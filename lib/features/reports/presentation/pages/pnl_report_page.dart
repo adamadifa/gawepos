@@ -73,7 +73,7 @@ class _PnlReportPageState extends State<PnlReportPage> {
                     pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text('WarungPro', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: PdfColors.indigo)),
+                        pw.Text('GawePOS', style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold, color: PdfColors.indigo)),
                         pw.Text('Laporan Keuangan Laba Rugi', style: pw.TextStyle(fontSize: 14, color: PdfColors.grey700)),
                       ],
                     ),
@@ -108,7 +108,7 @@ class _PnlReportPageState extends State<PnlReportPage> {
                 pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text('Dicetak secara otomatis oleh sistem WarungPro.', style: pw.TextStyle(fontSize: 8, color: PdfColors.grey500)),
+                    pw.Text('Dicetak secara otomatis oleh sistem GawePOS.', style: pw.TextStyle(fontSize: 8, color: PdfColors.grey500)),
                     pw.Text(DateFormat('dd MMM yyyy, HH:mm').format(DateTime.now()), style: pw.TextStyle(fontSize: 8, color: PdfColors.grey500)),
                   ],
                 ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AppConstants {
-  static const String appName = 'WarungPro';
+  static const String appName = 'GawePOS';
   static const String dbName = 'posmobile.db';
 
   // Primary Palette — Indigo Blue (Modern & Semi-Formal)

@@ -185,7 +185,7 @@ class _DatabaseManagementPageState extends State<DatabaseManagementPage> {
   Future<void> _shareBackup(File file) async {
     try {
       final name = p.basename(file.path);
-      await Share.shareXFiles([XFile(file.path)], text: 'Cadangan Lengkap WarungPro - $name');
+      await Share.shareXFiles([XFile(file.path)], text: 'Cadangan Lengkap GawePOS - $name');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -80,7 +80,7 @@ class _SplashPageState extends State<SplashPage>
                   ),
                   const SizedBox(height: 20),
                   Text(
-                    'WarungPro',
+                    'GawePOS',
                     style: GoogleFonts.poppins(
                       fontSize: 34,
                       fontWeight: FontWeight.bold,

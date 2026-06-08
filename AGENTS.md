@@ -1,8 +1,8 @@
-# AGENTS.md — posmobile (WarungPro)
+# AGENTS.md — posmobile (GawePOS)
 
 ## Project
 
-Offline-first Flutter POS app ("WarungPro") for Indonesian UMKM. Single-module, no monorepo.
+Offline-first Flutter POS app ("GawePOS") for Indonesian UMKM. Single-module, no monorepo.
 
 ## Commands
 

@@ -117,7 +117,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
 
                   Center(
                     child: Text(
-                      'WarungPro',
+                      'GawePOS',
                       style: GoogleFonts.poppins(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
