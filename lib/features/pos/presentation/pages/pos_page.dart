@@ -151,6 +151,388 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin {
     );
   }
 
+  void _showCustomerPickerModal() {
+    final searchController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return BlocBuilder<CustomerCubit, CustomerState>(
+          builder: (ctx, custState) {
+            return StatefulBuilder(
+              builder: (ctx, setModalState) {
+                final allCustomers = custState is CustomerLoaded
+                    ? custState.customers
+                    : <Customer>[];
+                final query = searchController.text.toLowerCase();
+                final filtered = query.isEmpty
+                    ? allCustomers
+                    : allCustomers.where((c) =>
+                        c.name.toLowerCase().contains(query) ||
+                        (c.phone?.toLowerCase().contains(query) ?? false) ||
+                        (c.email?.toLowerCase().contains(query) ?? false))
+                    .toList();
+                final cart = context.read<CartCubit>().state;
+
+                return Container(
+                  padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(ctx).viewInsets.bottom),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(20)),
+                  ),
+                  child: SafeArea(
+                    top: false,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(height: 8),
+                        Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+                          child: Row(
+                            mainAxisAlignment:
+                                MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Pilih Pelanggan',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.close_rounded),
+                                onPressed: () => Navigator.pop(ctx),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          child: TextField(
+                            controller: searchController,
+                            decoration: InputDecoration(
+                              hintText: 'Cari pelanggan...',
+                              prefixIcon: const Icon(
+                                  Icons.search_rounded,
+                                  size: 20),
+                              isDense: true,
+                              contentPadding:
+                                  const EdgeInsets.symmetric(vertical: 10),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            onChanged: (_) => setModalState(() {}),
+                          ),
+                        ),
+                        ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxHeight:
+                                MediaQuery.of(ctx).size.height * 0.4,
+                          ),
+                          child: ListView(
+                            shrinkWrap: true,
+                            children: [
+                              ListTile(
+                                leading: const Icon(
+                                    Icons.person_outline_rounded,
+                                    color:
+                                        AppConstants.textLightColor),
+                                title: Text(
+                                  'Pelanggan Umum (Cash)',
+                                  style: GoogleFonts.poppins(
+                                      fontSize: 13),
+                                ),
+                                selected: cart.selectedCustomer == null,
+                                selectedTileColor: AppConstants
+                                    .primaryColor
+                                    .withValues(alpha: 0.06),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(8),
+                                ),
+                                onTap: () {
+                                  context
+                                      .read<CartCubit>()
+                                      .selectCustomer(null);
+                                  Navigator.pop(ctx);
+                                },
+                              ),
+                              if (query.isNotEmpty && filtered.isEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Text(
+                                    'Pelanggan tidak ditemukan',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 12,
+                                      color:
+                                          AppConstants.textLightColor,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                )
+                              else
+                                ...filtered.map((c) => ListTile(
+                                      leading: const Icon(
+                                          Icons.person_rounded,
+                                          color: AppConstants
+                                              .primaryColor),
+                                      title: Text(
+                                        c.name,
+                                        style: GoogleFonts.poppins(
+                                            fontSize: 13),
+                                      ),
+                                      subtitle: c.phone != null
+                                          ? Text(
+                                              c.phone!,
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 11,
+                                                color: AppConstants
+                                                    .textLightColor,
+                                              ),
+                                            )
+                                          : null,
+                                      selected: cart.selectedCustomer
+                                              ?.id ==
+                                          c.id,
+                                      selectedTileColor: AppConstants
+                                          .primaryColor
+                                          .withValues(alpha: 0.06),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(8),
+                                      ),
+                                      onTap: () {
+                                        context
+                                            .read<CartCubit>()
+                                            .selectCustomer(c);
+                                        Navigator.pop(ctx);
+                                      },
+                                    )),
+                            ],
+                          ),
+                        ),
+                        const Divider(height: 1),
+                        Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              icon: const Icon(
+                                  Icons.person_add_alt_rounded,
+                                  size: 18),
+                              label: const Text(
+                                  'Tambah Pelanggan Baru'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor:
+                                    AppConstants.primaryColor,
+                                side: BorderSide(
+                                  color: AppConstants.primaryColor
+                                      .withValues(alpha: 0.4),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius:
+                                      BorderRadius.circular(10),
+                                ),
+                              ),
+                              onPressed: () {
+                                _showAddCustomerFromPicker(
+                                    ctx, setModalState);
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showAddCustomerFromPicker(
+      BuildContext sheetContext, void Function(void Function()) setModalState) {
+    final nameController = TextEditingController();
+    final phoneController = TextEditingController();
+    final emailController = TextEditingController();
+    final addressController = TextEditingController();
+
+    showModalBottomSheet(
+      context: sheetContext,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        bool hasInteractedName = false;
+        bool hasInteractedEmail = false;
+
+        return StatefulBuilder(
+          builder: (ctx, setFormState) {
+            final nameText = nameController.text.trim();
+            final emailText = emailController.text.trim();
+            final isNameValid = nameText.isNotEmpty;
+            final isEmailValid = emailText.isEmpty ||
+                RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                    .hasMatch(emailText);
+            final isValid = isNameValid && isEmailValid;
+
+            return Container(
+              margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+              padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(ctx).viewInsets.bottom),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: SafeArea(
+                top: false,
+                child: SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment:
+                              MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Tambah Pelanggan',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            IconButton(
+                              icon:
+                                  const Icon(Icons.close_rounded),
+                              onPressed: () =>
+                                  Navigator.pop(ctx),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: nameController,
+                          decoration: InputDecoration(
+                            labelText: 'Nama Pelanggan *',
+                            errorText:
+                                (hasInteractedName && !isNameValid)
+                                    ? 'Nama wajib diisi'
+                                    : null,
+                          ),
+                          onChanged: (_) {
+                            setFormState(() {
+                              hasInteractedName = true;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: phoneController,
+                          decoration: const InputDecoration(
+                            labelText: 'Nomor Telepon',
+                          ),
+                          keyboardType: TextInputType.phone,
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: emailController,
+                          decoration: InputDecoration(
+                            labelText: 'Email',
+                            errorText: (hasInteractedEmail &&
+                                    !isEmailValid)
+                                ? 'Format email tidak valid'
+                                : null,
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                          onChanged: (_) {
+                            setFormState(() {
+                              hasInteractedEmail = true;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: addressController,
+                          decoration: const InputDecoration(
+                            labelText: 'Alamat',
+                          ),
+                          maxLines: 2,
+                        ),
+                        const SizedBox(height: 24),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: isValid
+                                ? () {
+                                    final name =
+                                        nameController.text.trim();
+                                    final phone = phoneController
+                                        .text
+                                        .trim()
+                                        .isEmpty
+                                        ? null
+                                        : phoneController.text
+                                            .trim();
+                                    final email = emailController
+                                        .text
+                                        .trim()
+                                        .isEmpty
+                                        ? null
+                                        : emailController.text
+                                            .trim();
+                                    final address = addressController
+                                        .text
+                                        .trim()
+                                        .isEmpty
+                                        ? null
+                                        : addressController.text
+                                            .trim();
+
+                                    context
+                                        .read<CustomerCubit>()
+                                        .addCustomer(
+                                          name: name,
+                                          phone: phone,
+                                          email: email,
+                                          address: address,
+                                        );
+                                    Navigator.pop(ctx);
+                                  }
+                                : null,
+                            child: const Text('SIMPAN'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _handleBarcodeScanned(String barcode) {
     try {
       final match = _catalogProducts.firstWhere(
@@ -1908,98 +2290,63 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin {
   }
 
   Widget _buildCartHeaderSection(User? user) {
-    return BlocBuilder<CustomerCubit, CustomerState>(
-      builder: (context, custState) {
-        List<Customer> customers = [];
-        if (custState is CustomerLoaded) customers = custState.customers;
-        final cart = context.read<CartCubit>().state;
+    final cart = context.read<CartCubit>().state;
 
-        return Container(
-          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border(
-              bottom: BorderSide(
-                  color: AppConstants.borderLightColor.withValues(alpha: 0.7)),
-            ),
-          ),
-          child: Row(
-            children: [
-              // Customer Dropdown
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  decoration: BoxDecoration(
-                    color: AppConstants.backgroundColor,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<int?>(
-                      value: cart.selectedCustomer?.id,
-                      isExpanded: true,
-                      isDense: true,
-                      icon: const Icon(Icons.keyboard_arrow_down_rounded,
-                          size: 18),
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: AppConstants.textDarkColor,
+    return Container(
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(
+              color: AppConstants.borderLightColor.withValues(alpha: 0.7)),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Customer Selector
+          Expanded(
+            child: Material(
+              color: AppConstants.backgroundColor,
+              borderRadius: BorderRadius.circular(10),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(10),
+                onTap: () => _showCustomerPickerModal(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.person_rounded,
+                        size: 16,
+                        color: cart.selectedCustomer != null
+                            ? AppConstants.primaryColor
+                            : AppConstants.textLightColor,
                       ),
-                      hint: Row(
-                        children: [
-                          Icon(Icons.person_outline_rounded,
-                              size: 16,
-                              color: AppConstants.textLightColor),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Pelanggan Umum',
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              color: AppConstants.textLightColor,
-                            ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          cart.selectedCustomer?.name ?? 'Pelanggan Umum',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            color: cart.selectedCustomer != null
+                                ? AppConstants.textDarkColor
+                                : AppConstants.textLightColor,
                           ),
-                        ],
-                      ),
-                      items: [
-                        DropdownMenuItem<int?>(
-                          value: null,
-                          child: Row(
-                            children: [
-                              const Icon(Icons.person_outline_rounded,
-                                  size: 16, color: AppConstants.textLightColor),
-                              const SizedBox(width: 6),
-                              Text('Pelanggan Umum (Cash)',
-                                  style: GoogleFonts.poppins(fontSize: 12)),
-                            ],
-                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        ...customers.map((c) => DropdownMenuItem<int?>(
-                              value: c.id,
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.person_rounded,
-                                      size: 16,
-                                      color: AppConstants.primaryColor),
-                                  const SizedBox(width: 6),
-                                  Expanded(
-                                    child: Text(c.name,
-                                        style: GoogleFonts.poppins(
-                                            fontSize: 12),
-                                        overflow: TextOverflow.ellipsis),
-                                  ),
-                                ],
-                              ),
-                            )),
-                      ],
-                      onChanged: (val) {
-                        final cust = val == null
-                            ? null
-                            : customers.firstWhere((c) => c.id == val);
-                        context.read<CartCubit>().selectCustomer(cust);
-                      },
-                    ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        size: 18,
+                        color: AppConstants.textLightColor,
+                      ),
+                    ],
                   ),
                 ),
               ),
+            ),
+          ),
               const SizedBox(width: 8),
               // Hold button
               Material(
@@ -2125,8 +2472,6 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin {
             ],
           ),
         );
-      },
-    );
   }
 
   Widget _buildCartSummarySection(

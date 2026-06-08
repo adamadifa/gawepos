@@ -134,35 +134,28 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   children: [
                     // App icon box
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
+                      ClipRRect(
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.25),
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.contain,
                         ),
                       ),
-                      child: const Icon(
-                        Icons.point_of_sale_rounded,
-                        color: Colors.white,
-                        size: 30,
+                      const SizedBox(height: 12),
+                      Text(
+                        'GawePOS',
+                        style: GoogleFonts.poppins(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 0.2,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'GawePOS',
-                      style: GoogleFonts.poppins(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Mode Standalone — Kasir Mandiri',
+                      const SizedBox(height: 4),
+                      Text(
+                        'Mode Standalone — Kasir Mandiri',
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.white.withValues(alpha: 0.72),

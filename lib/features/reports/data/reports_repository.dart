@@ -371,10 +371,32 @@ class ReportsRepository {
       final payments = await (_db.select(_db.orderPayments)..where((tbl) => tbl.orderId.equals(order.id))).get();
       final paymentMethods = payments.map((p) => p.paymentMethod).join(', ');
 
+      final items = await (_db.select(_db.orderItems)
+            ..where((tbl) => tbl.orderId.equals(order.id)))
+          .get();
+
+      final List<Map<String, dynamic>> itemDetails = [];
+      for (var item in items) {
+        final prod = await (_db.select(_db.products)
+              ..where((tbl) => tbl.id.equals(item.productId)))
+            .getSingleOrNull();
+        final unit = await (_db.select(_db.productUnits)
+              ..where((tbl) => tbl.id.equals(item.unitId)))
+            .getSingleOrNull();
+        itemDetails.add({
+          'productName': prod?.name ?? 'Produk Tidak Dikenal',
+          'unitName': unit?.name ?? '',
+          'quantity': item.quantity,
+          'price': item.price,
+          'subtotal': item.subtotal,
+        });
+      }
+
       report.add({
         'order': order,
         'customerName': customer?.name ?? 'Umum',
         'paymentMethods': paymentMethods.isEmpty ? 'Tunai' : paymentMethods,
+        'items': itemDetails,
       });
     }
     return report;

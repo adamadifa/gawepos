@@ -116,6 +116,15 @@ class _OnboardingPageState extends State<OnboardingPage> {
                   const SizedBox(height: 10),
 
                   Center(
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      width: 120,
+                      height: 120,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Center(
                     child: Text(
                       'GawePOS',
                       style: GoogleFonts.poppins(

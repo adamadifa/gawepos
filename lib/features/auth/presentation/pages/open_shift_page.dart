@@ -50,35 +50,28 @@ class _OpenShiftPageState extends State<OpenShiftPage> {
                 padding: const EdgeInsets.fromLTRB(24, 28, 24, 44),
                 child: Column(
                   children: [
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
+                      ClipRRect(
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.25),
+                        child: Image.asset(
+                          'assets/images/logo.png',
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.contain,
                         ),
                       ),
-                      child: const Icon(
-                        Icons.lock_open_rounded,
-                        color: Colors.white,
-                        size: 30,
+                      const SizedBox(height: 12),
+                      Text(
+                        'GawePOS',
+                        style: GoogleFonts.poppins(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                          letterSpacing: 0.2,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'GawePOS',
-                      style: GoogleFonts.poppins(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Buka Sesi Shift Kasir',
+                      const SizedBox(height: 4),
+                      Text(
+                        'Buka Sesi Shift Kasir',
                       style: TextStyle(
                         fontSize: 13,
                         color: Colors.white.withValues(alpha: 0.72),

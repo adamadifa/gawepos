@@ -62,23 +62,16 @@ class _SplashPageState extends State<SplashPage>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Container(
-                    width: 88,
-                    height: 88,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.25),
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.point_of_sale_rounded,
-                      color: Colors.white,
-                      size: 44,
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(22),
+                    child: Image.asset(
+                      'assets/images/logo.png',
+                      width: 140,
+                      height: 140,
+                      fit: BoxFit.contain,
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 16),
                   Text(
                     'GawePOS',
                     style: GoogleFonts.poppins(
@@ -97,7 +90,16 @@ class _SplashPageState extends State<SplashPage>
                       letterSpacing: 1.2,
                     ),
                   ),
-                  const SizedBox(height: 56),
+                  const SizedBox(height: 4),
+                  Text(
+                    'by Adam Adifa',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.white54,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 48),
                   SizedBox(
                     width: 22,
                     height: 22,

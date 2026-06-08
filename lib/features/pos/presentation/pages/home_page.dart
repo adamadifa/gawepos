@@ -290,9 +290,76 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // ── Top AppBar ─────────────────────────────
+                  // ── Top AppBar ─────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+                  padding: const EdgeInsets.fromLTRB(16, 6, 4, 0),
+                  child: Row(
+                    children: [
+                      Image.asset(
+                        'assets/images/logo.png',
+                        width: 36,
+                        height: 36,
+                        fit: BoxFit.contain,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'GawePOS',
+                        style: GoogleFonts.poppins(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: Icon(
+                          Icons.settings_rounded,
+                          color: Colors.white.withValues(alpha: 0.85),
+                        ),
+                        tooltip: 'Pengaturan Printer & Toko',
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SettingsPage(),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.power_settings_new_rounded,
+                          color: Colors.white.withValues(alpha: 0.85),
+                        ),
+                        onPressed: () {
+                          if (widget.session != null) {
+                            showDialog(
+                              context: context,
+                              builder: (ctx) => AlertDialog(
+                                title: Text(
+                                  'Sesi Kasir Aktif',
+                                  style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+                                ),
+                                content: const Text(
+                                  'Anda tidak dapat logout saat sesi kasir/shift masih aktif. Silakan akhiri shift terlebih dahulu di bagian bawah halaman sebelum keluar.',
+                                  style: TextStyle(fontSize: 13, color: AppConstants.textLightColor),
+                                ),
+                                actions: [
+                                  ElevatedButton(
+                                    onPressed: () => Navigator.pop(ctx),
+                                    child: const Text('OK'),
+                                  ),
+                                ],
+                              ),
+                            );
+                          } else {
+                            context.read<AuthCubit>().logout();
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
                   child: Row(
                     children: [
                       // Avatar kasir
@@ -341,50 +408,6 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ],
                         ),
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          Icons.settings_rounded,
-                          color: Colors.white.withValues(alpha: 0.85),
-                        ),
-                        tooltip: 'Pengaturan Printer & Toko',
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SettingsPage(),
-                          ),
-                        ),
-                      ),
-                      IconButton(
-                        icon: Icon(
-                          Icons.power_settings_new_rounded,
-                          color: Colors.white.withValues(alpha: 0.85),
-                        ),
-                        onPressed: () {
-                          if (widget.session != null) {
-                            showDialog(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: Text(
-                                  'Sesi Kasir Aktif',
-                                  style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-                                ),
-                                content: const Text(
-                                  'Anda tidak dapat logout saat sesi kasir/shift masih aktif. Silakan akhiri shift terlebih dahulu di bagian bawah halaman sebelum keluar.',
-                                  style: TextStyle(fontSize: 13, color: AppConstants.textLightColor),
-                                ),
-                                actions: [
-                                  ElevatedButton(
-                                    onPressed: () => Navigator.pop(ctx),
-                                    child: const Text('OK'),
-                                  ),
-                                ],
-                              ),
-                            );
-                          } else {
-                            context.read<AuthCubit>().logout();
-                          }
-                        },
                       ),
                     ],
                   ),
