@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
+import 'package:archive/archive_io.dart';
 import '../../../../core/constants/constants.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/di/injection.dart';
@@ -59,7 +60,7 @@ class _DatabaseManagementPageState extends State<DatabaseManagementPage> {
     setState(() => _isLoading = true);
     try {
       final dir = await _getBackupsDir();
-      final entities = dir.listSync().where((e) => e.path.endsWith('.db')).toList();
+      final entities = dir.listSync().where((e) => e.path.endsWith('.zip')).toList();
       // Sort newest first
       entities.sort((a, b) {
         final aStat = a.statSync();
@@ -97,21 +98,54 @@ class _DatabaseManagementPageState extends State<DatabaseManagementPage> {
 
       final backupsDir = await _getBackupsDir();
       final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-      final backupPath = p.join(backupsDir.path, 'backup_$timestamp.db');
-      
-      // Copy DB file
-      final backupFile = await sourceFile.copy(backupPath);
+      final backupZipPath = p.join(backupsDir.path, 'backup_$timestamp.zip');
+
+      // Inisialisasi Archive untuk membuat file ZIP
+      final archive = Archive();
+
+      // 1. Tambahkan file database
+      final dbBytes = await sourceFile.readAsBytes();
+      archive.addFile(ArchiveFile('posmobile.db', dbBytes.length, dbBytes));
+
+      // 2. Tambahkan gambar produk (jika ada folder/file di path_provider)
+      // Mencari letak gambar produk. Di master_repository biasanya disimpan di subfolder /products atau /images.
+      // Kita backup semua file di subfolder 'products', 'images', dan 'logos' di database folder.
+      final List<String> assetFolders = ['products', 'images', 'logos'];
+      for (final folderName in assetFolders) {
+        final folderDir = Directory(p.join(dbFolder.path, folderName));
+        if (await folderDir.exists()) {
+          final files = folderDir.listSync(recursive: true);
+          for (final entity in files) {
+            if (entity is File) {
+              final relativePath = p.relative(entity.path, from: dbFolder.path);
+              final fileBytes = await entity.readAsBytes();
+              archive.addFile(ArchiveFile(relativePath, fileBytes.length, fileBytes));
+            }
+          }
+        }
+      }
+
+      // Encode archive menjadi format ZIP
+      final zipEncoder = ZipEncoder();
+      final zipBytes = zipEncoder.encode(archive);
+      if (zipBytes == null) {
+        throw Exception("Gagal mengompresi data cadangan.");
+      }
+
+      // Tulis file ZIP
+      final backupZipFile = File(backupZipPath);
+      await backupZipFile.writeAsBytes(zipBytes);
       
       await _loadDbInfo();
       await _loadBackups();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cadangan database berhasil dibuat!'), backgroundColor: AppConstants.successColor),
+          const SnackBar(content: Text('Cadangan terpadu (Data & Gambar) berhasil dibuat!'), backgroundColor: AppConstants.successColor),
         );
 
         // Offer to share backup immediately
-        _showShareImmediatelyDialog(backupFile);
+        _showShareImmediatelyDialog(backupZipFile);
       }
     } catch (e) {
       if (mounted) {
@@ -129,7 +163,7 @@ class _DatabaseManagementPageState extends State<DatabaseManagementPage> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text('Bagikan Cadangan?', style: GoogleFonts.poppins(fontWeight: FontWeight.bold)),
-        content: Text('Apakah Anda ingin membagikan atau menyimpan file cadangan ini ke penyimpanan eksternal sekarang?', style: GoogleFonts.poppins()),
+        content: Text('Apakah Anda ingin membagikan atau menyimpan file cadangan (ZIP) ini ke penyimpanan eksternal sekarang?', style: GoogleFonts.poppins()),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -151,7 +185,7 @@ class _DatabaseManagementPageState extends State<DatabaseManagementPage> {
   Future<void> _shareBackup(File file) async {
     try {
       final name = p.basename(file.path);
-      await Share.shareXFiles([XFile(file.path)], text: 'Cadangan Database WarungPro - $name');
+      await Share.shareXFiles([XFile(file.path)], text: 'Cadangan Lengkap WarungPro - $name');
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -209,9 +243,9 @@ class _DatabaseManagementPageState extends State<DatabaseManagementPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text('Pulihkan Database?', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: AppConstants.errorColor)),
+        title: Text('Pulihkan Database & Gambar?', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: AppConstants.errorColor)),
         content: Text(
-          'Peringatan: Proses ini akan menimpa seluruh data transaksi, produk, dan pengaturan saat ini dengan data dari file cadangan ini.\n\nAplikasi akan ditutup secara otomatis setelah pemulihan untuk memuat ulang data baru.',
+          'Peringatan: Proses ini akan menimpa seluruh data transaksi, produk, logo toko, dan semua foto saat ini dengan data dari file cadangan ini.\n\nAplikasi akan ditutup secara otomatis setelah pemulihan untuk memuat ulang data baru.',
           style: GoogleFonts.poppins(),
         ),
         actions: [
@@ -231,24 +265,37 @@ class _DatabaseManagementPageState extends State<DatabaseManagementPage> {
     if (confirm == true) {
       setState(() => _isLoading = true);
       try {
-        // 1. Close active Drift database connection
+        // 1. Tutup koneksi Drift Database aktif
         final db = getIt<AppDatabase>();
         await db.close();
 
-        // 2. Overwrite local posmobile.db with backup
-        final dbFolder = await getApplicationDocumentsDirectory();
-        final targetPath = p.join(dbFolder.path, 'posmobile.db');
-        
-        await backupFile.copy(targetPath);
+        // 2. Dekompresi file ZIP cadangan
+        final bytes = await backupFile.readAsBytes();
+        final archive = ZipDecoder().decodeBytes(bytes);
 
-        // 3. Show success and exit app to reload
+        final dbFolder = await getApplicationDocumentsDirectory();
+
+        // 3. Ekstrak masing-masing item di dalam ZIP
+        for (final archiveFile in archive) {
+          final filename = archiveFile.name;
+          if (archiveFile.isFile) {
+            final data = archiveFile.content as List<int>;
+            final targetFile = File(p.join(dbFolder.path, filename));
+            
+            // Buat direktori jika folder tujuan belum ada (seperti logos/ atau products/)
+            await targetFile.parent.create(recursive: true);
+            await targetFile.writeAsBytes(data);
+          }
+        }
+
+        // 4. Beritahu sukses dan tutup aplikasi
         if (mounted) {
           showDialog(
             context: context,
             barrierDismissible: false,
             builder: (ctx) => AlertDialog(
               title: Text('Pemulihan Sukses', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: AppConstants.successColor)),
-              content: Text('Data berhasil dipulihkan. Aplikasi harus ditutup untuk menerapkan perubahan ini. Silakan buka kembali aplikasi setelah keluar.', style: GoogleFonts.poppins()),
+              content: Text('Seluruh data database dan file gambar berhasil dipulihkan. Aplikasi harus ditutup untuk menerapkan perubahan ini. Silakan buka kembali aplikasi setelah keluar.', style: GoogleFonts.poppins()),
               actions: [
                 ElevatedButton(
                   onPressed: () {
@@ -283,12 +330,12 @@ class _DatabaseManagementPageState extends State<DatabaseManagementPage> {
         final path = result.files.single.path!;
         final file = File(path);
         
-        // Basic validation: must be a sqlite file (or end with .db)
-        if (!path.endsWith('.db')) {
+        // Validasi ekstensi harus .zip
+        if (!path.endsWith('.zip')) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Format file tidak didukung. Harap pilih file cadangan berformat .db'),
+                content: Text('Format file tidak didukung. Harap pilih file cadangan berformat .zip'),
                 backgroundColor: AppConstants.errorColor,
               ),
             );

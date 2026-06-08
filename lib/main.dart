@@ -4,7 +4,9 @@ import 'core/di/injection.dart';
 import 'core/theme/app_theme.dart';
 import 'core/constants/constants.dart';
 import 'features/auth/presentation/bloc/auth_cubit.dart';
+import 'features/auth/presentation/pages/splash_page.dart';
 import 'features/auth/presentation/pages/onboarding_page.dart';
+import 'features/auth/presentation/pages/onboarding_intro_page.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/auth/presentation/pages/open_shift_page.dart';
 import 'features/pos/presentation/pages/home_page.dart';
@@ -21,6 +23,7 @@ import 'features/purchases/presentation/bloc/purchase_cubit.dart';
 import 'features/reports/presentation/bloc/reports_cubit.dart';
 import 'features/auth/presentation/bloc/user_management_cubit.dart';
 import 'features/auth/presentation/bloc/role_permissions_cubit.dart';
+import 'features/inventory/presentation/bloc/return_cubit.dart';
 
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -86,6 +89,9 @@ class MyApp extends StatelessWidget {
         BlocProvider<ReportsCubit>(
           create: (context) => getIt<ReportsCubit>()..loadDashboard(),
         ),
+        BlocProvider<ReturnCubit>(
+          create: (context) => getIt<ReturnCubit>(),
+        ),
       ],
       child: MaterialApp(
         title: AppConstants.appName,
@@ -114,12 +120,12 @@ class AuthWrapper extends StatelessWidget {
         }
       },
       builder: (context, state) {
-        if (state is AuthLoading || state is AuthInitial) {
-          return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
-          );
+        if (state is AuthSplash || state is AuthLoading) {
+          return const SplashPage();
+        }
+        
+        if (state is AuthIntroRequired) {
+          return const OnboardingIntroPage();
         }
         
         if (state is AuthOnboardingRequired) {

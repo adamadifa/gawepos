@@ -64,6 +64,12 @@ class _PaymentPageState extends State<PaymentPage>
       'sublabel': 'Transfer via Bank',
       'icon': Icons.account_balance_rounded,
     },
+    {
+      'id': 'debt',
+      'label': 'Bon',
+      'sublabel': 'Bon / Piutang',
+      'icon': Icons.assignment_late_rounded,
+    },
   ];
 
   @override
@@ -102,7 +108,10 @@ class _PaymentPageState extends State<PaymentPage>
 
   void _calculateChange() {
     setState(() {
-      if (_paymentMethod != 'cash') {
+      if (_paymentMethod == 'debt') {
+        _changeAmount = 0.0;
+        // Let _amountPaid be whatever user typed for DP, default to 0.0 initially
+      } else if (_paymentMethod != 'cash') {
         _amountPaid = widget.cart.grandTotal;
         _amountPaidController.text = _amountPaid.toStringAsFixed(0);
         _changeAmount = 0.0;
@@ -162,11 +171,24 @@ class _PaymentPageState extends State<PaymentPage>
     }).toList();
 
     final paymentsMap = [
-      {
-        'method': _paymentMethod,
-        'amount': widget.cart.grandTotal,
-        'referenceId': null,
-      }
+      if (_paymentMethod == 'debt') ...[
+        {
+          'method': 'debt',
+          'amount': widget.cart.grandTotal - _amountPaid,
+          'referenceId': null,
+        },
+        if (_amountPaid > 0)
+          {
+            'method': 'cash',
+            'amount': _amountPaid,
+            'referenceId': null,
+          },
+      ] else
+        {
+          'method': _paymentMethod,
+          'amount': widget.cart.grandTotal,
+          'referenceId': null,
+        }
     ];
 
     context.read<SalesCubit>().checkout(
@@ -176,8 +198,9 @@ class _PaymentPageState extends State<PaymentPage>
           discountAmount: widget.cart.discountAmount,
           taxAmount: widget.cart.taxAmount,
           grandTotal: widget.cart.grandTotal,
-          paidAmount: _amountPaid,
+          paidAmount: _paymentMethod == 'debt' ? _amountPaid : (_paymentMethod == 'cash' ? _amountPaid : widget.cart.grandTotal),
           changeAmount: _changeAmount,
+          downPayment: _paymentMethod == 'debt' ? _amountPaid : 0.0,
           cartItems: cartItemsMap,
           payments: paymentsMap,
           customerId: widget.cart.selectedCustomer?.id,
@@ -457,71 +480,87 @@ class _PaymentPageState extends State<PaymentPage>
           final m = _paymentMethods[index];
           final id = m['id'] as String;
           final isSel = _paymentMethod == id;
+          final isDebtDisabled = id == 'debt' && widget.cart.selectedCustomer == null;
 
           return GestureDetector(
             onTap: () {
+              if (isDebtDisabled) {
+                HapticFeedback.heavyImpact();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('Silakan pilih pelanggan terlebih dahulu untuk transaksi Bon!'),
+                    backgroundColor: AppConstants.errorColor,
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                );
+                return;
+              }
               HapticFeedback.selectionClick();
               setState(() {
                 _paymentMethod = id;
                 _calculateChange();
               });
             },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              width: 114,
-              margin: EdgeInsets.only(
-                right: index < _paymentMethods.length - 1 ? 8 : 0,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: isSel ? AppConstants.primaryColor.withValues(alpha: 0.05) : Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: isSel ? AppConstants.primaryColor : AppConstants.borderLightColor,
-                  width: isSel ? 1.5 : 1.0,
+            child: Opacity(
+              opacity: isDebtDisabled ? 0.45 : 1.0,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                width: 114,
+                margin: EdgeInsets.only(
+                  right: index < _paymentMethods.length - 1 ? 8 : 0,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.01),
-                    blurRadius: 2,
-                    offset: const Offset(0, 1),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isSel ? AppConstants.primaryColor.withValues(alpha: 0.05) : Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: isSel ? AppConstants.primaryColor : AppConstants.borderLightColor,
+                    width: isSel ? 1.5 : 1.0,
                   ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    m['icon'] as IconData,
-                    size: 18,
-                    color: isSel ? AppConstants.primaryColor : AppConstants.textLightColor,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          m['label'] as String,
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: isSel ? AppConstants.primaryColor : AppConstants.textDarkColor,
-                          ),
-                        ),
-                        Text(
-                          m['sublabel'] as String,
-                          style: GoogleFonts.poppins(
-                            fontSize: 9,
-                            color: AppConstants.textLightColor,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.01),
+                      blurRadius: 2,
+                      offset: const Offset(0, 1),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      m['icon'] as IconData,
+                      size: 18,
+                      color: isSel ? AppConstants.primaryColor : AppConstants.textLightColor,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            m['label'] as String,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: isSel ? AppConstants.primaryColor : AppConstants.textDarkColor,
+                            ),
+                          ),
+                          Text(
+                            m['sublabel'] as String,
+                            style: GoogleFonts.poppins(
+                              fontSize: 9,
+                              color: AppConstants.textLightColor,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
@@ -796,6 +835,7 @@ class _PaymentPageState extends State<PaymentPage>
   Widget _buildNonCashInfo() {
     final methodLabel = _selectedMethod['label'] as String;
     final methodIcon = _selectedMethod['icon'] as IconData;
+    final isDebt = _paymentMethod == 'debt';
 
     return Column(
       key: const ValueKey('non_cash_section'),
@@ -806,7 +846,9 @@ class _PaymentPageState extends State<PaymentPage>
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppConstants.borderLightColor),
+            border: Border.all(
+              color: isDebt ? Colors.orange.shade200 : AppConstants.borderLightColor,
+            ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.01),
@@ -815,40 +857,128 @@ class _PaymentPageState extends State<PaymentPage>
               ),
             ],
           ),
-          child: Row(
+          child: Column(
             children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: AppConstants.primaryColor.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(methodIcon, color: AppConstants.primaryColor, size: 20),
+              Row(
+                children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: (isDebt ? Colors.orange : AppConstants.primaryColor).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      methodIcon,
+                      color: isDebt ? Colors.orange.shade800 : AppConstants.primaryColor,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isDebt ? 'Pembayaran Sistem Bon (Piutang)' : 'Pembayaran via $methodLabel',
+                          style: GoogleFonts.poppins(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: AppConstants.textDarkColor,
+                          ),
+                        ),
+                        Text(
+                          isDebt
+                              ? 'Tagihan sebesar ${CurrencyFormatter.format(widget.cart.grandTotal)} akan dicatat sebagai piutang pelanggan ${widget.cart.selectedCustomer?.name}.'
+                              : 'Tagihan dibayar penuh secara non-tunai. Tanpa kembalian.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: AppConstants.textLightColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              if (isDebt) ...[
+                const SizedBox(height: 16),
+                const Divider(height: 1, color: AppConstants.borderLightColor),
+                const SizedBox(height: 12),
+                Row(
                   children: [
-                    Text(
-                      'Pembayaran via $methodLabel',
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                        color: AppConstants.textDarkColor,
+                    Expanded(
+                      child: Text(
+                        'Uang Muka (DP)',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppConstants.textDarkColor,
+                        ),
                       ),
                     ),
-                    Text(
-                      'Tagihan dibayar penuh secara non-tunai. Tanpa kembalian.',
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        color: AppConstants.textLightColor,
+                    Expanded(
+                      flex: 2,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF8FAFC),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppConstants.borderLightColor),
+                        ),
+                        child: TextField(
+                          controller: _amountPaidController,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.right,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppConstants.textDarkColor,
+                          ),
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            prefixText: 'Rp ',
+                            prefixStyle: GoogleFonts.poppins(
+                              color: AppConstants.textLightColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          onChanged: (val) {
+                            setState(() {
+                              _amountPaid = double.tryParse(val) ?? 0.0;
+                              if (_amountPaid > widget.cart.grandTotal) {
+                                _amountPaid = widget.cart.grandTotal;
+                                _amountPaidController.text = _amountPaid.toStringAsFixed(0);
+                                // Ensure cursor stays at the end
+                                _amountPaidController.selection = TextSelection.fromPosition(
+                                    TextPosition(offset: _amountPaidController.text.length));
+                              }
+                            });
+                          },
+                        ),
                       ),
                     ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Sisa Piutang:',
+                      style: GoogleFonts.poppins(fontSize: 11, color: AppConstants.textLightColor),
+                    ),
+                    Text(
+                      CurrencyFormatter.format(widget.cart.grandTotal - _amountPaid),
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange.shade800,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
           ),
         ),

@@ -6,6 +6,7 @@ import '../../../../core/constants/constants.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../master/data/master_repository.dart';
 import '../../data/purchase_repository.dart';
 import '../bloc/purchase_cubit.dart';
 import 'purchase_form_page.dart';
@@ -18,10 +19,43 @@ class PurchasesListPage extends StatefulWidget {
 }
 
 class _PurchasesListPageState extends State<PurchasesListPage> {
+  final MasterRepository _masterRepository = getIt<MasterRepository>();
+  List<Supplier> _suppliers = [];
+  DateTime? _startDate;
+  DateTime? _endDate;
+  int? _selectedSupplierId;
+
   @override
   void initState() {
     super.initState();
     context.read<PurchaseCubit>().loadPurchases();
+    _loadSuppliers();
+  }
+
+  Future<void> _loadSuppliers() async {
+    try {
+      final list = await _masterRepository.getSuppliers();
+      setState(() {
+        _suppliers = list;
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _selectDateRange() async {
+    final picked = await showDateRangePicker(
+      context: context,
+      initialDateRange: _startDate != null && _endDate != null
+          ? DateTimeRange(start: _startDate!, end: _endDate!)
+          : null,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() {
+        _startDate = picked.start;
+        _endDate = picked.end;
+      });
+    }
   }
 
   void _showPurchaseDetails(BuildContext context, int purchaseId) {
@@ -264,13 +298,13 @@ class _PurchasesListPageState extends State<PurchasesListPage> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: isReceived
-            ? AppConstants.successColor.withOpacity(0.12)
-            : AppConstants.warningColor.withOpacity(0.12),
+            ? AppConstants.successColor.withValues(alpha: 0.12)
+            : AppConstants.warningColor.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isReceived
-              ? AppConstants.successColor.withOpacity(0.3)
-              : AppConstants.warningColor.withOpacity(0.3),
+              ? AppConstants.successColor.withValues(alpha: 0.3)
+              : AppConstants.warningColor.withValues(alpha: 0.3),
         ),
       ),
       child: Text(
@@ -291,12 +325,13 @@ class _PurchasesListPageState extends State<PurchasesListPage> {
       appBar: AppBar(
         title: Text(
           'Restok & Pembelian',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 18),
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 18, color: Colors.white),
         ),
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: AppConstants.textDarkColor,
+        backgroundColor: AppConstants.primaryColor,
+        foregroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: BlocConsumer<PurchaseCubit, PurchaseState>(
         listener: (context, state) {
@@ -312,107 +347,212 @@ class _PurchasesListPageState extends State<PurchasesListPage> {
           }
 
           if (state is PurchaseLoaded) {
-            final list = state.purchases;
+            final allPurchases = state.purchases;
+            final filteredPurchases = allPurchases.where((row) {
+              final Purchase purchase = row['purchase'];
 
-            if (list.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.local_shipping_outlined,
-                      size: 64,
-                      color: AppConstants.textLightColor.withOpacity(0.5),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Belum ada pembelian restok.',
-                      style: GoogleFonts.poppins(
-                        color: AppConstants.textLightColor,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
+              if (_selectedSupplierId != null && purchase.supplierId != _selectedSupplierId) {
+                return false;
+              }
 
-            return ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: list.length,
-              itemBuilder: (context, index) {
-                final item = list[index];
-                final Purchase purchase = item['purchase'];
-                final Supplier? supplier = item['supplier'];
-                final dateStr = DateFormat('dd MMM yyyy, HH:mm').format(purchase.createdAt);
+              final compareDate = purchase.createdAt;
+              if (_startDate != null) {
+                final start = DateTime(_startDate!.year, _startDate!.month, _startDate!.day);
+                if (compareDate.isBefore(start)) return false;
+              }
+              if (_endDate != null) {
+                final end = DateTime(_endDate!.year, _endDate!.month, _endDate!.day, 23, 59, 59);
+                if (compareDate.isAfter(end)) return false;
+              }
 
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
+              return true;
+            }).toList();
+
+            return Column(
+              children: [
+                Card(
+                  margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                   elevation: 0,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                    borderRadius: BorderRadius.circular(AppConstants.radiusSm),
                     side: const BorderSide(color: AppConstants.borderLightColor),
                   ),
-                  child: InkWell(
-                    onTap: () => _showPurchaseDetails(context, purchase.id),
-                    borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                purchase.referenceNo,
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 14,
-                                  color: AppConstants.textDarkColor,
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _selectDateRange,
+                                icon: const Icon(Icons.date_range_rounded, size: 16),
+                                label: Text(
+                                  _startDate == null || _endDate == null
+                                      ? 'Pilih Periode'
+                                      : '${DateFormat('dd/MM/yyyy').format(_startDate!)} - ${DateFormat('dd/MM/yyyy').format(_endDate!)}',
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppConstants.textDarkColor,
+                                  side: const BorderSide(color: AppConstants.borderLightColor),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                                  ),
                                 ),
                               ),
-                              _buildStatusBadge(purchase.status),
+                            ),
+                            if (_startDate != null || _endDate != null) ...[
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.clear_rounded, color: AppConstants.errorColor),
+                                onPressed: () {
+                                  setState(() {
+                                    _startDate = null;
+                                    _endDate = null;
+                                  });
+                                },
+                              ),
                             ],
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                            border: Border.all(color: AppConstants.borderLightColor),
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            supplier?.name ?? 'Supplier Umum',
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                              color: AppConstants.textDarkColor.withOpacity(0.8),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<int?>(
+                              value: _selectedSupplierId,
+                              isExpanded: true,
+                              hint: const Text('Semua Supplier / Pemasok', style: TextStyle(fontSize: 12)),
+                              items: [
+                                const DropdownMenuItem<int?>(
+                                  value: null,
+                                  child: Text('Semua Supplier / Pemasok', style: TextStyle(fontSize: 12)),
+                                ),
+                                ..._suppliers.map((s) => DropdownMenuItem<int?>(
+                                      value: s.id,
+                                      child: Text(s.name, style: const TextStyle(fontSize: 12)),
+                                    )),
+                              ],
+                              onChanged: (val) {
+                                setState(() {
+                                  _selectedSupplierId = val;
+                                });
+                              },
                             ),
                           ),
-                          const SizedBox(height: 12),
-                          const Divider(height: 1, color: AppConstants.borderLightColor),
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: filteredPurchases.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Text(
-                                dateStr,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 11,
-                                  color: AppConstants.textLightColor,
-                                ),
+                              Icon(
+                                Icons.local_shipping_outlined,
+                                size: 64,
+                                color: AppConstants.textLightColor.withValues(alpha: 0.5),
                               ),
+                              const SizedBox(height: 16),
                               Text(
-                                CurrencyFormatter.format(purchase.grandTotal),
+                                'Tidak ada data pembelian.',
                                 style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold,
+                                  color: AppConstants.textLightColor,
                                   fontSize: 14,
-                                  color: AppConstants.primaryColor,
                                 ),
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.all(16),
+                          itemCount: filteredPurchases.length,
+                          itemBuilder: (context, index) {
+                            final item = filteredPurchases[index];
+                            final Purchase purchase = item['purchase'];
+                            final Supplier? supplier = item['supplier'];
+                            final dateStr = DateFormat('dd MMM yyyy, HH:mm').format(purchase.createdAt);
+
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                                side: const BorderSide(color: AppConstants.borderLightColor),
+                              ),
+                              child: InkWell(
+                                onTap: () => _showPurchaseDetails(context, purchase.id),
+                                borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            purchase.referenceNo,
+                                            style: GoogleFonts.poppins(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              color: AppConstants.textDarkColor,
+                                            ),
+                                          ),
+                                          _buildStatusBadge(purchase.status),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        supplier?.name ?? 'Supplier Umum',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                          color: AppConstants.textDarkColor.withValues(alpha: 0.8),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 12),
+                                      const Divider(height: 1, color: AppConstants.borderLightColor),
+                                      const SizedBox(height: 12),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            dateStr,
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 11,
+                                              color: AppConstants.textLightColor,
+                                            ),
+                                          ),
+                                          Text(
+                                            CurrencyFormatter.format(purchase.grandTotal),
+                                            style: GoogleFonts.poppins(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              color: AppConstants.primaryColor,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
             );
           }
 

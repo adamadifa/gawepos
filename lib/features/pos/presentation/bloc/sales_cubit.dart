@@ -50,6 +50,7 @@ class SalesCubit extends Cubit<SalesState> {
     required double changeAmount,
     required List<Map<String, dynamic>> cartItems,
     required List<Map<String, dynamic>> payments,
+    double downPayment = 0.0,
     int? customerId,
     String? notes,
   }) async {
@@ -64,6 +65,7 @@ class SalesCubit extends Cubit<SalesState> {
         grandTotal: grandTotal,
         paidAmount: paidAmount,
         changeAmount: changeAmount,
+        downPayment: downPayment,
         cartItems: cartItems,
         payments: payments,
         customerId: customerId,

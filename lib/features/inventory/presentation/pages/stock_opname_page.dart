@@ -17,6 +17,7 @@ class StockOpnamePage extends StatefulWidget {
 
 class _StockOpnamePageState extends State<StockOpnamePage> {
   String _searchQuery = '';
+  final _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -24,142 +25,23 @@ class _StockOpnamePageState extends State<StockOpnamePage> {
     context.read<InventoryCubit>().loadInventory();
   }
 
-  void _showAdjustmentDialog(
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _showProductAdjustmentDialog(
     BuildContext context, {
     required Product product,
-    required ProductUnit unit,
-    required double currentStock,
+    required List<Map<String, dynamic>> productUnits,
   }) {
-    final physicalController = TextEditingController();
-    final notesController = TextEditingController();
-    double physicalStock = currentStock;
-    double difference = 0.0;
-
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-          ),
-          title: Text(
-            'Sesuaikan Stok (Opname)',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  product.name,
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 15),
-                ),
-                Text(
-                  'Satuan: ${unit.name} | SKU: ${product.sku ?? '-'}',
-                  style: const TextStyle(fontSize: 12, color: AppConstants.textLightColor),
-                ),
-                const Divider(height: 24),
-                // Theoretical Stock
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Stok Sistem (Teoretis):'),
-                    Text(
-                      '$currentStock ${unit.name}',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                // Physical input
-                TextField(
-                  controller: physicalController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(
-                    labelText: 'Stok Riil (Fisik) *',
-                  ),
-                  onChanged: (val) {
-                    setModalState(() {
-                      physicalStock = double.tryParse(val) ?? 0.0;
-                      difference = physicalStock - currentStock;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                // Calculation of Difference
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: difference == 0
-                        ? AppConstants.backgroundColor
-                        : difference > 0
-                            ? AppConstants.successColor.withValues(alpha: 0.06)
-                            : AppConstants.errorColor.withValues(alpha: 0.06),
-                    borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                    border: Border.all(
-                      color: difference == 0
-                          ? AppConstants.borderLightColor
-                          : difference > 0
-                              ? AppConstants.successColor.withValues(alpha: 0.15)
-                              : AppConstants.errorColor.withValues(alpha: 0.15),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Selisih Penyesuaian:',
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                      ),
-                      Text(
-                        '${difference > 0 ? "+" : ""}$difference ${unit.name}',
-                        style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.bold,
-                          color: difference == 0
-                              ? AppConstants.textDarkColor
-                              : difference > 0
-                                  ? AppConstants.successColor
-                                  : AppConstants.errorColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // Notes
-                TextField(
-                  controller: notesController,
-                  decoration: const InputDecoration(
-                    labelText: 'Alasan / Catatan Penyesuaian',
-                  ),
-                  maxLines: 2,
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('BATAL'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                if (physicalController.text.trim().isEmpty) return;
-                
-                context.read<InventoryCubit>().adjustStock(
-                  productId: product.id,
-                  unitId: unit.id,
-                  theoreticalQty: currentStock,
-                  physicalQty: physicalStock,
-                  notes: notesController.text.trim().isEmpty ? null : notesController.text.trim(),
-                );
-                Navigator.pop(ctx);
-              },
-              child: const Text('SIMPAN'),
-            ),
-          ],
-        ),
+      builder: (ctx) => _ProductAdjustmentDialog(
+        product: product,
+        productUnits: productUnits,
+        cubit: context.read<InventoryCubit>(),
       ),
     );
   }
@@ -228,10 +110,45 @@ class _StockOpnamePageState extends State<StockOpnamePage> {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           child: TextField(
+                            controller: _searchController,
                             onChanged: (val) {
                               setState(() {
-                                _searchQuery = val.toLowerCase();
+                                _searchQuery = val.trim().toLowerCase();
                               });
+                            },
+                            onSubmitted: (val) {
+                              final query = val.trim().toLowerCase();
+                              if (query.isNotEmpty) {
+                                try {
+                                  final match = rawItemsList.firstWhere(
+                                    (item) {
+                                      final Product p = item['product'];
+                                      return p.barcode?.toLowerCase() == query || p.sku?.toLowerCase() == query;
+                                    },
+                                    orElse: () => <String, dynamic>{},
+                                  );
+
+                                  if (match.isNotEmpty) {
+                                    final Product product = match['product'];
+                                    final productUnits = rawItemsList.where((item) {
+                                      return (item['product'] as Product).id == product.id;
+                                    }).toList();
+
+                                    _searchController.clear();
+                                    setState(() {
+                                      _searchQuery = '';
+                                    });
+
+                                    _showProductAdjustmentDialog(
+                                      context,
+                                      product: product,
+                                      productUnits: productUnits,
+                                    );
+                                  }
+                                } catch (e) {
+                                  // ignore
+                                }
+                              }
                             },
                             decoration: InputDecoration(
                               hintText: 'Cari nama produk atau SKU...',
@@ -324,25 +241,58 @@ class _StockOpnamePageState extends State<StockOpnamePage> {
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        // Info Utama Produk
-                                        Text(
-                                          product.name,
-                                          style: GoogleFonts.poppins(
-                                            fontWeight: FontWeight.bold,
-                                            color: AppConstants.textDarkColor,
-                                            fontSize: 15,
-                                          ),
-                                        ),
-                                        if (product.sku != null) ...[
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            'SKU: ${product.sku}',
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              color: AppConstants.textLightColor,
+                                        // Info Utama Produk & Tombol Opname Produk
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    product.name,
+                                                    style: GoogleFonts.poppins(
+                                                      fontWeight: FontWeight.bold,
+                                                      color: AppConstants.textDarkColor,
+                                                      fontSize: 15,
+                                                    ),
+                                                  ),
+                                                  if (product.sku != null) ...[
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      'SKU: ${product.sku}',
+                                                      style: const TextStyle(
+                                                        fontSize: 11,
+                                                        color: AppConstants.textLightColor,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ],
+                                              ),
                                             ),
-                                          ),
-                                        ],
+                                            const SizedBox(width: 8),
+                                            ElevatedButton.icon(
+                                              onPressed: () => _showProductAdjustmentDialog(
+                                                context,
+                                                product: product,
+                                                productUnits: productUnits,
+                                              ),
+                                              icon: const Icon(Icons.edit_note_rounded, size: 16),
+                                              label: const Text('OPNAME'),
+                                              style: ElevatedButton.styleFrom(
+                                                padding: const EdgeInsets.symmetric(
+                                                    horizontal: 12, vertical: 8),
+                                                minimumSize: Size.zero,
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                                                ),
+                                                textStyle: const TextStyle(
+                                                    fontSize: 11, fontWeight: FontWeight.bold),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                         const SizedBox(height: 12),
                                         const Divider(height: 1, color: AppConstants.borderLightColor),
                                         const SizedBox(height: 12),
@@ -357,93 +307,65 @@ class _StockOpnamePageState extends State<StockOpnamePage> {
                                           return Padding(
                                             padding: const EdgeInsets.only(bottom: 12),
                                             child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                               children: [
                                                 // Nama Unit & Status Stok
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Row(
-                                                        children: [
-                                                          Container(
-                                                            padding: const EdgeInsets.symmetric(
-                                                                horizontal: 8, vertical: 4),
-                                                            decoration: BoxDecoration(
-                                                              color: isLowStock
-                                                                  ? AppConstants.errorColor.withValues(alpha: 0.1)
-                                                                  : AppConstants.primaryColor.withValues(alpha: 0.1),
-                                                              borderRadius: BorderRadius.circular(4),
-                                                            ),
-                                                            child: Text(
-                                                              '$currentStock ${unit.name}',
-                                                              style: TextStyle(
-                                                                fontSize: 12,
-                                                                fontWeight: FontWeight.bold,
-                                                                color: isLowStock
-                                                                    ? AppConstants.errorColor
-                                                                    : AppConstants.primaryColor,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                          const SizedBox(width: 8),
-                                                          Text(
-                                                            unit.name,
-                                                            style: GoogleFonts.poppins(
-                                                              fontWeight: FontWeight.w500,
-                                                              fontSize: 13,
-                                                              color: AppConstants.textDarkColor,
-                                                            ),
-                                                          ),
-                                                        ],
+                                                Row(
+                                                  children: [
+                                                    Container(
+                                                      padding: const EdgeInsets.symmetric(
+                                                          horizontal: 8, vertical: 4),
+                                                      decoration: BoxDecoration(
+                                                        color: isLowStock
+                                                            ? AppConstants.errorColor.withValues(alpha: 0.1)
+                                                            : AppConstants.primaryColor.withValues(alpha: 0.1),
+                                                        borderRadius: BorderRadius.circular(4),
                                                       ),
-                                                      const SizedBox(height: 4),
-                                                      GestureDetector(
-                                                        onTap: () {
-                                                          Navigator.push(
-                                                            context,
-                                                            MaterialPageRoute(
-                                                              builder: (context) => StockCardPage(product: product),
-                                                            ),
-                                                          );
-                                                        },
-                                                        child: const Row(
-                                                          children: [
-                                                            Icon(Icons.history_rounded,
-                                                                size: 13, color: AppConstants.primaryColor),
-                                                            SizedBox(width: 4),
-                                                            Text(
-                                                              'Kartu Stok',
-                                                              style: TextStyle(
-                                                                fontSize: 11,
-                                                                color: AppConstants.primaryColor,
-                                                                fontWeight: FontWeight.w600,
-                                                              ),
-                                                            ),
-                                                          ],
+                                                      child: Text(
+                                                        '$currentStock ${unit.name}',
+                                                        style: TextStyle(
+                                                          fontSize: 12,
+                                                          fontWeight: FontWeight.bold,
+                                                          color: isLowStock
+                                                              ? AppConstants.errorColor
+                                                              : AppConstants.primaryColor,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 8),
+                                                    Text(
+                                                      unit.name,
+                                                      style: GoogleFonts.poppins(
+                                                        fontWeight: FontWeight.w500,
+                                                        fontSize: 13,
+                                                        color: AppConstants.textDarkColor,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                GestureDetector(
+                                                  onTap: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (context) => StockCardPage(product: product),
+                                                      ),
+                                                    );
+                                                  },
+                                                  child: const Row(
+                                                    children: [
+                                                      Icon(Icons.history_rounded,
+                                                          size: 13, color: AppConstants.primaryColor),
+                                                      SizedBox(width: 4),
+                                                      Text(
+                                                        'Kartu Stok',
+                                                        style: TextStyle(
+                                                          fontSize: 11,
+                                                          color: AppConstants.primaryColor,
+                                                          fontWeight: FontWeight.w600,
                                                         ),
                                                       ),
                                                     ],
-                                                  ),
-                                                ),
-                                                // Tombol Aksi Opname
-                                                ElevatedButton.icon(
-                                                  onPressed: () => _showAdjustmentDialog(
-                                                    context,
-                                                    product: product,
-                                                    unit: unit,
-                                                    currentStock: currentStock,
-                                                  ),
-                                                  icon: const Icon(Icons.edit_note_rounded, size: 16),
-                                                  label: const Text('OPNAME'),
-                                                  style: ElevatedButton.styleFrom(
-                                                    padding: const EdgeInsets.symmetric(
-                                                        horizontal: 12, vertical: 8),
-                                                    minimumSize: Size.zero,
-                                                    shape: RoundedRectangleBorder(
-                                                      borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                                                    ),
-                                                    textStyle: const TextStyle(
-                                                        fontSize: 11, fontWeight: FontWeight.bold),
                                                   ),
                                                 ),
                                               ],
@@ -472,81 +394,89 @@ class _StockOpnamePageState extends State<StockOpnamePage> {
   }
 
   void _showBarcodeScanner(List<Map<String, dynamic>> itemsList) {
-    showModalBottomSheet(
+    showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        height: MediaQuery.of(ctx).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
+      builder: (ctx) {
+        bool scanned = false;
+        return Container(
+          height: MediaQuery.of(ctx).size.height * 0.7,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 8),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppConstants.primaryColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppConstants.primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.qr_code_scanner_rounded,
+                          color: AppConstants.primaryColor, size: 20),
                     ),
-                    child: const Icon(Icons.qr_code_scanner_rounded,
-                        color: AppConstants.primaryColor, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Scan Barcode Produk',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                    const SizedBox(width: 12),
+                    Text(
+                      'Scan Barcode Produk',
+                      style: GoogleFonts.poppins(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ],
+                    const Spacer(),
+                    IconButton(
+                      icon: const Icon(Icons.close_rounded),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: MobileScanner(
-                    onDetect: (capture) {
-                      final List<Barcode> barcodes = capture.barcodes;
-                      if (barcodes.isNotEmpty) {
-                        final code = barcodes.first.rawValue;
-                        if (code != null) {
-                          Navigator.pop(ctx);
-                          _handleBarcodeScanned(code, itemsList);
+              Expanded(
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: MobileScanner(
+                      onDetect: (capture) {
+                        if (scanned) return;
+                        final List<Barcode> barcodes = capture.barcodes;
+                        if (barcodes.isNotEmpty) {
+                          final code = barcodes.first.rawValue;
+                          if (code != null) {
+                            scanned = true;
+                            Navigator.pop(ctx, code);
+                          }
                         }
-                      }
-                    },
+                      },
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-    );
+              const SizedBox(height: 24),
+            ],
+          ),
+        );
+      },
+    ).then((code) {
+      if (code != null && mounted) {
+        _handleBarcodeScanned(code, itemsList);
+      }
+    });
   }
 
   void _handleBarcodeScanned(String barcode, List<Map<String, dynamic>> itemsList) {
@@ -561,15 +491,15 @@ class _StockOpnamePageState extends State<StockOpnamePage> {
 
       if (match.isNotEmpty) {
         final Product product = match['product'];
-        final ProductUnit unit = match['unit'];
-        final InventoryData? inv = match['inventory'];
-        final double currentStock = inv?.quantity ?? 0.0;
+        
+        final productUnits = itemsList.where((item) {
+          return (item['product'] as Product).id == product.id;
+        }).toList();
 
-        _showAdjustmentDialog(
+        _showProductAdjustmentDialog(
           context,
           product: product,
-          unit: unit,
-          currentStock: currentStock,
+          productUnits: productUnits,
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -586,3 +516,217 @@ class _StockOpnamePageState extends State<StockOpnamePage> {
     }
   }
 }
+
+class _ProductAdjustmentDialog extends StatefulWidget {
+  final Product product;
+  final List<Map<String, dynamic>> productUnits;
+  final InventoryCubit cubit;
+
+  const _ProductAdjustmentDialog({
+    required this.product,
+    required this.productUnits,
+    required this.cubit,
+  });
+
+  @override
+  State<_ProductAdjustmentDialog> createState() => _ProductAdjustmentDialogState();
+}
+
+class _ProductAdjustmentDialogState extends State<_ProductAdjustmentDialog> {
+  final _notesController = TextEditingController();
+  final Map<int, double> _physicalStocks = {};
+  final Map<int, double> _differences = {};
+  final Map<int, TextEditingController> _controllers = {};
+
+  @override
+  void initState() {
+    super.initState();
+    for (var uMap in widget.productUnits) {
+      final ProductUnit unit = uMap['unit'];
+      final InventoryData? inv = uMap['inventory'];
+      final double currentStock = inv?.quantity ?? 0.0;
+      
+      _physicalStocks[unit.id] = currentStock;
+      _differences[unit.id] = 0.0;
+      _controllers[unit.id] = TextEditingController(text: currentStock.toString().replaceAll(RegExp(r'\.?0+$'), ''));
+    }
+  }
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    for (var controller in _controllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+      ),
+      title: Text(
+        'Sesuaikan Stok (Opname)',
+        style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16),
+      ),
+      content: SizedBox(
+        width: MediaQuery.of(context).size.width * 0.9,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                widget.product.name,
+                style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 15, color: AppConstants.textDarkColor),
+              ),
+              if (widget.product.sku != null)
+                Text(
+                  'SKU: ${widget.product.sku}',
+                  style: const TextStyle(fontSize: 11, color: AppConstants.textLightColor),
+                ),
+              const Divider(height: 24),
+              ...widget.productUnits.map((uMap) {
+                final ProductUnit unit = uMap['unit'];
+                final InventoryData? inv = uMap['inventory'];
+                final double currentStock = inv?.quantity ?? 0.0;
+                final double diff = _differences[unit.id] ?? 0.0;
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Satuan: ${unit.name}',
+                          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 12, color: AppConstants.textDarkColor),
+                        ),
+                        Text(
+                          'Stok Sistem: $currentStock',
+                          style: const TextStyle(fontSize: 11, color: AppConstants.textLightColor),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: TextField(
+                            controller: _controllers[unit.id],
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: const InputDecoration(
+                              labelText: 'Stok Riil (Fisik) *',
+                              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            ),
+                            onChanged: (val) {
+                              final pStock = double.tryParse(val) ?? 0.0;
+                              setState(() {
+                                _physicalStocks[unit.id] = pStock;
+                                _differences[unit.id] = pStock - currentStock;
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                            decoration: BoxDecoration(
+                              color: diff == 0
+                                  ? AppConstants.backgroundColor
+                                  : diff > 0
+                                      ? AppConstants.successColor.withValues(alpha: 0.06)
+                                      : AppConstants.errorColor.withValues(alpha: 0.06),
+                              borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                              border: Border.all(
+                                color: diff == 0
+                                    ? AppConstants.borderLightColor
+                                    : diff > 0
+                                        ? AppConstants.successColor.withValues(alpha: 0.15)
+                                        : AppConstants.errorColor.withValues(alpha: 0.15),
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${diff > 0 ? "+" : ""}${diff.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '')}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: diff == 0
+                                      ? AppConstants.textDarkColor
+                                      : diff > 0
+                                          ? AppConstants.successColor
+                                          : AppConstants.errorColor,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                );
+              }),
+              TextField(
+                controller: _notesController,
+                decoration: const InputDecoration(
+                  labelText: 'Alasan / Catatan Penyesuaian',
+                  contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                ),
+                maxLines: 2,
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('BATAL'),
+        ),
+        ElevatedButton(
+          onPressed: () {
+            final List<Map<String, dynamic>> adjustments = [];
+            for (var uMap in widget.productUnits) {
+              final ProductUnit unit = uMap['unit'];
+              final InventoryData? inv = uMap['inventory'];
+              final double currentStock = inv?.quantity ?? 0.0;
+              final double pStock = _physicalStocks[unit.id] ?? currentStock;
+              final diff = pStock - currentStock;
+
+              if (diff != 0) {
+                adjustments.add({
+                  'unitId': unit.id,
+                  'theoreticalQty': currentStock,
+                  'physicalQty': pStock,
+                });
+              }
+            }
+
+            final notes = _notesController.text.trim();
+
+            if (adjustments.isEmpty) {
+              Navigator.pop(context);
+              return;
+            }
+
+            widget.cubit.adjustStockMultiple(
+              productId: widget.product.id,
+              adjustments: adjustments,
+              notes: notes.isEmpty ? null : notes,
+            );
+            Navigator.pop(context);
+          },
+          child: const Text('SIMPAN'),
+        ),
+      ],
+    );
+  }
+}
+

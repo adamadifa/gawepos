@@ -208,10 +208,12 @@ class Purchases extends Table {
   IntColumn get supplierId => integer().references(Suppliers, #id)();
   TextColumn get referenceNo => text().unique()();
   TextColumn get status => text().withDefault(const Constant('pending'))(); // 'pending', 'ordered', 'received'
+  TextColumn get paymentType => text().withDefault(const Constant('cash'))(); // 'cash' / 'debt'
   RealColumn get subtotal => real().withDefault(const Constant(0.0))();
   RealColumn get discountAmount => real().withDefault(const Constant(0.0))();
   RealColumn get taxAmount => real().withDefault(const Constant(0.0))();
   RealColumn get grandTotal => real().withDefault(const Constant(0.0))();
+  RealColumn get downPayment => real().withDefault(const Constant(0.0))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -231,6 +233,92 @@ class RolePermissions extends Table {
   TextColumn get role => text().withLength(min: 3, max: 50).unique()(); // 'admin', 'cashier', etc.
   TextColumn get allowedMenus => text()(); // JSON string array, e.g., '["pos", "history"]'
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+// 22. Piutang Pelanggan (Customer Debts / Bon)
+class CustomerDebts extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get customerId => integer().references(Customers, #id, onDelete: KeyAction.cascade)();
+  IntColumn get orderId => integer().nullable().references(Orders, #id, onDelete: KeyAction.setNull)();
+  RealColumn get amount => real()();
+  RealColumn get paidAmount => real().withDefault(const Constant(0.0))();
+  TextColumn get status => text().withDefault(const Constant('unpaid'))(); // 'unpaid', 'partial', 'paid'
+  DateTimeColumn get dueDate => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+class CustomerDebtPayments extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get customerDebtId => integer().references(CustomerDebts, #id, onDelete: KeyAction.cascade)();
+  RealColumn get amountPaid => real()();
+  TextColumn get paymentMethod => text().withDefault(const Constant('cash'))(); // 'cash', 'transfer', etc.
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+// 23. Hutang ke Supplier (Supplier Debts)
+class SupplierDebts extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get supplierId => integer().references(Suppliers, #id, onDelete: KeyAction.cascade)();
+  IntColumn get purchaseId => integer().nullable().references(Purchases, #id, onDelete: KeyAction.setNull)();
+  RealColumn get amount => real()();
+  RealColumn get paidAmount => real().withDefault(const Constant(0.0))();
+  TextColumn get status => text().withDefault(const Constant('unpaid'))(); // 'unpaid', 'partial', 'paid'
+  DateTimeColumn get dueDate => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+class SupplierDebtPayments extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get supplierDebtId => integer().references(SupplierDebts, #id, onDelete: KeyAction.cascade)();
+  RealColumn get amountPaid => real()();
+  TextColumn get paymentMethod => text().withDefault(const Constant('cash'))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+// 24. Retur Penjualan (Customer Returns)
+class SalesReturns extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get orderId => integer().nullable().references(Orders, #id, onDelete: KeyAction.setNull)();
+  IntColumn get customerId => integer().nullable().references(Customers, #id, onDelete: KeyAction.setNull)();
+  IntColumn get cashierSessionId => integer().references(CashierSessions, #id)();
+  TextColumn get referenceNo => text().unique()(); // RET-SLS-YYYYMMDD-XXXX
+  RealColumn get refundAmount => real().withDefault(const Constant(0.0))();
+  TextColumn get refundMethod => text().withDefault(const Constant('cash'))(); // 'cash' / 'debt_reduction'
+  TextColumn get notes => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+class SalesReturnItems extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get salesReturnId => integer().references(SalesReturns, #id, onDelete: KeyAction.cascade)();
+  IntColumn get productId => integer().references(Products, #id)();
+  IntColumn get unitId => integer().references(ProductUnits, #id)();
+  RealColumn get quantity => real()();
+  RealColumn get price => real()();
+  RealColumn get subtotal => real()();
+}
+
+// 25. Retur Pembelian (Supplier Returns)
+class PurchaseReturns extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get purchaseId => integer().nullable().references(Purchases, #id, onDelete: KeyAction.setNull)();
+  IntColumn get supplierId => integer().references(Suppliers, #id)();
+  IntColumn get cashierSessionId => integer().references(CashierSessions, #id)();
+  TextColumn get referenceNo => text().unique()(); // RET-PUR-YYYYMMDD-XXXX
+  RealColumn get refundAmount => real().withDefault(const Constant(0.0))();
+  TextColumn get refundMethod => text().withDefault(const Constant('cash'))(); // 'cash' / 'debt_reduction'
+  TextColumn get notes => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+class PurchaseReturnItems extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get purchaseReturnId => integer().references(PurchaseReturns, #id, onDelete: KeyAction.cascade)();
+  IntColumn get productId => integer().references(Products, #id)();
+  IntColumn get unitId => integer().references(ProductUnits, #id)();
+  RealColumn get quantity => real()();
+  RealColumn get costPrice => real()();
+  RealColumn get subtotal => real()();
 }
 
 @DriftDatabase(tables: [
@@ -256,12 +344,20 @@ class RolePermissions extends Table {
   Purchases,
   PurchaseItems,
   RolePermissions,
+  CustomerDebts,
+  CustomerDebtPayments,
+  SupplierDebts,
+  SupplierDebtPayments,
+  SalesReturns,
+  SalesReturnItems,
+  PurchaseReturns,
+  PurchaseReturnItems,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -272,15 +368,47 @@ class AppDatabase extends _$AppDatabase {
           if (from < 2) {
             await m.createTable(rolePermissions);
           }
+          if (from < 3) {
+            await m.createTable(customerDebts);
+            await m.createTable(customerDebtPayments);
+            await m.createTable(supplierDebts);
+            await m.createTable(supplierDebtPayments);
+            await m.addColumn(purchases, purchases.paymentType);
+          }
+          if (from < 4) {
+            await m.addColumn(purchases, purchases.downPayment);
+          }
+          if (from < 5) {
+            await m.createTable(salesReturns);
+            await m.createTable(salesReturnItems);
+            await m.createTable(purchaseReturns);
+            await m.createTable(purchaseReturnItems);
+          }
         },
         beforeOpen: (details) async {
+          // Fix any missing payment_type column or null values in purchases
+          try {
+            final columns = await customSelect("PRAGMA table_info(purchases);").get();
+            final hasPaymentType = columns.any((row) => row.read<String>('name') == 'payment_type');
+            if (!hasPaymentType) {
+              await customStatement("ALTER TABLE purchases ADD COLUMN payment_type TEXT DEFAULT 'cash';");
+            }
+            await customStatement("UPDATE purchases SET payment_type = 'cash' WHERE payment_type IS NULL;");
+
+            final hasDownPayment = columns.any((row) => row.read<String>('name') == 'down_payment');
+            if (!hasDownPayment) {
+              await customStatement("ALTER TABLE purchases ADD COLUMN down_payment REAL DEFAULT 0.0;");
+            }
+            await customStatement("UPDATE purchases SET down_payment = 0.0 WHERE down_payment IS NULL;");
+          } catch (_) {}
+
           if (details.wasCreated || (details.hadUpgrade && (details.versionBefore ?? 0) < 2)) {
             final adminExists = await (select(rolePermissions)..where((tbl) => tbl.role.equals('admin'))).getSingleOrNull();
             if (adminExists == null) {
               await into(rolePermissions).insert(
                 RolePermissionsCompanion.insert(
                   role: 'admin',
-                  allowedMenus: '["pos","products","expenses","restock","opname","history","reports","contacts","settings","users"]',
+                  allowedMenus: '["pos","products","expenses","restock","opname","history","reports","contacts","settings","users","returns"]',
                 ),
               );
             }
@@ -289,7 +417,7 @@ class AppDatabase extends _$AppDatabase {
               await into(rolePermissions).insert(
                 RolePermissionsCompanion.insert(
                   role: 'cashier',
-                  allowedMenus: '["pos","history","contacts"]',
+                  allowedMenus: '["pos","history","contacts","returns"]',
                 ),
               );
             }

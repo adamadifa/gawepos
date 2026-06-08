@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:drift/drift.dart' as drift;
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../../core/constants/constants.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/di/injection.dart';
@@ -190,6 +191,89 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 _pickImage(ImageSource.gallery);
               },
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _scanBarcode() {
+    bool scanned = false;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        height: MediaQuery.of(ctx).size.height * 0.7,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 8),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppConstants.primaryColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.qr_code_scanner_rounded,
+                        color: AppConstants.primaryColor, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    'Scan Barcode Produk',
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: MobileScanner(
+                    onDetect: (capture) {
+                      if (scanned) return;
+                      final List<Barcode> barcodes = capture.barcodes;
+                      if (barcodes.isNotEmpty) {
+                        final code = barcodes.first.rawValue;
+                        if (code != null) {
+                          scanned = true;
+                          setState(() {
+                            _barcodeController.text = code;
+                          });
+                          Navigator.pop(ctx);
+                        }
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
           ],
         ),
       ),
@@ -417,8 +501,12 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 Expanded(
                   child: TextFormField(
                     controller: _barcodeController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Barcode / UPC',
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.qr_code_scanner_rounded, color: AppConstants.primaryColor),
+                        onPressed: _scanBarcode,
+                      ),
                     ),
                   ),
                 ),

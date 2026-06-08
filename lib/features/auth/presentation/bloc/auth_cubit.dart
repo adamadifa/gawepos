@@ -5,9 +5,11 @@ import '../../../../core/database/app_database.dart';
 // States
 abstract class AuthState {}
 
-class AuthInitial extends AuthState {}
+class AuthSplash extends AuthState {}
 
 class AuthLoading extends AuthState {}
+
+class AuthIntroRequired extends AuthState {}
 
 class AuthOnboardingRequired extends AuthState {}
 
@@ -40,7 +42,7 @@ class AuthCubit extends Cubit<AuthState> {
   CashierSession? _currentSession;
   List<String> _allowedMenus = [];
 
-  AuthCubit(this._authRepository) : super(AuthInitial());
+  AuthCubit(this._authRepository) : super(AuthSplash());
 
   User? get currentUser => _currentUser;
   CashierSession? get currentSession => _currentSession;
@@ -48,8 +50,9 @@ class AuthCubit extends Cubit<AuthState> {
 
   bool isMenuAllowed(String menuKey) {
     if (_currentUser == null) return false;
-    // Admin always has access to users and settings to prevent lockout
-    if (_currentUser!.role == 'admin' && (menuKey == 'users' || menuKey == 'settings')) {
+    // Admin always has access to users, settings, and owner_dashboard to prevent lockout
+    if (_currentUser!.role == 'admin' && 
+        (menuKey == 'users' || menuKey == 'settings' || menuKey == 'owner_dashboard' || menuKey == 'debts_receivables' || menuKey == 'returns')) {
       return true;
     }
     return _allowedMenus.contains(menuKey);
@@ -57,11 +60,17 @@ class AuthCubit extends Cubit<AuthState> {
 
   // Cek status awal aplikasi saat dibuka
   Future<void> checkStatus() async {
+    await Future.delayed(const Duration(milliseconds: 2000));
     emit(AuthLoading());
     try {
       final hasOutlet = await _authRepository.hasOutlet();
       if (!hasOutlet) {
-        emit(AuthOnboardingRequired());
+        final introShown = await _authRepository.isIntroShown();
+        if (!introShown) {
+          emit(AuthIntroRequired());
+        } else {
+          emit(AuthOnboardingRequired());
+        }
         return;
       }
 
@@ -81,6 +90,12 @@ class AuthCubit extends Cubit<AuthState> {
     } catch (e) {
       emit(AuthError('Gagal memuat status aplikasi: $e'));
     }
+  }
+
+  // Selesaikan intro carousel dan lanjut ke onboarding
+  Future<void> completeIntro() async {
+    await _authRepository.markIntroShown();
+    emit(AuthOnboardingRequired());
   }
 
   // Proses onboarding pertama kali
@@ -163,6 +178,12 @@ class AuthCubit extends Cubit<AuthState> {
   Future<double> getExpectedCashAmount() async {
     if (_currentSession == null) return 0.0;
     return await _authRepository.getExpectedCash(_currentSession!.id);
+  }
+
+  // Mendapatkan rincian transaksi sesi aktif
+  Future<Map<String, dynamic>?> getActiveSessionDetails() async {
+    if (_currentSession == null) return null;
+    return await _authRepository.getActiveSessionDetails(_currentSession!.id);
   }
 
   // Menutup Shift Kasir

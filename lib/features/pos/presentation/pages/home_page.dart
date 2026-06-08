@@ -15,8 +15,11 @@ import 'sales_history_page.dart';
 import '../../../expenses/presentation/pages/expenses_page.dart';
 import '../../../purchases/presentation/pages/purchases_list_page.dart';
 import '../../../inventory/presentation/pages/stock_opname_page.dart';
+import '../../../inventory/presentation/pages/debts_receivables_page.dart';
 import '../../../reports/presentation/pages/reports_menu_page.dart';
+import '../../../reports/presentation/pages/owner_dashboard_page.dart';
 import '../../../master/presentation/pages/contacts_page.dart';
+import '../../../inventory/presentation/pages/returns_menu_page.dart';
 
 class HomePage extends StatefulWidget {
   final User user;
@@ -32,6 +35,7 @@ class _HomePageState extends State<HomePage> {
   late Timer _clockTimer;
   String _currentTime = "";
   String _currentDate = "";
+  bool _showShiftDetails = false;
 
   @override
   void initState() {
@@ -224,6 +228,30 @@ class _HomePageState extends State<HomePage> {
             ),
       },
       {
+        'key': 'owner_dashboard',
+        'icon': Icons.dashboard_outlined,
+        'title': 'Dashboard',
+        'color': Colors.indigo,
+        'onTap': () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const OwnerDashboardPage(),
+              ),
+            ),
+      },
+      {
+        'key': 'debts_receivables',
+        'icon': Icons.account_balance_wallet_outlined,
+        'title': 'Hutang Piutang',
+        'color': Colors.deepOrange,
+        'onTap': () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const DebtsReceivablesPage(),
+              ),
+            ),
+      },
+      {
         'key': 'contacts',
         'icon': Icons.people_alt_rounded,
         'title': 'Kontak',
@@ -232,6 +260,18 @@ class _HomePageState extends State<HomePage> {
               context,
               MaterialPageRoute(
                 builder: (context) => const ContactsPage(),
+              ),
+            ),
+      },
+      {
+        'key': 'returns',
+        'icon': Icons.assignment_return_rounded,
+        'title': 'Retur',
+        'color': Colors.redAccent,
+        'onTap': () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const ReturnsMenuPage(),
               ),
             ),
       },
@@ -361,14 +401,13 @@ class _HomePageState extends State<HomePage> {
                         // Stat card melayang di atas header
                         widget.session == null
                             ? _buildOpenShiftPromptCard()
-                            : FutureBuilder<double>(
+                            : FutureBuilder<Map<String, dynamic>?>(
                                 future: context
                                     .read<AuthCubit>()
-                                    .getExpectedCashAmount(),
+                                    .getActiveSessionDetails(),
                                 builder: (context, snapshot) {
-                                  final expected =
-                                      snapshot.data ?? widget.session!.openingCash;
-                                  return _buildStatCard(expected);
+                                  final details = snapshot.data;
+                                  return _buildStatCard(details, widget.session!.openingCash);
                                 },
                               ),
                         const SizedBox(height: 24),
@@ -430,8 +469,23 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// Redesigned modern gradient stat card with live digital clock.
-  Widget _buildStatCard(double expected) {
+  /// Redesigned modern gradient stat card with live digital clock and details.
+  Widget _buildStatCard(Map<String, dynamic>? details, double openingCash) {
+    final double expected = details?['expectedCash'] ?? openingCash;
+    final Map<String, dynamic> paymentDetails = details?['paymentDetails'] ?? {
+      'cash': 0.0,
+      'qris': 0.0,
+      'card': 0.0,
+      'transfer': 0.0,
+    };
+    final Map<String, dynamic> cashSources = details?['cashSources'] ?? {
+      'opening': openingCash,
+      'sales': 0.0,
+      'debts': 0.0,
+      'supplierDebts': 0.0,
+      'expenses': 0.0,
+    };
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -561,6 +615,97 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          InkWell(
+            onTap: () {
+              setState(() {
+                _showShiftDetails = !_showShiftDetails;
+              });
+            },
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  _showShiftDetails ? 'Sembunyikan Rincian Sesi' : 'Tampilkan Rincian Sesi',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+                Icon(
+                  _showShiftDetails ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                  color: Colors.white,
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+          if (_showShiftDetails) ...[
+            const SizedBox(height: 12),
+            Container(
+              height: 1,
+              color: Colors.white.withValues(alpha: 0.15),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Rincian Pembayaran:',
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 4),
+            _buildStatDetailRow('Tunai (Cash)', paymentDetails['cash'] ?? 0.0),
+            _buildStatDetailRow('QRIS', paymentDetails['qris'] ?? 0.0),
+            _buildStatDetailRow('EDC / Kartu', paymentDetails['card'] ?? 0.0),
+            _buildStatDetailRow('Transfer', paymentDetails['transfer'] ?? 0.0),
+            const SizedBox(height: 12),
+            Text(
+              'Aliran Kas Laci:',
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 4),
+            _buildStatDetailRow('Modal Kas Awal (+)', cashSources['opening'] ?? 0.0),
+            _buildStatDetailRow('Penjualan Tunai (+)', cashSources['sales'] ?? 0.0),
+            _buildStatDetailRow('Penerimaan Piutang Tunai (+)', cashSources['debts'] ?? 0.0),
+            _buildStatDetailRow('Pengeluaran Toko Tunai (-)', cashSources['expenses'] ?? 0.0, isNegative: true),
+            _buildStatDetailRow('Pembayaran Hutang Tunai (-)', cashSources['supplierDebts'] ?? 0.0, isNegative: true),
+            _buildStatDetailRow('Retur Penjualan Tunai (-)', cashSources['salesReturns'] ?? 0.0, isNegative: true),
+            _buildStatDetailRow('Retur Pembelian Tunai (+)', cashSources['purchaseReturns'] ?? 0.0),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatDetailRow(String label, double amount, {bool isNegative = false}) {
+    final formatted = CurrencyFormatter.format(amount);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              color: Colors.white.withValues(alpha: 0.8),
+            ),
+          ),
+          Text(
+            isNegative && amount > 0 ? '- $formatted' : formatted,
+            style: GoogleFonts.poppins(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
         ],
       ),

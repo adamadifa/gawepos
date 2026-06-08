@@ -27,16 +27,30 @@ class InventoryRepository {
     }).toList();
   }
 
-  // Mengambil log riwayat mutasi stok untuk produk tertentu
-  Future<List<Map<String, dynamic>>> getStockMovements(int productId) async {
-    final query = (_db.select(_db.stockMovements)
-          ..where((tbl) => tbl.productId.equals(productId))
-          ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
-        .join([
-      innerJoin(_db.productUnits, _db.productUnits.id.equalsExp(_db.stockMovements.unitId)),
-    ]);
+  // Mengambil seluruh unit satuan yang terdaftar untuk produk tertentu
+  Future<List<ProductUnit>> getProductUnits(int productId) async {
+    return await (_db.select(_db.productUnits)..where((tbl) => tbl.productId.equals(productId))).get();
+  }
 
-    final rows = await query.get();
+  // Mengambil log riwayat mutasi stok untuk produk tertentu dengan filter tanggal opsional
+  Future<List<Map<String, dynamic>>> getStockMovements(int productId, {DateTime? start, DateTime? end}) async {
+    final query = _db.select(_db.stockMovements)
+      ..where((tbl) {
+        var expr = tbl.productId.equals(productId);
+        if (start != null) {
+          expr = expr & tbl.createdAt.isBiggerOrEqualValue(start);
+        }
+        if (end != null) {
+          expr = expr & tbl.createdAt.isSmallerOrEqualValue(end);
+        }
+        return expr;
+      })
+      ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]);
+
+    final rows = await query.join([
+      innerJoin(_db.productUnits, _db.productUnits.id.equalsExp(_db.stockMovements.unitId)),
+    ]).get();
+
     return rows.map((row) {
       return {
         'movement': row.readTable(_db.stockMovements),

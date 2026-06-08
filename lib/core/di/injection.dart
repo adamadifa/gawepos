@@ -23,6 +23,8 @@ import '../../features/purchases/data/purchase_repository.dart';
 import '../../features/purchases/presentation/bloc/purchase_cubit.dart';
 import '../../features/reports/data/reports_repository.dart';
 import '../../features/reports/presentation/bloc/reports_cubit.dart';
+import '../../features/inventory/data/return_repository.dart';
+import '../../features/inventory/presentation/bloc/return_cubit.dart';
 
 final getIt = GetIt.instance;
 
@@ -52,6 +54,7 @@ Future<void> setupLocator() async {
   getIt.registerLazySingleton<ExpensesRepository>(() => ExpensesRepository(getIt<AppDatabase>()));
   getIt.registerLazySingleton<PurchaseRepository>(() => PurchaseRepository(getIt<AppDatabase>()));
   getIt.registerLazySingleton<ReportsRepository>(() => ReportsRepository(getIt<AppDatabase>()));
+  getIt.registerLazySingleton<ReturnRepository>(() => ReturnRepository(getIt<AppDatabase>()));
 
   // Register AuthCubit
   getIt.registerFactory<AuthCubit>(() => AuthCubit(getIt<AuthRepository>()));
@@ -69,6 +72,7 @@ Future<void> setupLocator() async {
 
   // Register Inventory Cubit
   getIt.registerFactory<InventoryCubit>(() => InventoryCubit(getIt<InventoryRepository>()));
+  getIt.registerFactory<ReturnCubit>(() => ReturnCubit(getIt<ReturnRepository>()));
 
   // Register Expenses & Purchase Cubits
   getIt.registerFactory<ExpensesCubit>(() => ExpensesCubit(getIt<ExpensesRepository>()));

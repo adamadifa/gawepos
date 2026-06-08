@@ -22,12 +22,15 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
 
   Supplier? _selectedSupplier;
   final List<Map<String, dynamic>> _selectedItems = []; // item maps
+  String _paymentType = 'cash'; // 'cash' or 'debt'
 
   double _discountAmount = 0.0;
   double _taxAmount = 0.0;
+  double _downPayment = 0.0;
 
   final _discountController = TextEditingController();
   final _taxController = TextEditingController();
+  final _downPaymentController = TextEditingController();
 
   @override
   void initState() {
@@ -36,12 +39,14 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
     context.read<ProductCubit>().loadProducts();
     _discountController.text = '0';
     _taxController.text = '0';
+    _downPaymentController.text = '0';
   }
 
   @override
   void dispose() {
     _discountController.dispose();
     _taxController.dispose();
+    _downPaymentController.dispose();
     super.dispose();
   }
 
@@ -88,6 +93,95 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
         'costPrice': 0.0,
       });
     });
+  }
+
+  void _showSupplierSearchDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        String searchQuery = '';
+        return StatefulBuilder(
+          builder: (ctx, setStateDialog) {
+            return AlertDialog(
+              title: Text(
+                'Pilih Pemasok / Supplier',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              content: SizedBox(
+                width: double.maxFinite,
+                height: 350,
+                child: Column(
+                  children: [
+                    TextField(
+                      decoration: const InputDecoration(
+                        hintText: 'Cari Pemasok...',
+                        hintStyle: TextStyle(fontSize: 12, color: AppConstants.textLightColor),
+                        prefixIcon: Icon(Icons.search_rounded, size: 18),
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      onChanged: (val) {
+                        setStateDialog(() {
+                          searchQuery = val.toLowerCase();
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    Expanded(
+                      child: BlocBuilder<SupplierCubit, SupplierState>(
+                        builder: (context, state) {
+                          if (state is SupplierLoading) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+                          if (state is SupplierLoaded) {
+                            final list = state.suppliers.where((s) {
+                              return s.name.toLowerCase().contains(searchQuery);
+                            }).toList();
+
+                            if (list.isEmpty) {
+                              return Center(
+                                child: Text(
+                                  'Pemasok tidak ditemukan.',
+                                  style: GoogleFonts.poppins(color: AppConstants.textLightColor, fontSize: 12),
+                                ),
+                              );
+                            }
+
+                            return ListView.builder(
+                              itemCount: list.length,
+                              itemBuilder: (context, idx) {
+                                final s = list[idx];
+                                return ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
+                                  title: Text(s.name, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
+                                  subtitle: s.phone != null ? Text(s.phone!, style: const TextStyle(fontSize: 11)) : null,
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedSupplier = s;
+                                    });
+                                    Navigator.pop(ctx);
+                                  },
+                                );
+                              },
+                            );
+                          }
+                          return const Center(child: Text('Gagal memuat pemasok.'));
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('TUTUP'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   void _showProductSearchDialog() {
@@ -222,6 +316,8 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
           items: itemsToSave,
           discountAmount: _discountAmount,
           taxAmount: _taxAmount,
+          paymentType: _paymentType,
+          downPayment: _paymentType == 'debt' ? _downPayment : 0.0,
         );
 
     Navigator.pop(context);
@@ -240,12 +336,13 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
       appBar: AppBar(
         title: Text(
           'Restok Baru',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 18),
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 18, color: Colors.white),
         ),
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: AppConstants.textDarkColor,
+        backgroundColor: AppConstants.primaryColor,
+        foregroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Column(
         children: [
@@ -278,34 +375,32 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
                               ),
                             ),
                             const SizedBox(height: 12),
-                            BlocBuilder<SupplierCubit, SupplierState>(
-                              builder: (context, state) {
-                                if (state is SupplierLoading) {
-                                  return const Center(child: CircularProgressIndicator());
-                                }
-                                if (state is SupplierLoaded) {
-                                  final list = state.suppliers;
-                                  return DropdownButtonFormField<Supplier>(
-                                    value: _selectedSupplier,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Pilih Pemasok *',
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                    ),
-                                    items: list.map((sup) {
-                                      return DropdownMenuItem<Supplier>(
-                                        value: sup,
-                                        child: Text(sup.name, style: GoogleFonts.poppins(fontSize: 14)),
-                                      );
-                                    }).toList(),
-                                    onChanged: (val) {
-                                      setState(() {
-                                        _selectedSupplier = val;
-                                      });
-                                    },
-                                  );
-                                }
-                                return const Text('Gagal memuat daftar pemasok.');
-                              },
+                            InkWell(
+                              onTap: _showSupplierSearchDialog,
+                              borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                              child: InputDecorator(
+                                decoration: InputDecoration(
+                                  labelText: 'Pilih Pemasok *',
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  suffixIcon: _selectedSupplier != null
+                                      ? IconButton(
+                                          icon: const Icon(Icons.clear_rounded, size: 16),
+                                          onPressed: () {
+                                            setState(() {
+                                              _selectedSupplier = null;
+                                            });
+                                          },
+                                        )
+                                      : const Icon(Icons.arrow_drop_down_rounded),
+                                ),
+                                child: Text(
+                                  _selectedSupplier?.name ?? 'Pilih Pemasok...',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 14,
+                                    color: _selectedSupplier == null ? AppConstants.textLightColor : AppConstants.textDarkColor,
+                                  ),
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -555,6 +650,94 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
                           },
                         ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Metode Pembayaran:',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: AppConstants.textLightColor,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ChoiceChip(
+                              label: Center(
+                                child: Text(
+                                  'Tunai (Lunas)',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: _paymentType == 'cash' ? FontWeight.bold : FontWeight.normal,
+                                    color: _paymentType == 'cash' ? Colors.white : AppConstants.textDarkColor,
+                                  ),
+                                ),
+                              ),
+                              selected: _paymentType == 'cash',
+                              selectedColor: AppConstants.primaryColor,
+                              backgroundColor: Colors.grey.shade50,
+                              checkmarkColor: Colors.white,
+                              showCheckmark: false,
+                              onSelected: (selected) {
+                                if (selected) {
+                                  setState(() {
+                                    _paymentType = 'cash';
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ChoiceChip(
+                              label: Center(
+                                child: Text(
+                                  'Hutang (Kredit)',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11,
+                                    fontWeight: _paymentType == 'debt' ? FontWeight.bold : FontWeight.normal,
+                                    color: _paymentType == 'debt' ? Colors.white : AppConstants.textDarkColor,
+                                  ),
+                                ),
+                              ),
+                              selected: _paymentType == 'debt',
+                              selectedColor: AppConstants.primaryColor,
+                              backgroundColor: Colors.grey.shade50,
+                              checkmarkColor: Colors.white,
+                              showCheckmark: false,
+                              onSelected: (selected) {
+                                if (selected) {
+                                  setState(() {
+                                    _paymentType = 'debt';
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (_paymentType == 'debt') ...[
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _downPaymentController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Uang Muka / DP (Rp)',
+                            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          ),
+                          onChanged: (val) {
+                            setState(() {
+                              _downPayment = double.tryParse(val) ?? 0.0;
+                            });
+                          },
+                        ),
+                      ],
                     ],
                   ),
                   const SizedBox(height: 16),

@@ -40,6 +40,8 @@ class PurchaseCubit extends Cubit<PurchaseState> {
     required List<Map<String, dynamic>> items,
     double discountAmount = 0.0,
     double taxAmount = 0.0,
+    String paymentType = 'cash',
+    double downPayment = 0.0,
   }) async {
     emit(PurchaseLoading());
     try {
@@ -48,6 +50,8 @@ class PurchaseCubit extends Cubit<PurchaseState> {
         items: items,
         discountAmount: discountAmount,
         taxAmount: taxAmount,
+        paymentType: paymentType,
+        downPayment: downPayment,
       );
       final list = await _repository.getPurchases();
       emit(PurchaseLoaded(list));

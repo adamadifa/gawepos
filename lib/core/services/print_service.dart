@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:blue_thermal_printer/blue_thermal_printer.dart';
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:intl/intl.dart';
+import 'package:image/image.dart' as img;
 import '../../features/pos/data/sales_repository.dart';
 import '../../core/utils/currency_formatter.dart';
 import '../../core/database/app_database.dart';
@@ -113,11 +115,31 @@ class PrintService {
     final shopAddress = await _salesRepository.getSetting('shop_address') ?? '';
     final receiptHeader = await _salesRepository.getSetting('receipt_header') ?? 'TERIMA KASIH TELAH BERBELANJA';
     final receiptFooter = await _salesRepository.getSetting('receipt_footer') ?? '';
+    final shopLogoPath = await _salesRepository.getSetting('shop_logo') ?? '';
 
     try {
       final profile = await CapabilityProfile.load();
       final generator = Generator(PaperSize.mm58, profile);
       List<int> bytes = [];
+
+      // --- LOGO TOKO ---
+      if (shopLogoPath.isNotEmpty) {
+        final logoFile = File(shopLogoPath);
+        if (await logoFile.exists()) {
+          try {
+            final bytesLogo = await logoFile.readAsBytes();
+            final imgDecoded = img.decodeImage(bytesLogo);
+            if (imgDecoded != null) {
+              // Resize image agar pas dengan lebar struk 58mm (misalnya lebar maksimal 180-200 pixel)
+              final resizedImg = img.copyResize(imgDecoded, width: 180);
+              bytes += generator.imageRaster(resizedImg, align: PosAlign.center);
+              bytes += generator.feed(1);
+            }
+          } catch (_) {
+            // Abaikan jika pemrosesan gambar gagal agar struk tetap tercetak
+          }
+        }
+      }
 
       // --- HEADER ---
       bytes += generator.text(shopName, styles: const PosStyles(align: PosAlign.center, bold: true, height: PosTextSize.size2, width: PosTextSize.size2));
@@ -144,15 +166,15 @@ class PrintService {
       // --- ITEMS ---
       for (var itemDetail in items) {
         final OrderItem item = itemDetail['item'];
-        final Product product = itemDetail['product'];
-        final ProductUnit unit = itemDetail['unit'];
+        final Product? product = itemDetail['product'];
+        final ProductUnit? unit = itemDetail['unit'];
 
         // Row 1: Nama Barang
-        bytes += generator.text(product.name, styles: const PosStyles(bold: true));
+        bytes += generator.text(product?.name ?? 'Produk Terhapus (ID: ${item.productId})', styles: const PosStyles(bold: true));
         
         // Row 2: Qty x Price dan Subtotal
         final qtyStr = item.quantity.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '');
-        final unitName = unit.name;
+        final unitName = unit?.name ?? 'Satuan';
         final priceStr = _formatCurr(item.price);
         final itemSubtotalStr = _formatCurr(item.subtotal);
         

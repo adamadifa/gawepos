@@ -132,6 +132,33 @@ class AuthRepository {
     }
   }
 
+  // Cek apakah intro carousel sudah pernah ditampilkan
+  Future<bool> isIntroShown() async {
+    final query = _db.select(_db.settings)
+      ..where((tbl) => tbl.key.equals('onboarding_intro_shown'));
+    final record = await query.getSingleOrNull();
+    return record?.value == '1';
+  }
+
+  // Tandai intro carousel sudah ditampilkan
+  Future<void> markIntroShown() async {
+    final existing = await (_db.select(_db.settings)
+      ..where((tbl) => tbl.key.equals('onboarding_intro_shown')))
+      .getSingleOrNull();
+    if (existing != null) {
+      await (_db.update(_db.settings)
+        ..where((tbl) => tbl.key.equals('onboarding_intro_shown')))
+        .write(const SettingsCompanion(value: Value('1')));
+    } else {
+      await _db.into(_db.settings).insert(
+        SettingsCompanion.insert(
+          key: 'onboarding_intro_shown',
+          value: const Value('1'),
+        ),
+      );
+    }
+  }
+
   // Ambil menu yang diizinkan untuk role tertentu
   Future<List<String>> getAllowedMenus(String role) async {
     final query = _db.select(_db.rolePermissions)
@@ -188,13 +215,14 @@ class AuthRepository {
   }
 
   // Hitung ekspektasi uang kas di laci kasir saat ini
-  // expectedCash = openingCash + total Cash Payments - total Expenses
+  // expectedCash = openingCash + total Cash Payments + total Cash Debt Payments - total Expenses - total Sales Returns + total Purchase Returns
   Future<double> getExpectedCash(int sessionId) async {
     // 1. Ambil modal awal sesi
     final session = await (_db.select(_db.cashierSessions)
           ..where((tbl) => tbl.id.equals(sessionId)))
         .getSingle();
     final modalAwal = session.openingCash;
+    final endTime = session.closeTime ?? DateTime.now();
 
     // 2. Ambil total pembayaran penjualan tunai (cash) pada sesi ini
     final ordersInSession = await (_db.select(_db.orders)
@@ -210,12 +238,118 @@ class AuthRepository {
       totalCashSales = payments.fold(0.0, (sum, item) => sum + item.amount);
     }
 
-    // 3. Ambil total pengeluaran (expenses) selama sesi ini berlangsung (sejak openTime)
+    // 3. Ambil total pembayaran piutang tunai (cash) selama sesi ini berlangsung
+    final debtPayments = await (_db.select(_db.customerDebtPayments)
+          ..where((tbl) => tbl.createdAt.isBetweenValues(session.openTime, endTime) & tbl.paymentMethod.equals('cash')))
+        .get();
+    final totalCashDebtPayments = debtPayments.fold(0.0, (sum, item) => sum + item.amountPaid);
+
+    // 3b. Ambil total pembayaran hutang supplier tunai (cash) selama sesi ini berlangsung
+    final supplierDebtPayments = await (_db.select(_db.supplierDebtPayments)
+          ..where((tbl) => tbl.createdAt.isBetweenValues(session.openTime, endTime) & tbl.paymentMethod.equals('cash')))
+        .get();
+    final totalCashSupplierDebtPayments = supplierDebtPayments.fold(0.0, (sum, item) => sum + item.amountPaid);
+
+    // 4. Ambil total pengeluaran (expenses) selama sesi ini berlangsung
     final expenses = await (_db.select(_db.expenses)
-          ..where((tbl) => tbl.date.isBiggerOrEqualValue(session.openTime)))
+          ..where((tbl) => tbl.date.isBetweenValues(session.openTime, endTime)))
         .get();
     final totalExpenses = expenses.fold(0.0, (sum, item) => sum + item.amount);
 
-    return modalAwal + totalCashSales - totalExpenses;
+    // 5. Ambil total retur penjualan tunai (refund cash)
+    final salesReturns = await (_db.select(_db.salesReturns)
+          ..where((tbl) => tbl.cashierSessionId.equals(sessionId) & tbl.refundMethod.equals('cash')))
+        .get();
+    final totalSalesReturnRefunds = salesReturns.fold(0.0, (sum, item) => sum + item.refundAmount);
+
+    // 6. Ambil total retur pembelian tunai (refund cash dari supplier)
+    final purchaseReturns = await (_db.select(_db.purchaseReturns)
+          ..where((tbl) => tbl.cashierSessionId.equals(sessionId) & tbl.refundMethod.equals('cash')))
+        .get();
+    final totalPurchaseReturnRefunds = purchaseReturns.fold(0.0, (sum, item) => sum + item.refundAmount);
+
+    return modalAwal + totalCashSales + totalCashDebtPayments - totalCashSupplierDebtPayments - totalExpenses - totalSalesReturnRefunds + totalPurchaseReturnRefunds;
+  }
+
+  Future<Map<String, dynamic>> getActiveSessionDetails(int sessionId) async {
+    final session = await (_db.select(_db.cashierSessions)
+          ..where((tbl) => tbl.id.equals(sessionId)))
+        .getSingle();
+    final modalAwal = session.openingCash;
+    final endTime = session.closeTime ?? DateTime.now();
+
+    final ordersInSession = await (_db.select(_db.orders)
+          ..where((tbl) => tbl.cashierSessionId.equals(sessionId) & tbl.status.equals('completed')))
+        .get();
+
+    double totalCash = 0.0;
+    double totalQris = 0.0;
+    double totalCard = 0.0;
+    double totalTransfer = 0.0;
+
+    if (ordersInSession.isNotEmpty) {
+      final orderIds = ordersInSession.map((o) => o.id).toList();
+      final payments = await (_db.select(_db.orderPayments)
+            ..where((tbl) => tbl.orderId.isIn(orderIds)))
+          .get();
+
+      for (var p in payments) {
+        if (p.paymentMethod == 'cash') {
+          totalCash += p.amount;
+        } else if (p.paymentMethod == 'qris') {
+          totalQris += p.amount;
+        } else if (p.paymentMethod == 'card') {
+          totalCard += p.amount;
+        } else if (p.paymentMethod == 'transfer') {
+          totalTransfer += p.amount;
+        }
+      }
+    }
+
+    final debtPayments = await (_db.select(_db.customerDebtPayments)
+          ..where((tbl) => tbl.createdAt.isBetweenValues(session.openTime, endTime) & tbl.paymentMethod.equals('cash')))
+        .get();
+    final totalCashDebtPayments = debtPayments.fold(0.0, (sum, item) => sum + item.amountPaid);
+
+    final supplierDebtPayments = await (_db.select(_db.supplierDebtPayments)
+          ..where((tbl) => tbl.createdAt.isBetweenValues(session.openTime, endTime) & tbl.paymentMethod.equals('cash')))
+        .get();
+    final totalCashSupplierDebtPayments = supplierDebtPayments.fold(0.0, (sum, item) => sum + item.amountPaid);
+
+    final expenses = await (_db.select(_db.expenses)
+          ..where((tbl) => tbl.date.isBetweenValues(session.openTime, endTime)))
+        .get();
+    final totalExpenses = expenses.fold(0.0, (sum, item) => sum + item.amount);
+
+    final salesReturns = await (_db.select(_db.salesReturns)
+          ..where((tbl) => tbl.cashierSessionId.equals(sessionId) & tbl.refundMethod.equals('cash')))
+        .get();
+    final totalSalesReturnRefunds = salesReturns.fold(0.0, (sum, item) => sum + item.refundAmount);
+
+    final purchaseReturns = await (_db.select(_db.purchaseReturns)
+          ..where((tbl) => tbl.cashierSessionId.equals(sessionId) & tbl.refundMethod.equals('cash')))
+        .get();
+    final totalPurchaseReturnRefunds = purchaseReturns.fold(0.0, (sum, item) => sum + item.refundAmount);
+
+    final double expectedCash = modalAwal + totalCash + totalCashDebtPayments - totalCashSupplierDebtPayments - totalExpenses - totalSalesReturnRefunds + totalPurchaseReturnRefunds;
+
+    return {
+      'expectedCash': expectedCash,
+      'paymentDetails': {
+        'cash': totalCash,
+        'qris': totalQris,
+        'card': totalCard,
+        'transfer': totalTransfer,
+      },
+      'cashSources': {
+        'opening': modalAwal,
+        'sales': totalCash,
+        'debts': totalCashDebtPayments,
+        'supplierDebts': totalCashSupplierDebtPayments,
+        'expenses': totalExpenses,
+        'salesReturns': totalSalesReturnRefunds,
+        'purchaseReturns': totalPurchaseReturnRefunds,
+      }
+    };
   }
 }

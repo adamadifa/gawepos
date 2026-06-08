@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/inventory_repository.dart';
+import '../../../../core/database/app_database.dart';
 
 abstract class InventoryState {}
 
@@ -14,7 +15,8 @@ class InventoryLoaded extends InventoryState {
 
 class StockCardLoaded extends InventoryState {
   final List<Map<String, dynamic>> movements;
-  StockCardLoaded(this.movements);
+  final List<ProductUnit> units;
+  StockCardLoaded(this.movements, this.units);
 }
 
 class InventorySuccess extends InventoryState {}
@@ -39,11 +41,12 @@ class InventoryCubit extends Cubit<InventoryState> {
     }
   }
 
-  Future<void> loadStockCard(int productId) async {
+  Future<void> loadStockCard(int productId, {DateTime? start, DateTime? end}) async {
     emit(InventoryLoading());
     try {
-      final movements = await _repository.getStockMovements(productId);
-      emit(StockCardLoaded(movements));
+      final movements = await _repository.getStockMovements(productId, start: start, end: end);
+      final units = await _repository.getProductUnits(productId);
+      emit(StockCardLoaded(movements, units));
     } catch (e) {
       emit(InventoryError('Gagal memuat kartu stok: $e'));
     }
@@ -65,6 +68,29 @@ class InventoryCubit extends Cubit<InventoryState> {
         physicalQty: physicalQty,
         notes: notes,
       );
+      emit(InventorySuccess());
+      await loadInventory();
+    } catch (e) {
+      emit(InventoryError('Gagal melakukan penyesuaian stok: $e'));
+    }
+  }
+
+  Future<void> adjustStockMultiple({
+    required int productId,
+    required List<Map<String, dynamic>> adjustments,
+    String? notes,
+  }) async {
+    emit(InventoryLoading());
+    try {
+      for (var adj in adjustments) {
+        await _repository.adjustStock(
+          productId: productId,
+          unitId: adj['unitId'] as int,
+          theoreticalQty: adj['theoreticalQty'] as double,
+          physicalQty: adj['physicalQty'] as double,
+          notes: notes,
+        );
+      }
       emit(InventorySuccess());
       await loadInventory();
     } catch (e) {

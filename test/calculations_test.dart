@@ -43,6 +43,7 @@ void main() {
           discountAmount: 1000, // 2 * 10000 - 1000 = 19000
           availableUnits: [],
           pricingMatrix: [],
+          priceTierId: 1,
         ),
         CartItem(
           product: mockProduct2,
@@ -52,6 +53,7 @@ void main() {
           discountAmount: 0, // 1 * 5000 - 0 = 5000
           availableUnits: [],
           pricingMatrix: [],
+          priceTierId: 1,
         ),
       ];
 
@@ -70,6 +72,7 @@ void main() {
           discountAmount: 0, // subtotal = 20000
           availableUnits: [],
           pricingMatrix: [],
+          priceTierId: 1,
         ),
       ];
 
@@ -93,6 +96,7 @@ void main() {
           discountAmount: 0, // subtotal = 20000
           availableUnits: [],
           pricingMatrix: [],
+          priceTierId: 1,
         ),
       ];
 
@@ -116,6 +120,7 @@ void main() {
           discountAmount: 0, // subtotal = 20000
           availableUnits: [],
           pricingMatrix: [],
+          priceTierId: 1,
         ),
       ];
 

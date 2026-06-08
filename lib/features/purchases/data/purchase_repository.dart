@@ -70,6 +70,8 @@ class PurchaseRepository {
     required List<Map<String, dynamic>> items, // contains: productId, unitId, quantity, costPrice
     double discountAmount = 0.0,
     double taxAmount = 0.0,
+    String paymentType = 'cash',
+    double downPayment = 0.0,
   }) async {
     return await _db.transaction(() async {
       // 1. Generate Ref No: PUR-YYYYMMDD-XXXX
@@ -95,10 +97,12 @@ class PurchaseRepository {
               supplierId: supplierId,
               referenceNo: refNo,
               status: const Value('pending'),
+              paymentType: Value(paymentType),
               subtotal: Value(subtotal),
               discountAmount: Value(discountAmount),
               taxAmount: Value(taxAmount),
               grandTotal: Value(grandTotal),
+              downPayment: Value(downPayment),
               createdAt: Value(now),
             ),
           );
@@ -129,6 +133,7 @@ class PurchaseRepository {
 
   // Confirm receipt of purchase (Updates stock levels & logs history)
   Future<void> confirmReceive(int purchaseId) async {
+    final now = DateTime.now();
     await _db.transaction(() async {
       final purchase = await (_db.select(_db.purchases)
             ..where((tbl) => tbl.id.equals(purchaseId)))
@@ -142,12 +147,39 @@ class PurchaseRepository {
             purchase.copyWith(status: 'received'),
           );
 
+      // Jika pembelian menggunakan sistem Hutang, catat ke SupplierDebts
+      if (purchase.paymentType == 'debt') {
+        final dp = purchase.downPayment;
+        final statusVal = dp >= purchase.grandTotal ? 'paid' : (dp > 0 ? 'partial' : 'unpaid');
+        
+        final debtId = await _db.into(_db.supplierDebts).insert(
+              SupplierDebtsCompanion.insert(
+                supplierId: purchase.supplierId,
+                purchaseId: Value(purchaseId),
+                amount: purchase.grandTotal,
+                paidAmount: Value(dp),
+                status: Value(statusVal),
+                createdAt: Value(now),
+              ),
+            );
+
+        if (dp > 0) {
+          await _db.into(_db.supplierDebtPayments).insert(
+                SupplierDebtPaymentsCompanion.insert(
+                  supplierDebtId: debtId,
+                  amountPaid: dp,
+                  paymentMethod: const Value('cash'),
+                  createdAt: Value(now),
+                ),
+              );
+        }
+      }
+
       // Fetch items
       final items = await (_db.select(_db.purchaseItems)
             ..where((tbl) => tbl.purchaseId.equals(purchaseId)))
           .get();
 
-      final now = DateTime.now();
 
       for (var item in items) {
         // Find existing inventory record
