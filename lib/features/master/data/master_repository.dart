@@ -271,12 +271,6 @@ class MasterRepository {
         SuppliersCompanion.insert(name: 'CV Makmur Sejahtera', phone: const Value('031-7778889'), address: const Value('Raya Dupak, Surabaya')),
       );
 
-      // Fetch Price Tiers
-      final priceTiers = await getPriceTiers();
-      if (priceTiers.isEmpty) return;
-      final tier1Id = priceTiers[0].id;
-      final tier2Id = priceTiers.length > 1 ? priceTiers[1].id : tier1Id;
-
       // 5. Insert Product 1: Indomie Goreng
       final p1Id = await _db.into(_db.products).insert(
         ProductsCompanion.insert(
@@ -295,12 +289,12 @@ class MasterRepository {
       final u1SubId = await _db.into(_db.productUnits).insert(
         ProductUnitsCompanion.insert(productId: p1Id, name: 'Dus', conversionFactor: const Value(40.0), isBase: const Value(false)),
       );
-      // Prices for Pcs
-      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p1Id, unitId: u1BaseId, priceTierId: tier1Id, price: const Value(3500.0)));
-      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p1Id, unitId: u1BaseId, priceTierId: tier2Id, price: const Value(3300.0)));
-      // Prices for Dus
-      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p1Id, unitId: u1SubId, priceTierId: tier1Id, price: const Value(130000.0)));
-      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p1Id, unitId: u1SubId, priceTierId: tier2Id, price: const Value(125000.0)));
+      // Quantity breaks for Pcs
+      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p1Id, unitId: u1BaseId, priceTierId: 1, price: const Value(3500.0), minQty: const Value(1)));
+      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p1Id, unitId: u1BaseId, priceTierId: 1, price: const Value(3300.0), minQty: const Value(10)));
+      // Quantity breaks for Dus
+      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p1Id, unitId: u1SubId, priceTierId: 1, price: const Value(130000.0), minQty: const Value(1)));
+      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p1Id, unitId: u1SubId, priceTierId: 1, price: const Value(125000.0), minQty: const Value(5)));
 
       // 6. Insert Product 2: Coca-Cola
       final p2Id = await _db.into(_db.products).insert(
@@ -320,12 +314,12 @@ class MasterRepository {
       final u2SubId = await _db.into(_db.productUnits).insert(
         ProductUnitsCompanion.insert(productId: p2Id, name: 'Pack', conversionFactor: const Value(6.0), isBase: const Value(false)),
       );
-      // Prices for Can
-      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p2Id, unitId: u2BaseId, priceTierId: tier1Id, price: const Value(6500.0)));
-      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p2Id, unitId: u2BaseId, priceTierId: tier2Id, price: const Value(6000.0)));
-      // Prices for Pack
-      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p2Id, unitId: u2SubId, priceTierId: tier1Id, price: const Value(37000.0)));
-      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p2Id, unitId: u2SubId, priceTierId: tier2Id, price: const Value(34000.0)));
+      // Quantity breaks for Can
+      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p2Id, unitId: u2BaseId, priceTierId: 1, price: const Value(6500.0), minQty: const Value(1)));
+      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p2Id, unitId: u2BaseId, priceTierId: 1, price: const Value(6000.0), minQty: const Value(12)));
+      // Quantity breaks for Pack
+      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p2Id, unitId: u2SubId, priceTierId: 1, price: const Value(37000.0), minQty: const Value(1)));
+      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p2Id, unitId: u2SubId, priceTierId: 1, price: const Value(34000.0), minQty: const Value(3)));
     });
   }
 }

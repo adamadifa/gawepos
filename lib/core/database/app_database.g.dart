@@ -1560,6 +1560,21 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     ),
     defaultValue: const Constant(true),
   );
+  static const VerificationMeta _allowManualPriceMeta = const VerificationMeta(
+    'allowManualPrice',
+  );
+  @override
+  late final GeneratedColumn<bool> allowManualPrice = GeneratedColumn<bool>(
+    'allow_manual_price',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("allow_manual_price" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -1586,6 +1601,7 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     isStockManaged,
     minStockAlert,
     isActive,
+    allowManualPrice,
     createdAt,
   ];
   @override
@@ -1683,6 +1699,15 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
         isActive.isAcceptableOrUnknown(data['is_active']!, _isActiveMeta),
       );
     }
+    if (data.containsKey('allow_manual_price')) {
+      context.handle(
+        _allowManualPriceMeta,
+        allowManualPrice.isAcceptableOrUnknown(
+          data['allow_manual_price']!,
+          _allowManualPriceMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -1746,6 +1771,10 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
         DriftSqlType.bool,
         data['${effectivePrefix}is_active'],
       )!,
+      allowManualPrice: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}allow_manual_price'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -1772,6 +1801,7 @@ class Product extends DataClass implements Insertable<Product> {
   final bool isStockManaged;
   final int minStockAlert;
   final bool isActive;
+  final bool allowManualPrice;
   final DateTime createdAt;
   const Product({
     required this.id,
@@ -1786,6 +1816,7 @@ class Product extends DataClass implements Insertable<Product> {
     required this.isStockManaged,
     required this.minStockAlert,
     required this.isActive,
+    required this.allowManualPrice,
     required this.createdAt,
   });
   @override
@@ -1815,6 +1846,7 @@ class Product extends DataClass implements Insertable<Product> {
     map['is_stock_managed'] = Variable<bool>(isStockManaged);
     map['min_stock_alert'] = Variable<int>(minStockAlert);
     map['is_active'] = Variable<bool>(isActive);
+    map['allow_manual_price'] = Variable<bool>(allowManualPrice);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -1843,6 +1875,7 @@ class Product extends DataClass implements Insertable<Product> {
       isStockManaged: Value(isStockManaged),
       minStockAlert: Value(minStockAlert),
       isActive: Value(isActive),
+      allowManualPrice: Value(allowManualPrice),
       createdAt: Value(createdAt),
     );
   }
@@ -1865,6 +1898,7 @@ class Product extends DataClass implements Insertable<Product> {
       isStockManaged: serializer.fromJson<bool>(json['isStockManaged']),
       minStockAlert: serializer.fromJson<int>(json['minStockAlert']),
       isActive: serializer.fromJson<bool>(json['isActive']),
+      allowManualPrice: serializer.fromJson<bool>(json['allowManualPrice']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -1884,6 +1918,7 @@ class Product extends DataClass implements Insertable<Product> {
       'isStockManaged': serializer.toJson<bool>(isStockManaged),
       'minStockAlert': serializer.toJson<int>(minStockAlert),
       'isActive': serializer.toJson<bool>(isActive),
+      'allowManualPrice': serializer.toJson<bool>(allowManualPrice),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -1901,6 +1936,7 @@ class Product extends DataClass implements Insertable<Product> {
     bool? isStockManaged,
     int? minStockAlert,
     bool? isActive,
+    bool? allowManualPrice,
     DateTime? createdAt,
   }) => Product(
     id: id ?? this.id,
@@ -1915,6 +1951,7 @@ class Product extends DataClass implements Insertable<Product> {
     isStockManaged: isStockManaged ?? this.isStockManaged,
     minStockAlert: minStockAlert ?? this.minStockAlert,
     isActive: isActive ?? this.isActive,
+    allowManualPrice: allowManualPrice ?? this.allowManualPrice,
     createdAt: createdAt ?? this.createdAt,
   );
   Product copyWithCompanion(ProductsCompanion data) {
@@ -1941,6 +1978,9 @@ class Product extends DataClass implements Insertable<Product> {
           ? data.minStockAlert.value
           : this.minStockAlert,
       isActive: data.isActive.present ? data.isActive.value : this.isActive,
+      allowManualPrice: data.allowManualPrice.present
+          ? data.allowManualPrice.value
+          : this.allowManualPrice,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -1960,6 +2000,7 @@ class Product extends DataClass implements Insertable<Product> {
           ..write('isStockManaged: $isStockManaged, ')
           ..write('minStockAlert: $minStockAlert, ')
           ..write('isActive: $isActive, ')
+          ..write('allowManualPrice: $allowManualPrice, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -1979,6 +2020,7 @@ class Product extends DataClass implements Insertable<Product> {
     isStockManaged,
     minStockAlert,
     isActive,
+    allowManualPrice,
     createdAt,
   );
   @override
@@ -1997,6 +2039,7 @@ class Product extends DataClass implements Insertable<Product> {
           other.isStockManaged == this.isStockManaged &&
           other.minStockAlert == this.minStockAlert &&
           other.isActive == this.isActive &&
+          other.allowManualPrice == this.allowManualPrice &&
           other.createdAt == this.createdAt);
 }
 
@@ -2013,6 +2056,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
   final Value<bool> isStockManaged;
   final Value<int> minStockAlert;
   final Value<bool> isActive;
+  final Value<bool> allowManualPrice;
   final Value<DateTime> createdAt;
   const ProductsCompanion({
     this.id = const Value.absent(),
@@ -2027,6 +2071,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     this.isStockManaged = const Value.absent(),
     this.minStockAlert = const Value.absent(),
     this.isActive = const Value.absent(),
+    this.allowManualPrice = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   ProductsCompanion.insert({
@@ -2042,6 +2087,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     this.isStockManaged = const Value.absent(),
     this.minStockAlert = const Value.absent(),
     this.isActive = const Value.absent(),
+    this.allowManualPrice = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Product> custom({
@@ -2057,6 +2103,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Expression<bool>? isStockManaged,
     Expression<int>? minStockAlert,
     Expression<bool>? isActive,
+    Expression<bool>? allowManualPrice,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -2072,6 +2119,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       if (isStockManaged != null) 'is_stock_managed': isStockManaged,
       if (minStockAlert != null) 'min_stock_alert': minStockAlert,
       if (isActive != null) 'is_active': isActive,
+      if (allowManualPrice != null) 'allow_manual_price': allowManualPrice,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -2089,6 +2137,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Value<bool>? isStockManaged,
     Value<int>? minStockAlert,
     Value<bool>? isActive,
+    Value<bool>? allowManualPrice,
     Value<DateTime>? createdAt,
   }) {
     return ProductsCompanion(
@@ -2104,6 +2153,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       isStockManaged: isStockManaged ?? this.isStockManaged,
       minStockAlert: minStockAlert ?? this.minStockAlert,
       isActive: isActive ?? this.isActive,
+      allowManualPrice: allowManualPrice ?? this.allowManualPrice,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -2147,6 +2197,9 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     if (isActive.present) {
       map['is_active'] = Variable<bool>(isActive.value);
     }
+    if (allowManualPrice.present) {
+      map['allow_manual_price'] = Variable<bool>(allowManualPrice.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -2168,6 +2221,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
           ..write('isStockManaged: $isStockManaged, ')
           ..write('minStockAlert: $minStockAlert, ')
           ..write('isActive: $isActive, ')
+          ..write('allowManualPrice: $allowManualPrice, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -6152,6 +6206,18 @@ class $OrderItemsTable extends OrderItems
     requiredDuringInsert: false,
     defaultValue: const Constant(0.0),
   );
+  static const VerificationMeta _minQtyAppliedMeta = const VerificationMeta(
+    'minQtyApplied',
+  );
+  @override
+  late final GeneratedColumn<int> minQtyApplied = GeneratedColumn<int>(
+    'min_qty_applied',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(1),
+  );
   static const VerificationMeta _subtotalMeta = const VerificationMeta(
     'subtotal',
   );
@@ -6172,6 +6238,7 @@ class $OrderItemsTable extends OrderItems
     quantity,
     price,
     discountAmount,
+    minQtyApplied,
     subtotal,
   ];
   @override
@@ -6238,6 +6305,15 @@ class $OrderItemsTable extends OrderItems
         ),
       );
     }
+    if (data.containsKey('min_qty_applied')) {
+      context.handle(
+        _minQtyAppliedMeta,
+        minQtyApplied.isAcceptableOrUnknown(
+          data['min_qty_applied']!,
+          _minQtyAppliedMeta,
+        ),
+      );
+    }
     if (data.containsKey('subtotal')) {
       context.handle(
         _subtotalMeta,
@@ -6283,6 +6359,10 @@ class $OrderItemsTable extends OrderItems
         DriftSqlType.double,
         data['${effectivePrefix}discount_amount'],
       )!,
+      minQtyApplied: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}min_qty_applied'],
+      )!,
       subtotal: attachedDatabase.typeMapping.read(
         DriftSqlType.double,
         data['${effectivePrefix}subtotal'],
@@ -6304,6 +6384,7 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
   final double quantity;
   final double price;
   final double discountAmount;
+  final int minQtyApplied;
   final double subtotal;
   const OrderItem({
     required this.id,
@@ -6313,6 +6394,7 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
     required this.quantity,
     required this.price,
     required this.discountAmount,
+    required this.minQtyApplied,
     required this.subtotal,
   });
   @override
@@ -6325,6 +6407,7 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
     map['quantity'] = Variable<double>(quantity);
     map['price'] = Variable<double>(price);
     map['discount_amount'] = Variable<double>(discountAmount);
+    map['min_qty_applied'] = Variable<int>(minQtyApplied);
     map['subtotal'] = Variable<double>(subtotal);
     return map;
   }
@@ -6338,6 +6421,7 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
       quantity: Value(quantity),
       price: Value(price),
       discountAmount: Value(discountAmount),
+      minQtyApplied: Value(minQtyApplied),
       subtotal: Value(subtotal),
     );
   }
@@ -6355,6 +6439,7 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
       quantity: serializer.fromJson<double>(json['quantity']),
       price: serializer.fromJson<double>(json['price']),
       discountAmount: serializer.fromJson<double>(json['discountAmount']),
+      minQtyApplied: serializer.fromJson<int>(json['minQtyApplied']),
       subtotal: serializer.fromJson<double>(json['subtotal']),
     );
   }
@@ -6369,6 +6454,7 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
       'quantity': serializer.toJson<double>(quantity),
       'price': serializer.toJson<double>(price),
       'discountAmount': serializer.toJson<double>(discountAmount),
+      'minQtyApplied': serializer.toJson<int>(minQtyApplied),
       'subtotal': serializer.toJson<double>(subtotal),
     };
   }
@@ -6381,6 +6467,7 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
     double? quantity,
     double? price,
     double? discountAmount,
+    int? minQtyApplied,
     double? subtotal,
   }) => OrderItem(
     id: id ?? this.id,
@@ -6390,6 +6477,7 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
     quantity: quantity ?? this.quantity,
     price: price ?? this.price,
     discountAmount: discountAmount ?? this.discountAmount,
+    minQtyApplied: minQtyApplied ?? this.minQtyApplied,
     subtotal: subtotal ?? this.subtotal,
   );
   OrderItem copyWithCompanion(OrderItemsCompanion data) {
@@ -6403,6 +6491,9 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
       discountAmount: data.discountAmount.present
           ? data.discountAmount.value
           : this.discountAmount,
+      minQtyApplied: data.minQtyApplied.present
+          ? data.minQtyApplied.value
+          : this.minQtyApplied,
       subtotal: data.subtotal.present ? data.subtotal.value : this.subtotal,
     );
   }
@@ -6417,6 +6508,7 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
           ..write('quantity: $quantity, ')
           ..write('price: $price, ')
           ..write('discountAmount: $discountAmount, ')
+          ..write('minQtyApplied: $minQtyApplied, ')
           ..write('subtotal: $subtotal')
           ..write(')'))
         .toString();
@@ -6431,6 +6523,7 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
     quantity,
     price,
     discountAmount,
+    minQtyApplied,
     subtotal,
   );
   @override
@@ -6444,6 +6537,7 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
           other.quantity == this.quantity &&
           other.price == this.price &&
           other.discountAmount == this.discountAmount &&
+          other.minQtyApplied == this.minQtyApplied &&
           other.subtotal == this.subtotal);
 }
 
@@ -6455,6 +6549,7 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
   final Value<double> quantity;
   final Value<double> price;
   final Value<double> discountAmount;
+  final Value<int> minQtyApplied;
   final Value<double> subtotal;
   const OrderItemsCompanion({
     this.id = const Value.absent(),
@@ -6464,6 +6559,7 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
     this.quantity = const Value.absent(),
     this.price = const Value.absent(),
     this.discountAmount = const Value.absent(),
+    this.minQtyApplied = const Value.absent(),
     this.subtotal = const Value.absent(),
   });
   OrderItemsCompanion.insert({
@@ -6474,6 +6570,7 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
     required double quantity,
     required double price,
     this.discountAmount = const Value.absent(),
+    this.minQtyApplied = const Value.absent(),
     required double subtotal,
   }) : orderId = Value(orderId),
        productId = Value(productId),
@@ -6489,6 +6586,7 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
     Expression<double>? quantity,
     Expression<double>? price,
     Expression<double>? discountAmount,
+    Expression<int>? minQtyApplied,
     Expression<double>? subtotal,
   }) {
     return RawValuesInsertable({
@@ -6499,6 +6597,7 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
       if (quantity != null) 'quantity': quantity,
       if (price != null) 'price': price,
       if (discountAmount != null) 'discount_amount': discountAmount,
+      if (minQtyApplied != null) 'min_qty_applied': minQtyApplied,
       if (subtotal != null) 'subtotal': subtotal,
     });
   }
@@ -6511,6 +6610,7 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
     Value<double>? quantity,
     Value<double>? price,
     Value<double>? discountAmount,
+    Value<int>? minQtyApplied,
     Value<double>? subtotal,
   }) {
     return OrderItemsCompanion(
@@ -6521,6 +6621,7 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
       quantity: quantity ?? this.quantity,
       price: price ?? this.price,
       discountAmount: discountAmount ?? this.discountAmount,
+      minQtyApplied: minQtyApplied ?? this.minQtyApplied,
       subtotal: subtotal ?? this.subtotal,
     );
   }
@@ -6549,6 +6650,9 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
     if (discountAmount.present) {
       map['discount_amount'] = Variable<double>(discountAmount.value);
     }
+    if (minQtyApplied.present) {
+      map['min_qty_applied'] = Variable<int>(minQtyApplied.value);
+    }
     if (subtotal.present) {
       map['subtotal'] = Variable<double>(subtotal.value);
     }
@@ -6565,6 +6669,7 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
           ..write('quantity: $quantity, ')
           ..write('price: $price, ')
           ..write('discountAmount: $discountAmount, ')
+          ..write('minQtyApplied: $minQtyApplied, ')
           ..write('subtotal: $subtotal')
           ..write(')'))
         .toString();
@@ -14728,6 +14833,7 @@ typedef $$ProductsTableCreateCompanionBuilder =
       Value<bool> isStockManaged,
       Value<int> minStockAlert,
       Value<bool> isActive,
+      Value<bool> allowManualPrice,
       Value<DateTime> createdAt,
     });
 typedef $$ProductsTableUpdateCompanionBuilder =
@@ -14744,6 +14850,7 @@ typedef $$ProductsTableUpdateCompanionBuilder =
       Value<bool> isStockManaged,
       Value<int> minStockAlert,
       Value<bool> isActive,
+      Value<bool> allowManualPrice,
       Value<DateTime> createdAt,
     });
 
@@ -15006,6 +15113,11 @@ class $$ProductsTableFilterComposer
 
   ColumnFilters<bool> get isActive => $composableBuilder(
     column: $table.isActive,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get allowManualPrice => $composableBuilder(
+    column: $table.allowManualPrice,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -15320,6 +15432,11 @@ class $$ProductsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get allowManualPrice => $composableBuilder(
+    column: $table.allowManualPrice,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -15418,6 +15535,11 @@ class $$ProductsTableAnnotationComposer
 
   GeneratedColumn<bool> get isActive =>
       $composableBuilder(column: $table.isActive, builder: (column) => column);
+
+  GeneratedColumn<bool> get allowManualPrice => $composableBuilder(
+    column: $table.allowManualPrice,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -15721,6 +15843,7 @@ class $$ProductsTableTableManager
                 Value<bool> isStockManaged = const Value.absent(),
                 Value<int> minStockAlert = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
+                Value<bool> allowManualPrice = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => ProductsCompanion(
                 id: id,
@@ -15735,6 +15858,7 @@ class $$ProductsTableTableManager
                 isStockManaged: isStockManaged,
                 minStockAlert: minStockAlert,
                 isActive: isActive,
+                allowManualPrice: allowManualPrice,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -15751,6 +15875,7 @@ class $$ProductsTableTableManager
                 Value<bool> isStockManaged = const Value.absent(),
                 Value<int> minStockAlert = const Value.absent(),
                 Value<bool> isActive = const Value.absent(),
+                Value<bool> allowManualPrice = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => ProductsCompanion.insert(
                 id: id,
@@ -15765,6 +15890,7 @@ class $$ProductsTableTableManager
                 isStockManaged: isStockManaged,
                 minStockAlert: minStockAlert,
                 isActive: isActive,
+                allowManualPrice: allowManualPrice,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
@@ -21534,6 +21660,7 @@ typedef $$OrderItemsTableCreateCompanionBuilder =
       required double quantity,
       required double price,
       Value<double> discountAmount,
+      Value<int> minQtyApplied,
       required double subtotal,
     });
 typedef $$OrderItemsTableUpdateCompanionBuilder =
@@ -21545,6 +21672,7 @@ typedef $$OrderItemsTableUpdateCompanionBuilder =
       Value<double> quantity,
       Value<double> price,
       Value<double> discountAmount,
+      Value<int> minQtyApplied,
       Value<double> subtotal,
     });
 
@@ -21635,6 +21763,11 @@ class $$OrderItemsTableFilterComposer
 
   ColumnFilters<double> get discountAmount => $composableBuilder(
     column: $table.discountAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get minQtyApplied => $composableBuilder(
+    column: $table.minQtyApplied,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -21742,6 +21875,11 @@ class $$OrderItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get minQtyApplied => $composableBuilder(
+    column: $table.minQtyApplied,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<double> get subtotal => $composableBuilder(
     column: $table.subtotal,
     builder: (column) => ColumnOrderings(column),
@@ -21837,6 +21975,11 @@ class $$OrderItemsTableAnnotationComposer
 
   GeneratedColumn<double> get discountAmount => $composableBuilder(
     column: $table.discountAmount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get minQtyApplied => $composableBuilder(
+    column: $table.minQtyApplied,
     builder: (column) => column,
   );
 
@@ -21948,6 +22091,7 @@ class $$OrderItemsTableTableManager
                 Value<double> quantity = const Value.absent(),
                 Value<double> price = const Value.absent(),
                 Value<double> discountAmount = const Value.absent(),
+                Value<int> minQtyApplied = const Value.absent(),
                 Value<double> subtotal = const Value.absent(),
               }) => OrderItemsCompanion(
                 id: id,
@@ -21957,6 +22101,7 @@ class $$OrderItemsTableTableManager
                 quantity: quantity,
                 price: price,
                 discountAmount: discountAmount,
+                minQtyApplied: minQtyApplied,
                 subtotal: subtotal,
               ),
           createCompanionCallback:
@@ -21968,6 +22113,7 @@ class $$OrderItemsTableTableManager
                 required double quantity,
                 required double price,
                 Value<double> discountAmount = const Value.absent(),
+                Value<int> minQtyApplied = const Value.absent(),
                 required double subtotal,
               }) => OrderItemsCompanion.insert(
                 id: id,
@@ -21977,6 +22123,7 @@ class $$OrderItemsTableTableManager
                 quantity: quantity,
                 price: price,
                 discountAmount: discountAmount,
+                minQtyApplied: minQtyApplied,
                 subtotal: subtotal,
               ),
           withReferenceMapper: (p0) => p0

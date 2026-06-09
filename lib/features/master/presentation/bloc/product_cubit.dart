@@ -62,6 +62,7 @@ class ProductCubit extends Cubit<ProductState> {
     required String productType,
     required bool isStockManaged,
     required int minStockAlert,
+    bool allowManualPrice = false,
     required List<ProductUnitsCompanion> units,
     required List<ProductPricesCompanion> prices,
     File? newImageFile,
@@ -85,6 +86,7 @@ class ProductCubit extends Cubit<ProductState> {
           productType: Value(productType),
           isStockManaged: Value(isStockManaged),
           minStockAlert: Value(minStockAlert),
+          allowManualPrice: Value(allowManualPrice),
           isActive: const Value(true),
         );
 
@@ -105,6 +107,7 @@ class ProductCubit extends Cubit<ProductState> {
           productType: productType,
           isStockManaged: isStockManaged,
           minStockAlert: minStockAlert,
+          allowManualPrice: allowManualPrice,
         );
 
         await _repository.updateProductComplete(

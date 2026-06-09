@@ -161,6 +161,11 @@ class PrintService {
       if (order.notes != null && order.notes!.isNotEmpty) {
         bytes += generator.text("Ket  : ${order.notes}");
       }
+      bytes += generator.feed(1);
+      // Barcode transaksi
+      try {
+        bytes += generator.barcode(Barcode.code128(order.referenceNo.split('')));
+      } catch (_) {}
       bytes += generator.text("--------------------------------", styles: const PosStyles(align: PosAlign.center));
 
       // --- ITEMS ---

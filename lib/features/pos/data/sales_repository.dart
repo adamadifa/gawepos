@@ -9,6 +9,10 @@ class SalesRepository {
   // Mengambil daftar produk lengkap beserta unit dan harga jualnya
   Future<List<Map<String, dynamic>>> getPosProducts() async {
     final products = await _db.select(_db.products).get();
+    final brands = await _db.select(_db.brands).get();
+    final categories = await _db.select(_db.categories).get();
+    final brandMap = {for (final b in brands) b.id: b.name};
+    final categoryMap = {for (final c in categories) c.id: c.name};
     final List<Map<String, dynamic>> results = [];
     
     for (var product in products) {
@@ -22,6 +26,8 @@ class SalesRepository {
         'product': product,
         'units': units,
         'prices': prices,
+        'brandName': brandMap[product.brandId],
+        'categoryName': categoryMap[product.categoryId],
       });
     }
     return results;
@@ -113,6 +119,7 @@ class SalesRepository {
         final double price = item['price'];
         final double disc = item['discountAmount'] ?? 0.0;
         final double sub = (qty * price) - disc;
+        final int minQty = item['appliedMinQty'] ?? 1;
 
         await _db.into(_db.orderItems).insert(
               OrderItemsCompanion.insert(
@@ -123,6 +130,7 @@ class SalesRepository {
                 price: price,
                 discountAmount: Value(disc),
                 subtotal: sub,
+                minQtyApplied: Value(minQty),
               ),
             );
 

@@ -14,6 +14,7 @@ class OnboardingPage extends StatefulWidget {
 
 class _OnboardingPageState extends State<OnboardingPage> {
   final _formKey = GlobalKey<FormState>();
+  bool _isSubmitting = false;
 
   final _shopNameController = TextEditingController();
   final _shopAddressController = TextEditingController();
@@ -34,44 +35,83 @@ class _OnboardingPageState extends State<OnboardingPage> {
     super.dispose();
   }
 
-  void _submit() {
-    if (_formKey.currentState!.validate()) {
-      context.read<AuthCubit>().performOnboarding(
-        shopName: _shopNameController.text.trim(),
-        shopAddress: _shopAddressController.text.trim(),
-        shopPhone: _shopPhoneController.text.trim(),
-        adminName: _adminNameController.text.trim(),
-        adminUsername: _adminUsernameController.text.trim(),
-        adminPin: _adminPinController.text.trim(),
-      );
-    }
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isSubmitting = true);
+
+    await context.read<AuthCubit>().performOnboarding(
+      shopName: _shopNameController.text.trim(),
+      shopAddress: _shopAddressController.text.trim(),
+      shopPhone: _shopPhoneController.text.trim(),
+      adminName: _adminNameController.text.trim(),
+      adminUsername: _adminUsernameController.text.trim(),
+      adminPin: _adminPinController.text.trim(),
+    );
+
+    if (mounted) setState(() => _isSubmitting = false);
   }
 
-  /// Section header dengan left border accent berwarna.
-  Widget _buildSectionHeader(String title, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-        border: Border(
-          left: BorderSide(color: color, width: 3),
+
+  Widget _buildFormField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    String? hint,
+    TextInputType? keyboardType,
+    bool obscure = false,
+    int maxLines = 1,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller: controller,
+      obscureText: obscure,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      style: GoogleFonts.poppins(
+        fontSize: 14,
+        color: AppConstants.textDarkColor,
+      ),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        prefixIcon: Icon(icon, size: 20),
+        filled: true,
+        fillColor: AppConstants.backgroundColor,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
+        labelStyle: GoogleFonts.poppins(
+          fontSize: 13,
+          color: AppConstants.textLightColor,
+        ),
+        hintStyle: GoogleFonts.poppins(
+          fontSize: 13,
+          color: AppConstants.textLightColor.withValues(alpha: 0.5),
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+          borderSide: const BorderSide(color: AppConstants.borderLightColor),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+          borderSide: const BorderSide(color: AppConstants.borderLightColor),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+          borderSide: const BorderSide(color: AppConstants.primaryColor, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+          borderSide: const BorderSide(color: AppConstants.errorColor),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+          borderSide: const BorderSide(color: AppConstants.errorColor, width: 1.5),
         ),
       ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 18),
-          const SizedBox(width: 10),
-          Text(
-            title,
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppConstants.textDarkColor,
-            ),
-          ),
-        ],
-      ),
+      validator: validator,
     );
   }
 
@@ -79,221 +119,276 @@ class _OnboardingPageState extends State<OnboardingPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppConstants.backgroundColor,
-      body: Stack(
+      body: Column(
         children: [
-          // Background header dengan diagonal clipper
-          const CurvedHeader(height: 280),
-
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppConstants.paddingMd,
-                vertical: AppConstants.paddingLg,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 4),
-
-                  // App icon
-                  Center(
-                    child: Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.25)),
-                      ),
-                      child: const Icon(
-                        Icons.point_of_sale_rounded,
-                        color: Colors.white,
-                        size: 28,
+          CurvedHeader(
+            height: 220,
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Spacer(),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        width: 80,
+                        height: 80,
+                        fit: BoxFit.contain,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-
-                  Center(
-                    child: Image.asset(
-                      'assets/images/logo.png',
-                      width: 120,
-                      height: 120,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Center(
-                    child: Text(
+                    const SizedBox(height: 4),
+                    Text(
                       'GawePOS',
                       style: GoogleFonts.poppins(
-                        fontSize: 28,
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                         letterSpacing: 0.2,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  const Center(
-                    child: Text(
-                      'Setup toko & kasir dalam hitungan menit',
-                      style: TextStyle(
+                    const SizedBox(height: 4),
+                    Text(
+                      'Lengkapi data toko & akun admin',
+                      style: GoogleFonts.poppins(
                         fontSize: 13,
-                        color: Colors.white70,
+                        color: Colors.white.withValues(alpha: 0.75),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 28),
-
-                  // ── Form Card ──────────────────────────────
-                  Center(
-                    child: Container(
-                      constraints: const BoxConstraints(maxWidth: 550),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius:
-                            BorderRadius.circular(AppConstants.radiusLg),
-                        border: Border.all(color: AppConstants.borderLightColor),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.07),
-                            blurRadius: 24,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      padding: const EdgeInsets.all(AppConstants.paddingLg),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // ── SECTION 1: Profil Toko ────────
-                            _buildSectionHeader(
-                              'Profil Toko / Outlet',
-                              Icons.business_rounded,
-                              AppConstants.primaryColor,
-                            ),
-                            const SizedBox(height: 16),
-
-                            TextFormField(
-                              controller: _shopNameController,
-                              decoration: const InputDecoration(
-                                labelText: 'Nama Toko',
-                                prefixIcon: Icon(Icons.store_rounded),
-                                hintText: 'Contoh: Cafe Kenangan',
-                              ),
-                              validator: (v) => v == null || v.isEmpty
-                                  ? 'Nama toko wajib diisi'
-                                  : null,
-                            ),
-                            const SizedBox(height: 14),
-
-                            TextFormField(
-                              controller: _shopAddressController,
-                              decoration: const InputDecoration(
-                                labelText: 'Alamat Toko',
-                                prefixIcon: Icon(Icons.location_on_rounded),
-                                hintText: 'Alamat lengkap toko Anda',
-                              ),
-                              maxLines: 2,
-                            ),
-                            const SizedBox(height: 14),
-
-                            TextFormField(
-                              controller: _shopPhoneController,
-                              decoration: const InputDecoration(
-                                labelText: 'Nomor Telepon',
-                                prefixIcon: Icon(Icons.phone_rounded),
-                                hintText: 'Contoh: 08123456789',
-                              ),
-                              keyboardType: TextInputType.phone,
-                            ),
-                            const SizedBox(height: 24),
-
-                            // ── SECTION 2: Administrator ───────
-                            _buildSectionHeader(
-                              'Akun Administrator Utama',
-                              Icons.admin_panel_settings_rounded,
-                              AppConstants.successColor,
-                            ),
-                            const SizedBox(height: 16),
-
-                            TextFormField(
-                              controller: _adminNameController,
-                              decoration: const InputDecoration(
-                                labelText: 'Nama Lengkap Admin',
-                                prefixIcon: Icon(Icons.person_rounded),
-                              ),
-                              validator: (v) => v == null || v.isEmpty
-                                  ? 'Nama admin wajib diisi'
-                                  : null,
-                            ),
-                            const SizedBox(height: 14),
-
-                            TextFormField(
-                              controller: _adminUsernameController,
-                              decoration: const InputDecoration(
-                                labelText: 'Username Login',
-                                prefixIcon:
-                                    Icon(Icons.alternate_email_rounded),
-                                hintText: 'Contoh: admin',
-                              ),
-                              validator: (v) {
-                                if (v == null || v.isEmpty) {
-                                  return 'Username wajib diisi';
-                                }
-                                if (v.length < 3) {
-                                  return 'Minimal 3 karakter';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 14),
-
-                            TextFormField(
-                              controller: _adminPinController,
-                              decoration: const InputDecoration(
-                                labelText: 'PIN Login (4-6 Digit Angka)',
-                                prefixIcon: Icon(Icons.lock_rounded),
-                                hintText: 'Contoh: 123456',
-                              ),
-                              keyboardType: TextInputType.number,
-                              obscureText: true,
-                              validator: (v) {
-                                if (v == null || v.isEmpty) {
-                                  return 'PIN wajib diisi';
-                                }
-                                if (int.tryParse(v) == null) {
-                                  return 'PIN harus berupa angka';
-                                }
-                                if (v.length < 4 || v.length > 6) {
-                                  return 'PIN harus 4 sampai 6 digit';
-                                }
-                                return null;
-                              },
-                            ),
-                            const SizedBox(height: 28),
-
-                            SizedBox(
-                              height: 50,
-                              child: ElevatedButton(
-                                onPressed: _submit,
-                                child: const Text('Simpan & Mulai Aplikasi'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                ],
+                    const Spacer(),
+                  ],
+                ),
               ),
             ),
           ),
+
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(
+                AppConstants.paddingMd,
+                0,
+                AppConstants.paddingMd,
+                AppConstants.paddingLg,
+              ),
+              child: Center(
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 540),
+                  margin: const EdgeInsets.only(top: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(AppConstants.radiusLg),
+                          border: Border.all(color: AppConstants.borderLightColor),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.06),
+                              blurRadius: 20,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _buildSection(
+                                icon: Icons.store_rounded,
+                                title: 'Profil Toko / Outlet',
+                                subtitle: 'Informasi dasar toko Anda',
+                                color: AppConstants.primaryColor,
+                                children: [
+                                  _buildFormField(
+                                    controller: _shopNameController,
+                                    label: 'Nama Toko',
+                                    icon: Icons.store_rounded,
+                                    hint: 'Contoh: Cafe Kenangan',
+                                    validator: (v) =>
+                                        v == null || v.isEmpty ? 'Nama toko wajib diisi' : null,
+                                  ),
+                                  const SizedBox(height: 14),
+                                  _buildFormField(
+                                    controller: _shopAddressController,
+                                    label: 'Alamat Toko',
+                                    icon: Icons.location_on_rounded,
+                                    hint: 'Alamat lengkap toko Anda',
+                                    maxLines: 2,
+                                  ),
+                                  const SizedBox(height: 14),
+                                  _buildFormField(
+                                    controller: _shopPhoneController,
+                                    label: 'Nomor Telepon',
+                                    icon: Icons.phone_rounded,
+                                    hint: 'Contoh: 08123456789',
+                                    keyboardType: TextInputType.phone,
+                                  ),
+                                ],
+                              ),
+
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 24),
+                                child: Divider(
+                                  color: AppConstants.borderLightColor,
+                                  height: 1,
+                                ),
+                              ),
+
+                              _buildSection(
+                                icon: Icons.admin_panel_settings_rounded,
+                                title: 'Akun Administrator Utama',
+                                subtitle: 'Login pertama untuk kelola toko',
+                                color: AppConstants.successColor,
+                                children: [
+                                  _buildFormField(
+                                    controller: _adminNameController,
+                                    label: 'Nama Lengkap Admin',
+                                    icon: Icons.person_rounded,
+                                    hint: 'Contoh: Bambang',
+                                    validator: (v) =>
+                                        v == null || v.isEmpty ? 'Nama admin wajib diisi' : null,
+                                  ),
+                                  const SizedBox(height: 14),
+                                  _buildFormField(
+                                    controller: _adminUsernameController,
+                                    label: 'Username Login',
+                                    icon: Icons.alternate_email_rounded,
+                                    hint: 'Contoh: admin',
+                                    validator: (v) {
+                                      if (v == null || v.isEmpty) return 'Username wajib diisi';
+                                      if (v.length < 3) return 'Minimal 3 karakter';
+                                      return null;
+                                    },
+                                  ),
+                                  const SizedBox(height: 14),
+                                  _buildFormField(
+                                    controller: _adminPinController,
+                                    label: 'PIN Login (4-6 Digit Angka)',
+                                    icon: Icons.lock_rounded,
+                                    hint: 'Contoh: 123456',
+                                    keyboardType: TextInputType.number,
+                                    obscure: true,
+                                    validator: (v) {
+                                      if (v == null || v.isEmpty) return 'PIN wajib diisi';
+                                      if (int.tryParse(v) == null) return 'PIN harus berupa angka';
+                                      if (v.length < 4 || v.length > 6) return 'PIN harus 4 sampai 6 digit';
+                                      return null;
+                                    },
+                                  ),
+                                ],
+                              ),
+
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+                                child: SizedBox(
+                                  height: 50,
+                                  child: ElevatedButton(
+                                    onPressed: _isSubmitting ? null : _submit,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppConstants.primaryColor,
+                                      foregroundColor: Colors.white,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                                      ),
+                                      shadowColor: AppConstants.primaryColor.withValues(alpha: 0.3),
+                                    ),
+                                    child: _isSubmitting
+                                        ? const SizedBox(
+                                            width: 22,
+                                            height: 22,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.5,
+                                              color: Colors.white,
+                                            ),
+                                          )
+                                        : Row(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              const Icon(Icons.check_circle_outline_rounded, size: 20),
+                                              const SizedBox(width: 8),
+                                              Text(
+                                                'Simpan & Mulai Aplikasi',
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSection({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required List<Widget> children,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 19),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                      color: AppConstants.textDarkColor,
+                    ),
+                  ),
+                  const SizedBox(height: 1),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: AppConstants.textLightColor,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...children,
         ],
       ),
     );

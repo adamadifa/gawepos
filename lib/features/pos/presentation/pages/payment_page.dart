@@ -76,7 +76,7 @@ class _PaymentPageState extends State<PaymentPage>
   void initState() {
     super.initState();
     _amountPaid = widget.cart.grandTotal;
-    _amountPaidController.text = _amountPaid.toStringAsFixed(0);
+    _amountPaidController.text = _formatNumber(_amountPaid.toStringAsFixed(0));
     _calculateChange();
 
     _pulseController = AnimationController(
@@ -113,7 +113,7 @@ class _PaymentPageState extends State<PaymentPage>
         // Let _amountPaid be whatever user typed for DP, default to 0.0 initially
       } else if (_paymentMethod != 'cash') {
         _amountPaid = widget.cart.grandTotal;
-        _amountPaidController.text = _amountPaid.toStringAsFixed(0);
+        _amountPaidController.text = _formatNumber(_amountPaid.toStringAsFixed(0));
         _changeAmount = 0.0;
       } else {
         _changeAmount = _amountPaid - widget.cart.grandTotal;
@@ -167,6 +167,7 @@ class _PaymentPageState extends State<PaymentPage>
         'quantity': item.quantity,
         'price': item.price,
         'discountAmount': item.discountAmount,
+        'appliedMinQty': item.appliedMinQty,
       };
     }).toList();
 
@@ -646,6 +647,9 @@ class _PaymentPageState extends State<PaymentPage>
                         child: TextField(
                           controller: _amountPaidController,
                           keyboardType: TextInputType.number,
+                          inputFormatters: const [
+                            _NumberInputFormatter(),
+                          ],
                           style: GoogleFonts.poppins(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -658,7 +662,10 @@ class _PaymentPageState extends State<PaymentPage>
                           ),
                           onChanged: (val) {
                             setState(() {
-                              _amountPaid = double.tryParse(val) ?? 0.0;
+                              _amountPaid = double.tryParse(
+                                    val.replaceAll('.', ''),
+                                  ) ??
+                                  0.0;
                               _calculateChange();
                             });
                           },
@@ -701,7 +708,7 @@ class _PaymentPageState extends State<PaymentPage>
                             setState(() {
                               _amountPaid = s;
                               _amountPaidController.text =
-                                  s.toStringAsFixed(0);
+                                  _formatNumber(s.toStringAsFixed(0));
                               _calculateChange();
                             });
                           },
@@ -929,6 +936,9 @@ class _PaymentPageState extends State<PaymentPage>
                         child: TextField(
                           controller: _amountPaidController,
                           keyboardType: TextInputType.number,
+                          inputFormatters: const [
+                            _NumberInputFormatter(),
+                          ],
                           textAlign: TextAlign.right,
                           style: GoogleFonts.poppins(
                             fontSize: 14,
@@ -945,13 +955,23 @@ class _PaymentPageState extends State<PaymentPage>
                           ),
                           onChanged: (val) {
                             setState(() {
-                              _amountPaid = double.tryParse(val) ?? 0.0;
+                              _amountPaid = double.tryParse(
+                                    val.replaceAll('.', ''),
+                                  ) ??
+                                  0.0;
                               if (_amountPaid > widget.cart.grandTotal) {
                                 _amountPaid = widget.cart.grandTotal;
-                                _amountPaidController.text = _amountPaid.toStringAsFixed(0);
-                                // Ensure cursor stays at the end
-                                _amountPaidController.selection = TextSelection.fromPosition(
-                                    TextPosition(offset: _amountPaidController.text.length));
+                                _amountPaidController.text =
+                                    _formatNumber(
+                                  _amountPaid.toStringAsFixed(0),
+                                );
+                                _amountPaidController.selection =
+                                    TextSelection.fromPosition(
+                                  TextPosition(
+                                    offset:
+                                        _amountPaidController.text.length,
+                                  ),
+                                );
                               }
                             });
                           },
@@ -1106,5 +1126,52 @@ class _PaymentPageState extends State<PaymentPage>
       return '${(value / 1000).toStringAsFixed(value % 1000 == 0 ? 0 : 1)}rb';
     }
     return value.toStringAsFixed(0);
+  }
+
+  String _formatNumber(String digits) {
+    if (digits.isEmpty) return '';
+    final buffer = StringBuffer();
+    int count = 0;
+    for (int i = digits.length - 1; i >= 0; i--) {
+      if (count > 0 && count % 3 == 0) {
+        buffer.write('.');
+      }
+      buffer.write(digits[i]);
+      count++;
+    }
+    return buffer.toString().split('').reversed.join();
+  }
+}
+
+class _NumberInputFormatter extends TextInputFormatter {
+  const _NumberInputFormatter();
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final digitsOnly = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digitsOnly.isEmpty) {
+      return const TextEditingValue(text: '');
+    }
+    final formatted = _formatNumber(digitsOnly);
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+
+  static String _formatNumber(String digits) {
+    final buffer = StringBuffer();
+    int count = 0;
+    for (int i = digits.length - 1; i >= 0; i--) {
+      if (count > 0 && count % 3 == 0) {
+        buffer.write('.');
+      }
+      buffer.write(digits[i]);
+      count++;
+    }
+    return buffer.toString().split('').reversed.join();
   }
 }

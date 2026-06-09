@@ -25,6 +25,18 @@ Tidak perlu toggle manual.
 | **min_qty** | Kolom ada di DB (`product_prices`) tapi selalu hardcoded `1` dan **tidak pernah dipakai** |
 | **Perubahan qty** | Harga satuan tetap, tidak berespon terhadap jumlah beli |
 | **Setting harga** | Input di form produk: 1 field harga per tier per unit |
+| **Override manual** | Selalu bisa input harga manual, tanpa kontrol |
+
+---
+
+## 2B. Keputusan Desain (Hasil Diskusi)
+
+| Poin | Keputusan |
+|------|-----------|
+| **1. Price Tier (Umum/Grosir)** | **Dihapus.** Konsep "Harga Grosir" diganti dengan quantity break per rentang qty. `price_tier_id` jadi nullable, tidak dipakai lagi. |
+| **2. Override Manual** | **Tetap ada, tapi digate oleh field di produk.** Tambah field `allow_manual_price` (boolean) di tabel `products`. Jika false, field harga manual di POS disembunyikan. Jika true, tampil seperti sekarang. |
+| **3. Perubahan qty di keranjang** | **Mengunci seperti sekarang.** Harga ditentukan saat item masuk keranjang (di modal produk). Perubahan qty di keranjang tidak mengubah harga. |
+| **4. Multi-unit + quantity break** | **Ya, diimplementasikan.** Jika user beli 15 Pcs dan ada unit Dus (1 Dus = 10 Pcs), sistem akan menawarkan konversi ke 1 Dus + 5 Pcs dengan harga break masing-masing. |
 
 ---
 
@@ -37,7 +49,10 @@ Setiap produk + unit bisa punya beberapa **Quantity Break**:
 
 Satu baris `product_prices` sekarang adalah: **(product_id, unit_id, min_qty) → price**
 
-Tidak ada lagi `price_tier_id` (bisa dihapus/diabaikan bertahap).
+`price_tier_id` diabaikan (nullable) — price tier (Umum/Grosir) dihapus, diganti quantity break.
+
+Setiap produk punya field baru:
+- `allow_manual_price` (boolean, default false) — mengontrol apakah cashier bisa override harga di POS.
 
 ### 3.2. Contoh Data
 
@@ -104,9 +119,16 @@ User input qty = 12 di modal produk:
 ### 5.2. Tampilan di Modal Produk
 - Harga otomatis berubah saat qty diubah
 - Ada indikasi: "Harga @ Rp 9.000 (min. 10 pcs)"
-- Cashier tetap bisa manual override harga jika perlu (custom price)
+- Cashier bisa input harga manual **hanya jika** produk memiliki `allow_manual_price = true`
+- Jika `allow_manual_price = false`, harga otomatis tidak bisa diubah
 
-### 5.3. Tampilan di Form Produk
+### 5.3. Multi-Unit Auto-Conversion
+- Jika user pilih unit Pcs dan input qty yang setara dengan unit lebih besar (misal 15 Pcs, 1 Dus = 10 Pcs):
+  - Tampilkan saran: "15 Pcs bisa dikonversi ke 1 Dus + 5 Pcs"
+  - Jika user setuju → qty diubah jadi 1 Dus + 5 Pcs, harga dihitung per unit masing-masing
+  - Jika tidak → tetap 15 Pcs dengan harga break Pcs
+
+### 5.4. Tampilan di Form Produk
 Per unit, input beberapa baris quantity break:
 ```
 [Unit: Pcs]
@@ -116,10 +138,10 @@ Per unit, input beberapa baris quantity break:
   [+ Tambah Break]
 ```
 
-### 5.4. Keranjang
+### 5.5. Keranjang
 - Setiap item menyimpan `appliedMinQty` (break yang dipakai) untuk referensi
-- Jika quantity diubah di keranjang → re-calculate harga berdasarkan break
-- Subtotal = qty * price (sesuai break yang aktif)
+- Harga mengunci saat item masuk keranjang (tidak berubah jika qty diubah di keranjang)
+- Subtotal = qty * price (sesuai break saat item ditambahkan)
 
 ---
 
@@ -154,19 +176,31 @@ SELECT product_id, unit_id, price_tier_id, price, 1
 FROM product_prices_old;
 ```
 
-6.3. **`price_tiers` — Opsional dihapus atau dibiarkan**
-- Jika tidak dipakai lagi, bisa di-drop di migrasi berikutnya
-- Atau dibiarkan untuk kompatibilitas
+6.3. **`products` — Add column**
+```sql
+ALTER TABLE products ADD COLUMN allow_manual_price INTEGER DEFAULT 0;
+```
 
-6.4. **`order_items` — Tidak perlu perubahan**
-- `price` sudah menyimpan harga satuan saat transaksi
-- Tidak perlu追溯 quantity break yang dipakai (kecuali untuk analisa)
+6.4. **`price_tiers` — Dibiarkan (tidak di-drop)**
+- Tabel dibiarkan ada untuk kompatibilitas, tidak dipakai lagi
+- Migrasi data existing: harga grosir jadi quantity break dengan `min_qty` tertentu (default 1)
+
+6.5. **`order_items` — Add column**
+```sql
+ALTER TABLE order_items ADD COLUMN min_qty_applied INTEGER DEFAULT 1;
+```
+- Mencatat quantity break (`min_qty`) yang dipakai saat item dijual
+- Berguna untuk analisa pola pembelian per break
 
 ---
 
 ## 7. Perubahan UI
 
 ### 7.1. Master Produk — Halaman Form
+Tambah field baru:
+- **Toggle "Izinkan Input Harga Manual"** (`allow_manual_price`) — default off
+
+Per unit, input beberapa baris quantity break (menggantikan field price tier):
 ```
 ┌──────────────────────────────────────┐
 │  Unit: Pcs                          │
@@ -174,19 +208,21 @@ FROM product_prices_old;
 │  │ Qty ≥ 1    │ Rp [___________] │  │
 │  │ Qty ≥ 10   │ Rp [___________] │  │
 │  │ Qty ≥ 50   │ Rp [___________] │  │
-│  │ [+ Tambah Baris]              │  │
+│  │ [+ Tambah Break]              │  │
 │  └────────────────────────────────┘  │
 │                                      │
 │  Unit: Dus                           │
 │  ┌────────────────────────────────┐  │
 │  │ Qty ≥ 1    │ Rp [___________] │  │
 │  │ Qty ≥ 5    │ Rp [___________] │  │
-│  │ [+ Tambah Baris]              │  │
+│  │ [+ Tambah Break]              │  │
 │  └────────────────────────────────┘  │
 └──────────────────────────────────────┘
 ```
 
 ### 7.2. POS — Tampilan Harga di Modal Produk
+
+**Jika `allow_manual_price = true`:**
 ```
 ┌──────────────────────────────┐
 │  Harga: Rp 9.000 / pcs       │
@@ -199,7 +235,34 @@ FROM product_prices_old;
 └──────────────────────────────┘
 ```
 
-### 7.3. POS — Tampilan di Keranjang
+**Jika `allow_manual_price = false`:**
+```
+┌──────────────────────────────┐
+│  Harga: Rp 9.000 / pcs       │
+│  (berlaku untuk min. 10 pcs) │
+│                              │
+│  Qty: [12] ➕                │
+│  Subtotal: Rp 108.000       │
+│                              │
+│  (Harga otomatis)            │
+└──────────────────────────────┘
+```
+
+### 7.3. POS — Konversi Multi-Unit
+Jika user input qty di modal produk Pcs yang cukup untuk dikonversi:
+```
+┌──────────────────────────────┐
+│  Qty: [15] Pcs ➕            │
+│                              │
+│  ⚠ 15 Pcs = 1 Dus + 5 Pcs  │
+│  Harga: Rp 130rb + Rp 45rb  │
+│  = Rp 175.000               │
+│                              │
+│  [Konversi] [Tetap 15 Pcs]  │
+└──────────────────────────────┘
+```
+
+### 7.4. POS — Tampilan di Keranjang
 ```
 ┌──────────────────────────────────┐
 │  Kopra                    x 12   │
@@ -220,7 +283,7 @@ FROM product_prices_old;
 | `_getPriceForUnit()` | Tambah parameter `quantity`. Cari break dengan `min_qty <= quantity`, ambil `min_qty` terbesar. Fallback ke harga dengan `min_qty` terkecil. |
 | `addToCart()` | Pass `quantity` ke `_getPriceForUnit()` |
 | `updateQuantity()` | Method baru: saat qty diubah, re-calculate price berdasarkan break. Jika ada, update item. |
-| `changePriceTier()` | Bisa dihapus atau diubah jadi override global (jika price_tier masih dipakai) |
+| `changePriceTier()` | **Dihapus** — tidak ada lagi price tier global |
 
 ### 8.2. `master_repository.dart`
 
@@ -238,31 +301,20 @@ FROM product_prices_old;
 
 ---
 
-## 9. Poin Diskusi
+## 9. Keputusan Desain Lanjutan
 
-1. **Price tier existing mau diapakan?**
-   - Harga Umum / Grosir yang sekarang: dihapus, diubah jadi quantity break, atau dipertahankan sebagai kategori?
-   - Contoh: "Harga Grosir" bisa direpresentasikan sebagai break min_qty tertentu.
+### 9.1. Perlakuan Harga 0
+**Keputusan: Diabaikan (tidak valid).**
+- Quantity break dengan `price = 0` dianggap tidak diisi / tidak aktif.
+- Saat lookup harga, break dengan `price = 0` dilewati.
+- Jika semua break bernilai 0 → price = 0 (gratis, tapi perlu konfirmasi).
+- Untuk kasus gratis, kasir bisa override manual jika `allow_manual_price = true`.
 
-2. **Override manual tetap ada?**
-   - Cashier tetap bisa input harga manual untuk situasi khusus (misal harga deal khusus)?
-   - Jika iya, tampilkan peringatan "Harga berbeda dari standar" saat override.
-
-3. **Quantity break di keranjang?**
-   - Jika user tambah qty di keranjang (bukan di modal), apakah harga ikut berubah otomatis?
-   - Atau harga mengunci saat item pertama masuk keranjang?
-
-4. **Multi-unit dengan quantity break?**
-   - Harga per unit dihitung terpisah.
-   - Tapi jika user punya 15 Pcs, apa boleh dikonversi ke 1 Dus + 5 Pcs dengan harga break masing-masing?
-
-5. **Perlakuan harga 0?**
-   - Jika quantity break dengan harga 0 → diabaikan (tidak valid).
-   - Atau harga 0 dianggap gratis?
-
-6. **History transaksi lama?**
-   - `order_items` sudah menyimpan `price` final — tidak masalah.
-   - Tapi tidak ada info quantity break mana yang dipakai → mungkin perlu tambah kolom `min_qty_applied`?
+### 9.2. History Transaksi
+**Keputusan: Dicatat.**
+- Tambah kolom `min_qty_applied` (INTEGER) di `order_items`.
+- Menyimpan `min_qty` dari quantity break yang dipakai saat item dijual.
+- Berguna untuk analisa: "produk X sering dibeli di break berapa?"
 
 ---
 
@@ -270,10 +322,12 @@ FROM product_prices_old;
 
 | Priority | Item | Complexity |
 |----------|------|------------|
+| P0 | Migrasi DB: `allow_manual_price` di products, ubah `product_prices` pakai `min_qty` | Medium |
+| P0 | Form produk: input quantity breaks + toggle manual price | Medium |
 | P0 | Ubah `_getPriceForUnit()` di cart_cubit agar terima parameter qty | Low |
-| P0 | Update form produk: input quantity breaks | Medium |
 | P1 | Re-calculate price saat qty berubah di modal produk | Low |
-| P1 | Tampilkan keterangan break aktif di modal | Low |
-| P2 | Re-calculate price saat qty berubah di keranjang | Medium |
-| P2 | Hapus/deprecate price tier UI (Harga Umum/Grosir toggle) | Low |
+| P1 | Sembunyikan/tampilkan field harga manual di modal produk sesuai `allow_manual_price` | Low |
+| P1 | Tampilkan keterangan break aktif di modal ("min. X qty") | Low |
+| P2 | Hapus UI price tier toggle (Harga Umum/Grosir) dari POS | Low |
+| P2 | Multi-unit auto-conversion di modal produk | Medium |
 | P3 | Tambah kolom `min_qty_applied` di order_items (untuk analisa) | Low |

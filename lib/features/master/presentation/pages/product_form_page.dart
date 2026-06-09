@@ -43,11 +43,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
   final List<Map<String, dynamic>> _units = [];
   int _tempUnitIdCounter = 1;
 
-  // List of price tiers loaded from database
-  List<PriceTier> _priceTiers = [];
-
-  // Matrix Harga: map kunci "tempUnitId_priceTierId" -> controller price
-  final Map<String, TextEditingController> _priceControllers = {};
+  bool _allowManualPrice = false;
 
   @override
   void initState() {
@@ -56,14 +52,9 @@ class _ProductFormPageState extends State<ProductFormPage> {
   }
 
   Future<void> _loadPriceTiersAndData() async {
-    final repo = getIt<MasterRepository>();
-    final tiers = await repo.getPriceTiers();
-    setState(() {
-      _priceTiers = tiers;
-    });
-
     if (widget.existingProduct != null) {
       final product = widget.existingProduct!;
+      final repo = getIt<MasterRepository>();
       _nameController.text = product.name;
       _skuController.text = product.sku ?? '';
       _barcodeController.text = product.barcode ?? '';
@@ -74,8 +65,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
       _selectedCategoryId = product.categoryId;
       _selectedBrandId = product.brandId;
       _existingImagePath = product.imagePath;
+      _allowManualPrice = product.allowManualPrice;
 
-      // Load existing units & prices
       final complete = await repo.getProductComplete(product.id);
       if (complete != null) {
         final List<ProductUnit> dbUnits = complete['units'];
@@ -83,10 +74,24 @@ class _ProductFormPageState extends State<ProductFormPage> {
 
         setState(() {
           for (var u in dbUnits) {
-            final tempId = u.id; // Gunakan id DB asli sebagai temp ID
+            final tempId = u.id;
             if (tempId >= _tempUnitIdCounter) {
               _tempUnitIdCounter = tempId + 1;
             }
+
+            // Group prices by minQty
+            final priceMap = <int, double>{};
+            for (var p in dbPrices.where((p) => p.unitId == u.id && p.price > 0)) {
+              priceMap[p.minQty] = p.price;
+            }
+            if (priceMap.isEmpty) priceMap[1] = 0.0;
+
+            final breaks = priceMap.entries.map((e) {
+              return {
+                'minQtyController': TextEditingController(text: e.key.toString()),
+                'priceController': TextEditingController(text: e.value.toStringAsFixed(0)),
+              };
+            }).toList();
 
             _units.add({
               'id': tempId,
@@ -95,23 +100,12 @@ class _ProductFormPageState extends State<ProductFormPage> {
               'isBase': u.isBase,
               'nameController': TextEditingController(text: u.name),
               'factorController': TextEditingController(text: u.conversionFactor.toString()),
+              'breaks': breaks,
             });
-
-            // Map prices
-            for (var pt in _priceTiers) {
-              final priceObj = dbPrices.firstWhere(
-                (p) => p.unitId == u.id && p.priceTierId == pt.id,
-                orElse: () => ProductPrice(id: 0, productId: product.id, unitId: u.id, priceTierId: pt.id, price: 0.0, minQty: 1),
-              );
-
-              final key = "${tempId}_${pt.id}";
-              _priceControllers[key] = TextEditingController(text: priceObj.price.toStringAsFixed(0));
-            }
           }
         });
       }
     } else {
-      // Default: tambah satu Base Unit (Pcs)
       _addUnitRow(isBase: true, defaultName: 'Pcs');
     }
   }
@@ -126,13 +120,13 @@ class _ProductFormPageState extends State<ProductFormPage> {
         'isBase': isBase,
         'nameController': TextEditingController(text: defaultName),
         'factorController': TextEditingController(text: isBase ? '1.0' : ''),
+        'breaks': <Map<String, dynamic>>[
+          {
+            'minQtyController': TextEditingController(text: '1'),
+            'priceController': TextEditingController(text: '0'),
+          },
+        ],
       });
-
-      // Hubungkan ke price matrix controllers
-      for (var pt in _priceTiers) {
-        final key = "${tempId}_${pt.id}";
-        _priceControllers[key] = TextEditingController(text: '0');
-      }
     });
   }
 
@@ -144,14 +138,33 @@ class _ProductFormPageState extends State<ProductFormPage> {
       );
       return;
     }
-    
-    final tempId = unit['id'] as int;
     setState(() {
-      _units.removeAt(index);
-      for (var pt in _priceTiers) {
-        final key = "${tempId}_${pt.id}";
-        _priceControllers.remove(key);
+      for (var b in (unit['breaks'] as List)) {
+        (b['minQtyController'] as TextEditingController).dispose();
+        (b['priceController'] as TextEditingController).dispose();
       }
+      _units.removeAt(index);
+    });
+  }
+
+  void _addBreakRow(int unitIndex) {
+    setState(() {
+      final unit = _units[unitIndex];
+      (unit['breaks'] as List).add({
+        'minQtyController': TextEditingController(text: '1'),
+        'priceController': TextEditingController(text: '0'),
+      });
+    });
+  }
+
+  void _removeBreakRow(int unitIndex, int breakIndex) {
+    setState(() {
+      final unit = _units[unitIndex];
+      final breaks = unit['breaks'] as List;
+      final b = breaks[breakIndex];
+      (b['minQtyController'] as TextEditingController).dispose();
+      (b['priceController'] as TextEditingController).dispose();
+      breaks.removeAt(breakIndex);
     });
   }
 
@@ -318,18 +331,19 @@ class _ProductFormPageState extends State<ProductFormPage> {
         ),
       );
 
-      // Ambil harga matrix
-      for (var pt in _priceTiers) {
-        final key = "${tempId}_${pt.id}";
-        final priceVal = double.tryParse(_priceControllers[key]?.text ?? '0') ?? 0.0;
+      // Ambil quantity breaks
+      final breaks = u['breaks'] as List;
+      for (var b in breaks) {
+        final minQty = int.tryParse((b['minQtyController'] as TextEditingController).text) ?? 1;
+        final priceVal = double.tryParse((b['priceController'] as TextEditingController).text) ?? 0.0;
 
         pricesCompanions.add(
           ProductPricesCompanion(
-            unitId: drift.Value(tempId), // tempId
-            priceTierId: drift.Value(pt.id),
+            unitId: drift.Value(tempId),
+            priceTierId: const drift.Value(1),
             price: drift.Value(priceVal),
-            minQty: const drift.Value(1),
-            productId: const drift.Value(0), // Di-update oleh repo
+            minQty: drift.Value(minQty),
+            productId: const drift.Value(0),
           ),
         );
       }
@@ -347,6 +361,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
       productType: _productType,
       isStockManaged: _isStockManaged,
       minStockAlert: int.tryParse(_minStockController.text) ?? 0,
+      allowManualPrice: _allowManualPrice,
       units: unitsCompanions,
       prices: pricesCompanions,
       newImageFile: _imageFile,
@@ -363,9 +378,10 @@ class _ProductFormPageState extends State<ProductFormPage> {
     for (var u in _units) {
       (u['nameController'] as TextEditingController).dispose();
       (u['factorController'] as TextEditingController).dispose();
-    }
-    for (var ctrl in _priceControllers.values) {
-      ctrl.dispose();
+      for (var b in (u['breaks'] as List)) {
+        (b['minQtyController'] as TextEditingController).dispose();
+        (b['priceController'] as TextEditingController).dispose();
+      }
     }
     super.dispose();
   }
@@ -577,6 +593,14 @@ class _ProductFormPageState extends State<ProductFormPage> {
                   ),
                   keyboardType: TextInputType.number,
                 ),
+              const SizedBox(height: 12),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Izinkan Input Harga Manual di POS'),
+                subtitle: const Text('Kasir bisa mengubah harga saat transaksi'),
+                value: _allowManualPrice,
+                onChanged: (val) => setState(() => _allowManualPrice = val),
+              ),
             ],
           ],
         ),
@@ -738,12 +762,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
     );
   }
 
-  // 4. Pricing Matrix Card
   Widget _buildPricingMatrixCard() {
-    if (_priceTiers.isEmpty) {
-      return const SizedBox();
-    }
-
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -755,17 +774,18 @@ class _ProductFormPageState extends State<ProductFormPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionHeader('Matriks Harga Jual'),
+            _buildSectionHeader('Harga Bertingkat (Quantity Break)'),
             const SizedBox(height: 12),
             const Text(
-              'Masukkan harga jual untuk masing-masing Satuan Unit per Price Tier yang aktif.',
+              'Atur harga berbeda berdasarkan jumlah pembelian.',
               style: TextStyle(fontSize: 12, color: AppConstants.textLightColor),
             ),
             const SizedBox(height: 16),
             ..._units.map((u) {
               final unitName = (u['nameController'] as TextEditingController).text;
               final isBase = u['isBase'] == true;
-              final tempId = u['id'] as int;
+              final unitIndex = _units.indexOf(u);
+              final breaks = u['breaks'] as List;
 
               if (unitName.trim().isEmpty) return const SizedBox();
 
@@ -779,26 +799,67 @@ class _ProductFormPageState extends State<ProductFormPage> {
                       style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                     const SizedBox(height: 8),
-                    Row(
-                      children: _priceTiers.map((pt) {
-                        final key = "${tempId}_${pt.id}";
-                        final ctrl = _priceControllers[key];
+                    ...breaks.asMap().entries.map((entry) {
+                      final i = entry.key;
+                      final b = entry.value;
+                      final qtyCtrl = b['minQtyController'] as TextEditingController;
+                      final priceCtrl = b['priceController'] as TextEditingController;
 
-                        return Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 8.0),
-                            child: TextFormField(
-                              controller: ctrl,
-                              keyboardType: TextInputType.number,
-                              decoration: InputDecoration(
-                                labelText: pt.name,
-                                prefixText: 'Rp ',
-                                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Row(
+                          children: [
+                            const Text('Qty \u2265 ', style: TextStyle(fontSize: 13)),
+                            SizedBox(
+                              width: 50,
+                              child: TextFormField(
+                                controller: qtyCtrl,
+                                keyboardType: TextInputType.number,
+                                textAlign: TextAlign.center,
+                                decoration: InputDecoration(
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                                ),
                               ),
                             ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: TextFormField(
+                                controller: priceCtrl,
+                                keyboardType: TextInputType.number,
+                                decoration: InputDecoration(
+                                  prefixText: 'Rp ',
+                                  isDense: true,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
+                                ),
+                              ),
+                            ),
+                            if (breaks.length > 1)
+                              IconButton(
+                                icon: const Icon(Icons.remove_circle_outline, size: 18, color: AppConstants.errorColor),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                                onPressed: () => _removeBreakRow(unitIndex, i),
+                              ),
+                          ],
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 4),
+                    GestureDetector(
+                      onTap: () => _addBreakRow(unitIndex),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.add_circle_outline, size: 16, color: AppConstants.primaryColor),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Tambah Break',
+                            style: GoogleFonts.poppins(fontSize: 12, color: AppConstants.primaryColor),
                           ),
-                        );
-                      }).toList(),
+                        ],
+                      ),
                     ),
                   ],
                 ),

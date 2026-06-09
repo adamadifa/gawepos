@@ -27,6 +27,8 @@ import 'features/inventory/presentation/bloc/return_cubit.dart';
 
 import 'package:intl/date_symbol_data_local.dart';
 
+final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
+
 void main() async {
   // Pastikan binding Flutter diinisialisasi
   WidgetsFlutterBinding.ensureInitialized();
@@ -97,6 +99,7 @@ class MyApp extends StatelessWidget {
         title: AppConstants.appName,
         theme: AppTheme.lightTheme,
         debugShowCheckedModeBanner: false,
+        navigatorObservers: [routeObserver],
         home: const AuthWrapper(),
       ),
     );

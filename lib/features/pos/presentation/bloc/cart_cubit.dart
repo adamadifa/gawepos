@@ -7,11 +7,11 @@ class CartItem {
   final Product product;
   final ProductUnit unit;
   final double quantity;
-  final double price; // Harga per item setelah disesuaikan tier
-  final double discountAmount; // Diskon nominal per item
+  final double price;
+  final double discountAmount;
   final List<ProductUnit> availableUnits;
   final List<ProductPrice> pricingMatrix;
-  final int priceTierId; // 1 = Umum, 2 = Grosir
+  final int appliedMinQty;
 
   CartItem({
     required this.product,
@@ -21,7 +21,7 @@ class CartItem {
     required this.discountAmount,
     required this.availableUnits,
     required this.pricingMatrix,
-    required this.priceTierId,
+    required this.appliedMinQty,
   });
 
   CartItem copyWith({
@@ -32,7 +32,7 @@ class CartItem {
     double? discountAmount,
     List<ProductUnit>? availableUnits,
     List<ProductPrice>? pricingMatrix,
-    int? priceTierId,
+    int? appliedMinQty,
   }) {
     return CartItem(
       product: product ?? this.product,
@@ -42,7 +42,7 @@ class CartItem {
       discountAmount: discountAmount ?? this.discountAmount,
       availableUnits: availableUnits ?? this.availableUnits,
       pricingMatrix: pricingMatrix ?? this.pricingMatrix,
-      priceTierId: priceTierId ?? this.priceTierId,
+      appliedMinQty: appliedMinQty ?? this.appliedMinQty,
     );
   }
 
@@ -52,10 +52,9 @@ class CartItem {
 class CartState {
   final List<CartItem> items;
   final Customer? selectedCustomer;
-  final double globalDiscount; // Diskon global
-  final bool isGlobalDiscountPercentage; // Persen atau nominal
+  final double globalDiscount;
+  final bool isGlobalDiscountPercentage;
   final double taxPercentage;
-  final int selectedPriceTierId; // 1 = Umum, 2 = Grosir
 
   CartState({
     required this.items,
@@ -63,7 +62,6 @@ class CartState {
     this.globalDiscount = 0.0,
     this.isGlobalDiscountPercentage = false,
     this.taxPercentage = 0.0,
-    this.selectedPriceTierId = 1,
   });
 
   double get subtotal => items.fold(0.0, (sum, item) => sum + item.subtotal);
@@ -85,7 +83,6 @@ class CartState {
     double? globalDiscount,
     bool? isGlobalDiscountPercentage,
     double? taxPercentage,
-    int? selectedPriceTierId,
     bool clearCustomer = false,
   }) {
     return CartState(
@@ -94,7 +91,6 @@ class CartState {
       globalDiscount: globalDiscount ?? this.globalDiscount,
       isGlobalDiscountPercentage: isGlobalDiscountPercentage ?? this.isGlobalDiscountPercentage,
       taxPercentage: taxPercentage ?? this.taxPercentage,
-      selectedPriceTierId: selectedPriceTierId ?? this.selectedPriceTierId,
     );
   }
 }
@@ -102,17 +98,14 @@ class CartState {
 class CartCubit extends Cubit<CartState> {
   CartCubit() : super(CartState(items: []));
 
-  // Menambah atau memperbarui produk ke keranjang
   void addToCart(Product product, List<ProductUnit> units, List<ProductPrice> prices, {
     ProductUnit? unit,
     double quantity = 1.0,
     double discount = 0.0,
-    int? priceTierId,
     double? customPrice,
   }) {
     final targetUnit = unit ?? units.firstWhere((u) => u.isBase, orElse: () => units.first);
-    final tierId = priceTierId ?? state.selectedPriceTierId;
-    final price = customPrice ?? _getPriceForUnit(targetUnit.id, prices, tierId: tierId);
+    final price = customPrice ?? _getPriceForUnit(targetUnit.id, prices, quantity: quantity);
 
     final existingIndex = state.items.indexWhere(
         (item) => item.product.id == product.id && item.unit.id == targetUnit.id);
@@ -123,10 +116,10 @@ class CartCubit extends Cubit<CartState> {
         quantity: quantity,
         price: price,
         discountAmount: discount,
-        priceTierId: tierId,
       );
       emit(state.copyWith(items: newItems));
     } else {
+      final appliedQty = _getAppliedMinQty(targetUnit.id, prices, quantity: quantity);
       final newItems = List<CartItem>.from(state.items)
         ..add(CartItem(
           product: product,
@@ -136,7 +129,7 @@ class CartCubit extends Cubit<CartState> {
           discountAmount: discount,
           availableUnits: units,
           pricingMatrix: prices,
-          priceTierId: tierId,
+          appliedMinQty: appliedQty,
         ));
       emit(state.copyWith(items: newItems));
     }
@@ -151,7 +144,9 @@ class CartCubit extends Cubit<CartState> {
 
     final newItems = state.items.map((item) {
       if (item.product.id == productId && item.unit.id == unitId) {
-        return item.copyWith(quantity: quantity);
+        final newPrice = _getPriceForUnit(unitId, item.pricingMatrix, quantity: quantity);
+        final newAppliedMinQty = _getAppliedMinQty(unitId, item.pricingMatrix, quantity: quantity);
+        return item.copyWith(quantity: quantity, price: newPrice, appliedMinQty: newAppliedMinQty);
       }
       return item;
     }).toList();
@@ -175,16 +170,16 @@ class CartCubit extends Cubit<CartState> {
     emit(state.copyWith(items: newItems));
   }
 
-  // Mengubah Satuan Unit item (misal Pcs -> Dus)
   void updateUnit(int productId, int oldUnitId, ProductUnit newUnit) {
     final newItems = state.items.map((item) {
       if (item.product.id == productId && item.unit.id == oldUnitId) {
-        final tierId = item.priceTierId;
-        final newPrice = _getPriceForUnit(newUnit.id, item.pricingMatrix, tierId: tierId);
+        final newPrice = _getPriceForUnit(newUnit.id, item.pricingMatrix, quantity: item.quantity);
+        final appliedQty = _getAppliedMinQty(newUnit.id, item.pricingMatrix, quantity: item.quantity);
 
         return item.copyWith(
           unit: newUnit,
           price: newPrice,
+          appliedMinQty: appliedQty,
         );
       }
       return item;
@@ -221,42 +216,40 @@ class CartCubit extends Cubit<CartState> {
     ));
   }
 
-  // Mengubah Tipe Harga secara manual (global)
-  void changePriceTier(int tierId) {
-    final newItems = state.items.map((item) {
-      final newPrice = _getPriceForUnit(item.unit.id, item.pricingMatrix, tierId: tierId);
-      return item.copyWith(
-        price: newPrice,
-        priceTierId: tierId,
-      );
-    }).toList();
-
-    emit(state.copyWith(
-      selectedPriceTierId: tierId,
-      items: newItems,
-    ));
-  }
-
-  // Update persentase pajak
   void updateTaxPercentage(double percentage) {
     emit(state.copyWith(taxPercentage: percentage));
   }
 
-  // Bersihkan keranjang
   void clearCart() {
     emit(CartState(items: [], taxPercentage: state.taxPercentage));
   }
 
-  // Mengambil harga unit berdasarkan price matrix & price tier
-  double _getPriceForUnit(int unitId, List<ProductPrice> matrix, {required int tierId}) {
-    final priceObj = matrix.firstWhere(
-      (p) => p.unitId == unitId && p.priceTierId == tierId,
-      orElse: () => matrix.firstWhere(
-        (p) => p.unitId == unitId,
-        orElse: () => ProductPrice(id: 0, productId: 0, unitId: unitId, priceTierId: tierId, price: 0.0, minQty: 1),
-      ),
-    );
-    return priceObj.price;
+  double _getPriceForUnit(int unitId, List<ProductPrice> matrix, {required double quantity}) {
+    final validPrices = matrix.where((p) => p.unitId == unitId && p.price > 0).toList();
+    if (validPrices.isEmpty) return 0.0;
+
+    final applicable = validPrices.where((p) => p.minQty <= quantity).toList();
+    if (applicable.isNotEmpty) {
+      applicable.sort((a, b) => b.minQty.compareTo(a.minQty));
+      return applicable.first.price;
+    }
+
+    validPrices.sort((a, b) => a.minQty.compareTo(b.minQty));
+    return validPrices.first.price;
+  }
+
+  int _getAppliedMinQty(int unitId, List<ProductPrice> matrix, {required double quantity}) {
+    final validPrices = matrix.where((p) => p.unitId == unitId && p.price > 0).toList();
+    if (validPrices.isEmpty) return 1;
+
+    final applicable = validPrices.where((p) => p.minQty <= quantity).toList();
+    if (applicable.isNotEmpty) {
+      applicable.sort((a, b) => b.minQty.compareTo(a.minQty));
+      return applicable.first.minQty;
+    }
+
+    validPrices.sort((a, b) => a.minQty.compareTo(b.minQty));
+    return validPrices.first.minQty;
   }
 
   // Tahan transaksi (Hold)
@@ -271,7 +264,7 @@ class CartCubit extends Cubit<CartState> {
         'quantity': item.quantity,
         'price': item.price,
         'discount_amount': item.discountAmount,
-        'price_tier_id': item.priceTierId,
+        'min_qty_applied': item.appliedMinQty,
       };
     }).toList();
 
@@ -317,7 +310,7 @@ class CartCubit extends Cubit<CartState> {
         final double qty = (itemMap['quantity'] as num).toDouble();
         final double price = (itemMap['price'] as num).toDouble();
         final double disc = (itemMap['discount_amount'] as num).toDouble();
-        final int priceTierId = itemMap['price_tier_id'] ?? 1;
+        final int appliedMinQty = itemMap['min_qty_applied'] ?? 1;
 
         // Temukan detail produk di cache
         final prodMap = allPosProducts.firstWhere(
@@ -339,7 +332,7 @@ class CartCubit extends Cubit<CartState> {
             discountAmount: disc,
             availableUnits: units,
             pricingMatrix: prices,
-            priceTierId: priceTierId,
+            appliedMinQty: appliedMinQty,
           ));
         }
       }

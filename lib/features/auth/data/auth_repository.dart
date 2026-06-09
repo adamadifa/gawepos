@@ -68,42 +68,48 @@ class AuthRepository {
               ),
             );
 
-        // Seed Default Role Permissions
-        await _db.into(_db.rolePermissions).insert(
-              RolePermissionsCompanion.insert(
-                role: 'admin',
-                allowedMenus: jsonEncode([
-                  'pos',
-                  'products',
-                  'expenses',
-                  'restock',
-                  'opname',
-                  'history',
-                  'reports',
-                  'contacts',
-                  'settings',
-                  'users'
-                ]),
-              ),
-            );
-        await _db.into(_db.rolePermissions).insert(
-              RolePermissionsCompanion.insert(
-                role: 'cashier',
-                allowedMenus: jsonEncode([
-                  'pos',
-                  'history',
-                  'contacts'
-                ]),
-              ),
-            );
+        // Seed Default Role Permissions (jika belum ada)
+        final existingRoles = await _db.select(_db.rolePermissions).get();
+        if (existingRoles.isEmpty) {
+          await _db.into(_db.rolePermissions).insert(
+                RolePermissionsCompanion.insert(
+                  role: 'admin',
+                  allowedMenus: jsonEncode([
+                    'pos',
+                    'products',
+                    'expenses',
+                    'restock',
+                    'opname',
+                    'history',
+                    'reports',
+                    'contacts',
+                    'settings',
+                    'users'
+                  ]),
+                ),
+              );
+          await _db.into(_db.rolePermissions).insert(
+                RolePermissionsCompanion.insert(
+                  role: 'cashier',
+                  allowedMenus: jsonEncode([
+                    'pos',
+                    'history',
+                    'contacts'
+                  ]),
+                ),
+              );
+        }
 
-        // 3. Seed Default Price Tiers
-        await _db.into(_db.priceTiers).insert(
-              PriceTiersCompanion.insert(name: 'Harga Umum'),
-            );
-        await _db.into(_db.priceTiers).insert(
-              PriceTiersCompanion.insert(name: 'Harga Grosir'),
-            );
+        // 3. Seed Default Price Tiers (jika belum ada)
+        final existingTiers = await _db.select(_db.priceTiers).get();
+        if (existingTiers.isEmpty) {
+          await _db.into(_db.priceTiers).insert(
+                PriceTiersCompanion.insert(name: 'Harga Umum'),
+              );
+          await _db.into(_db.priceTiers).insert(
+                PriceTiersCompanion.insert(name: 'Harga Grosir'),
+              );
+        }
 
         // 4. Seed Default Settings
         final defaultSettings = {
@@ -123,6 +129,7 @@ class AuthRepository {
                   key: entry.key,
                   value: Value(entry.value),
                 ),
+                mode: InsertMode.insertOrReplace,
               );
         }
       });

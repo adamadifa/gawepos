@@ -57,6 +57,7 @@ class Products extends Table {
   BoolColumn get isStockManaged => boolean().withDefault(const Constant(true))();
   IntColumn get minStockAlert => integer().withDefault(const Constant(0))();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+  BoolColumn get allowManualPrice => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -164,6 +165,7 @@ class OrderItems extends Table {
   RealColumn get quantity => real()();
   RealColumn get price => real()();
   RealColumn get discountAmount => real().withDefault(const Constant(0.0))();
+  IntColumn get minQtyApplied => integer().withDefault(const Constant(1))();
   RealColumn get subtotal => real()();
 }
 
@@ -357,7 +359,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -383,6 +385,10 @@ class AppDatabase extends _$AppDatabase {
             await m.createTable(salesReturnItems);
             await m.createTable(purchaseReturns);
             await m.createTable(purchaseReturnItems);
+          }
+          if (from < 6) {
+            await m.addColumn(products, products.allowManualPrice);
+            await m.addColumn(orderItems, orderItems.minQtyApplied);
           }
         },
         beforeOpen: (details) async {

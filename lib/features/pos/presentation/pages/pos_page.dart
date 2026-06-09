@@ -6,6 +6,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../../core/constants/constants.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../main.dart' show routeObserver;
 import '../../../auth/presentation/bloc/auth_cubit.dart';
 import '../../../master/presentation/bloc/category_cubit.dart';
 import '../../../master/presentation/bloc/customer_cubit.dart';
@@ -40,7 +41,7 @@ class PosPage extends StatefulWidget {
   State<PosPage> createState() => _PosPageState();
 }
 
-class _PosPageState extends State<PosPage> with TickerProviderStateMixin {
+class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteAware {
   late TabController _mobileTabController;
   late AnimationController _fabAnimController;
   String _searchQuery = '';
@@ -66,11 +67,23 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    routeObserver.subscribe(this, ModalRoute.of(context) as PageRoute);
+  }
+
+  @override
   void dispose() {
+    routeObserver.unsubscribe(this);
     _mobileTabController.dispose();
     _fabAnimController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    context.read<SalesCubit>().loadProducts();
   }
 
   void _showBarcodeScanner() {
@@ -1274,6 +1287,8 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin {
     final List<ProductUnit> units = List<ProductUnit>.from(item['units'] ?? []);
     final List<ProductPrice> prices =
         List<ProductPrice>.from(item['prices'] ?? []);
+    final String? brandName = item['brandName'] as String?;
+    final String? categoryName = item['categoryName'] as String?;
 
     // Get base price
     ProductUnit? baseUnit;
@@ -1284,16 +1299,14 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin {
           );
     }
 
-    double basePrice = 0.0;
-    String unitName = 'Pcs';
-    if (baseUnit != null) {
-      unitName = baseUnit.name;
-      if (prices.isNotEmpty) {
-        final priceObj = prices.cast<ProductPrice?>().firstWhere(
-              (p) => p!.unitId == baseUnit!.id && p.priceTierId == 1,
-              orElse: () => prices.first,
-            );
-        if (priceObj != null) basePrice = priceObj.price;
+    double minPrice = 0.0;
+    double maxPrice = 0.0;
+    if (prices.isNotEmpty) {
+      final validPrices = prices.where((p) => p.price > 0).toList();
+      if (validPrices.isNotEmpty) {
+        validPrices.sort((a, b) => a.price.compareTo(b.price));
+        minPrice = validPrices.first.price;
+        maxPrice = validPrices.last.price;
       }
     }
 
@@ -1417,7 +1430,9 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin {
                         ],
                       ),
                       child: Text(
-                        CurrencyFormatter.format(basePrice),
+                        minPrice == maxPrice
+                            ? CurrencyFormatter.format(minPrice)
+                            : '${CurrencyFormatter.format(minPrice)} - ${CurrencyFormatter.format(maxPrice)}',
                         style: GoogleFonts.poppins(
                           color: Colors.white,
                           fontSize: 10,
@@ -1431,10 +1446,10 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin {
             ),
             // Product info
             Expanded(
-              flex: 2,
+              flex: 1,
               child: Padding(
                 padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1449,37 +1464,20 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin {
                         height: 1.3,
                       ),
                     ),
-                    const Spacer(),
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEEF2FF),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            '/ $unitName',
-                            style: GoogleFonts.poppins(
-                              fontSize: 10,
-                              color: AppConstants.primaryColor,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
+                    const SizedBox(height: 2),
+                    if (brandName != null || categoryName != null)
+                      Text(
+                        [
+                          if (brandName != null) brandName,
+                          if (categoryName != null) categoryName,
+                        ].join(' • '),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 9,
+                          color: AppConstants.textLightColor,
                         ),
-                        if (prod.sku != null && prod.sku!.isNotEmpty) ...[
-                          const Spacer(),
-                          Text(
-                            prod.sku!,
-                            style: GoogleFonts.poppins(
-                              fontSize: 9,
-                              color: AppConstants.textLightColor,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+                      ),
                   ],
                 ),
               ),
@@ -1504,45 +1502,33 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin {
       return match?.quantity ?? 0.0;
     }
 
-    double getPriceForUnit(ProductUnit unit, int tierId) {
-      // If already in cart, use that price
+    double getPriceForUnitByQty(ProductUnit unit, double qty) {
       final match = cartState.items.cast<CartItem?>().firstWhere(
         (c) => c!.product.id == prod.id && c.unit.id == unit.id,
         orElse: () => null,
       );
-      if (match != null) {
-        return match.price;
+      if (match != null) return match.price;
+
+      final validPrices = prices.where((p) => p.unitId == unit.id && p.price > 0).toList();
+      if (validPrices.isEmpty) return 0.0;
+      final applicable = validPrices.where((p) => p.minQty <= qty).toList();
+      if (applicable.isNotEmpty) {
+        applicable.sort((a, b) => b.minQty.compareTo(a.minQty));
+        return applicable.first.price;
       }
-      // Otherwise get default price for tier
-      if (prices.isNotEmpty) {
-        final priceObj = prices.firstWhere(
-          (p) => p.unitId == unit.id && p.priceTierId == tierId,
-          orElse: () => prices.firstWhere(
-            (p) => p.unitId == unit.id,
-            orElse: () => prices.first,
-          ),
-        );
-        return priceObj.price;
-      }
-      return 0.0;
+      validPrices.sort((a, b) => a.minQty.compareTo(b.minQty));
+      return validPrices.first.price;
     }
 
-    // Determine initial selected price tier
     final existingInCart = cartState.items.where((c) => c.product.id == prod.id);
-    int selectedItemTierId = existingInCart.isNotEmpty 
-        ? existingInCart.first.priceTierId 
-        : cartState.selectedPriceTierId;
-
-    // Is the product completely new to the cart?
     final bool isProductNew = existingInCart.isEmpty;
 
-    // Create unit states
     final List<_UnitInputState> unitStates = units.map((u) {
       double initialQty = getQtyForUnit(u);
       if (isProductNew && u.isBase && initialQty == 0.0) {
-        initialQty = 1.0; // pre-fill base unit with 1.0
+        initialQty = 1.0;
       }
-      final double initialPrice = getPriceForUnit(u, selectedItemTierId);
+      final double initialPrice = getPriceForUnitByQty(u, initialQty);
 
       return _UnitInputState(
         unit: u,
@@ -1579,22 +1565,21 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin {
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setModalState) {
-          // Helper to rebuild default prices if price tier changes
-          void updatePricesForTier(int tierId) {
-            selectedItemTierId = tierId;
-            for (var state in unitStates) {
-              if (prices.isNotEmpty) {
-                final priceObj = prices.firstWhere(
-                  (p) => p.unitId == state.unit.id && p.priceTierId == tierId,
-                  orElse: () => prices.firstWhere(
-                    (p) => p.unitId == state.unit.id,
-                    orElse: () => prices.first,
-                  ),
-                );
-                state.price = priceObj.price;
-                state.priceController.text = priceObj.price.toStringAsFixed(0);
-              }
+          void updatePriceForQuantity(_UnitInputState uState) {
+            if (prices.isEmpty) return;
+            final validPrices = prices.where((p) => p.unitId == uState.unit.id && p.price > 0).toList();
+            if (validPrices.isEmpty) return;
+            final applicable = validPrices.where((p) => p.minQty <= uState.qty).toList();
+            double newPrice;
+            if (applicable.isNotEmpty) {
+              applicable.sort((a, b) => b.minQty.compareTo(a.minQty));
+              newPrice = applicable.first.price;
+            } else {
+              validPrices.sort((a, b) => a.minQty.compareTo(b.minQty));
+              newPrice = validPrices.first.price;
             }
+            uState.price = newPrice;
+            uState.priceController.text = newPrice.toStringAsFixed(0);
           }
 
           final totalQty = unitStates.fold<double>(0.0, (sum, u) => sum + u.qty);
@@ -1644,88 +1629,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin {
                         )
                       ],
                     ),
-                    const SizedBox(height: 16),
-
-                    // Price Tier Selector Row
-                    Text(
-                      'Tipe Harga',
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppConstants.textLightColor,
-                      ),
-                    ),
                     const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              setModalState(() {
-                                updatePricesForTier(1);
-                              });
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              decoration: BoxDecoration(
-                                color: selectedItemTierId == 1
-                                    ? AppConstants.primaryColor
-                                    : AppConstants.backgroundColor,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: selectedItemTierId == 1
-                                      ? AppConstants.primaryColor
-                                      : AppConstants.borderLightColor,
-                                ),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                'Harga Umum',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: selectedItemTierId == 1 ? Colors.white : AppConstants.textDarkColor,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              setModalState(() {
-                                updatePricesForTier(2);
-                              });
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              decoration: BoxDecoration(
-                                color: selectedItemTierId == 2
-                                    ? AppConstants.primaryColor
-                                    : AppConstants.backgroundColor,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: selectedItemTierId == 2
-                                      ? AppConstants.primaryColor
-                                      : AppConstants.borderLightColor,
-                                ),
-                              ),
-                              alignment: Alignment.center,
-                              child: Text(
-                                'Harga Grosir',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: selectedItemTierId == 2 ? Colors.white : AppConstants.textDarkColor,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
 
                     // Units Qty & Price Editor List
                     Text(
@@ -1769,7 +1673,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin {
                               const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  // Manual Price field
+                                  // Price field (manual if allowed, otherwise read-only)
                                   Expanded(
                                     flex: 3,
                                     child: TextField(
@@ -1779,8 +1683,9 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin {
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
                                       ),
+                                      readOnly: !prod.allowManualPrice,
                                       decoration: InputDecoration(
-                                        labelText: 'Harga Manual',
+                                        labelText: prod.allowManualPrice ? 'Harga (Manual)' : 'Harga (Otomatis)',
                                         prefixText: 'Rp ',
                                         isDense: true,
                                         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -1820,6 +1725,9 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin {
                                                 uState.qtyController.text = uState.qty > 0 
                                                     ? uState.qty.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '') 
                                                     : '';
+                                                if (!prod.allowManualPrice) {
+                                                  updatePriceForQuantity(uState);
+                                                }
                                               });
                                             } : null,
                                           ),
@@ -1840,6 +1748,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin {
                                               onChanged: (val) {
                                                 setModalState(() {
                                                   uState.qty = double.tryParse(val) ?? 0.0;
+                                                  updatePriceForQuantity(uState);
                                                 });
                                               },
                                             ),
@@ -1850,6 +1759,9 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin {
                                               setModalState(() {
                                                 uState.qty++;
                                                 uState.qtyController.text = uState.qty.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '');
+                                                if (!prod.allowManualPrice) {
+                                                  updatePriceForQuantity(uState);
+                                                }
                                               });
                                             },
                                           ),
@@ -1917,7 +1829,6 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin {
                                     unit: us.unit,
                                     quantity: us.qty,
                                     discount: unitDisc,
-                                    priceTierId: selectedItemTierId,
                                     customPrice: us.price,
                                   );
                               addedAny = true;
@@ -2059,10 +1970,18 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin {
             InkWell(
               onTap: () {
                 final cartState = context.read<CartCubit>().state;
+                // Cari prices fresh dari catalog (bukan dari pricingMatrix yg basi)
+                final catalogMatch = _catalogProducts.cast<Map<String, dynamic>?>().firstWhere(
+                  (p) => (p!['product'] as Product).id == product.id,
+                  orElse: () => null,
+                );
+                final freshPrices = catalogMatch != null
+                    ? List<ProductPrice>.from(catalogMatch['prices'])
+                    : firstItem.pricingMatrix;
                 final catalogItem = {
                   'product': product,
                   'units': firstItem.availableUnits,
-                  'prices': firstItem.pricingMatrix,
+                  'prices': freshPrices,
                 };
                 _showProductModal(context, catalogItem, cartState);
               },
