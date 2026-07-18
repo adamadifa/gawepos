@@ -5,10 +5,12 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val flutterExtension = extensions.getByType<com.flutter.gradle.FlutterExtension>()
+
 android {
     namespace = "com.mypos.posmobile.posmobile"
-    compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    compileSdk = flutterExtension.compileSdkVersion
+    ndkVersion = flutterExtension.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -24,10 +26,10 @@ android {
         applicationId = "com.mypos.posmobile.posmobile"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        minSdk = flutterExtension.minSdkVersion
+        targetSdk = flutterExtension.targetSdkVersion
+        versionCode = flutterExtension.versionCode
+        versionName = flutterExtension.versionName
     }
 
     buildTypes {

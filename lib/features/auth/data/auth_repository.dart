@@ -121,6 +121,10 @@ class AuthRepository {
           'printer_name': '',
           'receipt_header': 'TERIMA KASIH TELAH BERBELANJA',
           'receipt_footer': 'Barang yang sudah dibeli tidak dapat ditukar/dikembalikan.',
+          'points_enabled': '1',
+          'points_earn_rate': '1000',
+          'points_redeem_value': '10',
+          'points_min_redeem': '100',
         };
 
         for (var entry in defaultSettings.entries) {

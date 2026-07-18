@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../../../../core/utils/scan_sound_helper.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -91,76 +93,86 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => Container(
-        height: MediaQuery.of(ctx).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          children: [
-            const SizedBox(height: 8),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppConstants.primaryColor.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.qr_code_scanner_rounded,
-                        color: AppConstants.primaryColor, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    'Scan Barcode Produk',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: MobileScanner(
-                    onDetect: (capture) {
-                      final List<Barcode> barcodes = capture.barcodes;
-                      if (barcodes.isNotEmpty) {
-                        final code = barcodes.first.rawValue;
-                        if (code != null) {
-                          Navigator.pop(ctx);
-                          _handleBarcodeScanned(code);
-                        }
-                      }
-                    },
+      builder: (ctx) {
+        bool scanned = false;
+        return Container(
+          height: MediaQuery.of(ctx).size.height * 0.7,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              children: [
+                const SizedBox(height: 8),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-              ),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppConstants.primaryColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.qr_code_scanner_rounded,
+                            color: AppConstants.primaryColor, size: 20),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Scan Barcode Produk',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: MobileScanner(
+                        onDetect: (capture) {
+                          if (scanned) return;
+                          final List<Barcode> barcodes = capture.barcodes;
+                          if (barcodes.isNotEmpty) {
+                            final code = barcodes.first.rawValue;
+                            if (code != null) {
+                              scanned = true;
+                              ScanSoundHelper.playBeep();
+                              HapticFeedback.lightImpact();
+                              Navigator.pop(ctx);
+                              _handleBarcodeScanned(code);
+                            }
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+              ],
             ),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -1732,25 +1744,35 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                                             } : null,
                                           ),
                                           Expanded(
-                                            child: TextField(
-                                              controller: uState.qtyController,
-                                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                              textAlign: TextAlign.center,
-                                              style: GoogleFonts.poppins(
-                                                fontSize: 13, 
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                              decoration: const InputDecoration(
-                                                isDense: true,
-                                                contentPadding: EdgeInsets.zero,
-                                                border: InputBorder.none,
-                                              ),
-                                              onChanged: (val) {
-                                                setModalState(() {
-                                                  uState.qty = double.tryParse(val) ?? 0.0;
-                                                  updatePriceForQuantity(uState);
-                                                });
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                _showQtyInputDialogForModal(
+                                                  context,
+                                                  uState,
+                                                  prod.name,
+                                                  () {
+                                                    setModalState(() {
+                                                      if (!prod.allowManualPrice) {
+                                                        updatePriceForQuantity(uState);
+                                                      }
+                                                    });
+                                                  },
+                                                );
                                               },
+                                              child: Container(
+                                                padding: const EdgeInsets.symmetric(vertical: 4),
+                                                color: Colors.transparent,
+                                                child: Text(
+                                                  uState.qty > 0 
+                                                      ? uState.qty.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '') 
+                                                      : '0',
+                                                  textAlign: TextAlign.center,
+                                                  style: GoogleFonts.poppins(
+                                                    fontSize: 13, 
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
                                             ),
                                           ),
                                           IconButton(
@@ -2119,15 +2141,23 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                                 }
                               },
                             ),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              child: Text(
-                                item.quantity
-                                    .toStringAsFixed(3)
-                                    .replaceAll(RegExp(r'\.?0+$'), ''),
-                                style: GoogleFonts.poppins(
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 13,
+                            GestureDetector(
+                              onTap: () => _showQtyInputDialog(context, item),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: AppConstants.borderLightColor.withValues(alpha: 0.3)),
+                                  borderRadius: BorderRadius.circular(4),
+                                  color: Colors.white,
+                                ),
+                                child: Text(
+                                  item.quantity
+                                      .toStringAsFixed(3)
+                                      .replaceAll(RegExp(r'\.?0+$'), ''),
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ),
                             ),
@@ -2519,6 +2549,130 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
           ),
         ),
       ],
+    );
+  }
+
+  void _showQtyInputDialog(BuildContext context, CartItem item) {
+    final controller = TextEditingController(
+      text: item.quantity.toString().replaceAll(RegExp(r'\.?0+$'), ''),
+    );
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+        ),
+        title: Text(
+          'Input Jumlah (Qty)',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              item.product.name,
+              style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14, color: AppConstants.textDarkColor),
+            ),
+            Text(
+              'Satuan: ${item.unit.name}',
+              style: const TextStyle(fontSize: 12, color: AppConstants.textLightColor),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Jumlah *',
+                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('BATAL'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final newQty = double.tryParse(controller.text.trim());
+              if (newQty != null && newQty > 0) {
+                context.read<CartCubit>().updateQuantity(
+                  item.product.id,
+                  item.unit.id,
+                  newQty,
+                );
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('SIMPAN'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showQtyInputDialogForModal(BuildContext context, _UnitInputState uState, String productName, Function() onSave) {
+    final controller = TextEditingController(
+      text: uState.qty > 0 ? uState.qty.toString().replaceAll(RegExp(r'\.?0+$'), '') : '',
+    );
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+        ),
+        title: Text(
+          'Input Jumlah (Qty)',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              productName,
+              style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14, color: AppConstants.textDarkColor),
+            ),
+            Text(
+              'Satuan: ${uState.unit.name}',
+              style: const TextStyle(fontSize: 12, color: AppConstants.textLightColor),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              autofocus: true,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Jumlah *',
+                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('BATAL'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final newQty = double.tryParse(controller.text.trim());
+              if (newQty != null && newQty >= 0) {
+                uState.qty = newQty;
+                uState.qtyController.text = newQty > 0 
+                    ? newQty.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '') 
+                    : '';
+                onSave();
+              }
+              Navigator.pop(ctx);
+            },
+            child: const Text('SIMPAN'),
+          ),
+        ],
+      ),
     );
   }
 }

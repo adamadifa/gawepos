@@ -90,7 +90,9 @@ class _OpenShiftPageState extends State<OpenShiftPage> {
                   const BorderRadius.vertical(top: Radius.circular(28)),
               child: Container(
                 color: AppConstants.backgroundColor,
-                child: SingleChildScrollView(
+                child: SafeArea(
+                  top: false,
+                  child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
                   child: Center(
                     child: Container(
@@ -268,6 +270,7 @@ class _OpenShiftPageState extends State<OpenShiftPage> {
                   ),
                 ),
               ),
+            ),
             ),
           ),
         ],

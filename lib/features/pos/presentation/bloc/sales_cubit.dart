@@ -53,6 +53,9 @@ class SalesCubit extends Cubit<SalesState> {
     double downPayment = 0.0,
     int? customerId,
     String? notes,
+    int pointsEarned = 0,
+    int pointsRedeemed = 0,
+    double pointsDiscount = 0.0,
   }) async {
     emit(SalesLoading());
     try {
@@ -70,6 +73,9 @@ class SalesCubit extends Cubit<SalesState> {
         payments: payments,
         customerId: customerId,
         notes: notes,
+        pointsEarned: pointsEarned,
+        pointsRedeemed: pointsRedeemed,
+        pointsDiscount: pointsDiscount,
       );
       emit(SalesSuccess(orderId));
     } catch (e) {

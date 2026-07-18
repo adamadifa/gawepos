@@ -14,23 +14,27 @@ class ReturnRepository {
           ..orderBy([(tbl) => OrderingTerm(expression: tbl.createdAt, mode: OrderingMode.desc)]))
         .get();
 
-    final List<Map<String, dynamic>> results = [];
-    for (var r in returns) {
-      final customer = r.customerId != null
-          ? await (_db.select(_db.customers)..where((tbl) => tbl.id.equals(r.customerId!))).getSingleOrNull()
-          : null;
+    if (returns.isEmpty) return [];
 
-      final order = r.orderId != null
-          ? await (_db.select(_db.orders)..where((tbl) => tbl.id.equals(r.orderId!))).getSingleOrNull()
-          : null;
+    final customerIds = returns.where((r) => r.customerId != null).map((r) => r.customerId!).toSet().toList();
+    final orderIds = returns.where((r) => r.orderId != null).map((r) => r.orderId!).toSet().toList();
 
-      results.add({
+    final customers = customerIds.isEmpty ? [] : await (_db.select(_db.customers)
+          ..where((tbl) => tbl.id.isIn(customerIds)))
+        .get();
+    final orders = orderIds.isEmpty ? [] : await (_db.select(_db.orders)
+          ..where((tbl) => tbl.id.isIn(orderIds)))
+        .get();
+    final customerMap = {for (var c in customers) c.id: c};
+    final orderMap = {for (var o in orders) o.id: o};
+
+    return returns.map((r) {
+      return {
         'return': r,
-        'customer': customer,
-        'order': order,
-      });
-    }
-    return results;
+        'customer': customerMap[r.customerId],
+        'order': orderMap[r.orderId],
+      };
+    }).toList();
   }
 
   // Ambil detail item dari satu transaksi retur penjualan
@@ -47,17 +51,24 @@ class ReturnRepository {
         : null;
 
     final items = await (_db.select(_db.salesReturnItems)..where((tbl) => tbl.salesReturnId.equals(returnId))).get();
-    final List<Map<String, dynamic>> itemDetails = [];
+    final productIds = items.map((i) => i.productId).toSet().toList();
+    final unitIds = items.map((i) => i.unitId).toSet().toList();
+    final products = productIds.isEmpty ? [] : await (_db.select(_db.products)
+          ..where((tbl) => tbl.id.isIn(productIds)))
+        .get();
+    final units = unitIds.isEmpty ? [] : await (_db.select(_db.productUnits)
+          ..where((tbl) => tbl.id.isIn(unitIds)))
+        .get();
+    final productMap = {for (var p in products) p.id: p};
+    final unitMap = {for (var u in units) u.id: u};
 
-    for (var item in items) {
-      final product = await (_db.select(_db.products)..where((tbl) => tbl.id.equals(item.productId))).getSingleOrNull();
-      final unit = await (_db.select(_db.productUnits)..where((tbl) => tbl.id.equals(item.unitId))).getSingleOrNull();
-      itemDetails.add({
+    final itemDetails = items.map((item) {
+      return {
         'item': item,
-        'product': product,
-        'unit': unit,
-      });
-    }
+        'product': productMap[item.productId],
+        'unit': unitMap[item.unitId],
+      };
+    }).toList();
 
     return {
       'return': ret,
@@ -82,9 +93,11 @@ class ReturnRepository {
       
       // 1. Generate Ref No: RETS-YYYYMMDD-XXXX
       final dateStr = "${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}";
-      final countQuery = _db.select(_db.salesReturns)..where((tbl) => tbl.referenceNo.like('RETS-$dateStr-%'));
-      final count = (await countQuery.get()).length + 1;
-      final refNo = "RETS-$dateStr-${count.toString().padLeft(4, '0')}";
+      final countQuery = _db.selectOnly(_db.salesReturns)
+        ..addColumns([_db.salesReturns.id.count()])
+        ..where(_db.salesReturns.referenceNo.like('RETS-$dateStr-%'));
+      final count = (await countQuery.getSingle()).read<int>(_db.salesReturns.id.count()) ?? 0;
+      final refNo = "RETS-$dateStr-${(count + 1).toString().padLeft(4, '0')}";
 
       // 2. Insert Sales Return
       final returnId = await _db.into(_db.salesReturns).insert(
@@ -183,20 +196,27 @@ class ReturnRepository {
           ..orderBy([(tbl) => OrderingTerm(expression: tbl.createdAt, mode: OrderingMode.desc)]))
         .get();
 
-    final List<Map<String, dynamic>> results = [];
-    for (var r in returns) {
-      final supplier = await (_db.select(_db.suppliers)..where((tbl) => tbl.id.equals(r.supplierId))).getSingleOrNull();
-      final purchase = r.purchaseId != null
-          ? await (_db.select(_db.purchases)..where((tbl) => tbl.id.equals(r.purchaseId!))).getSingleOrNull()
-          : null;
+    if (returns.isEmpty) return [];
 
-      results.add({
+    final supplierIds = returns.map((r) => r.supplierId).toSet().toList();
+    final purchaseIds = returns.where((r) => r.purchaseId != null).map((r) => r.purchaseId!).toSet().toList();
+
+    final suppliers = await (_db.select(_db.suppliers)
+          ..where((tbl) => tbl.id.isIn(supplierIds)))
+        .get();
+    final purchases = purchaseIds.isEmpty ? [] : await (_db.select(_db.purchases)
+          ..where((tbl) => tbl.id.isIn(purchaseIds)))
+        .get();
+    final supplierMap = {for (var s in suppliers) s.id: s};
+    final purchaseMap = {for (var o in purchases) o.id: o};
+
+    return returns.map((r) {
+      return {
         'return': r,
-        'supplier': supplier,
-        'purchase': purchase,
-      });
-    }
-    return results;
+        'supplier': supplierMap[r.supplierId],
+        'purchase': purchaseMap[r.purchaseId],
+      };
+    }).toList();
   }
 
   // Ambil detail item dari satu transaksi retur pembelian
@@ -210,17 +230,24 @@ class ReturnRepository {
         : null;
 
     final items = await (_db.select(_db.purchaseReturnItems)..where((tbl) => tbl.purchaseReturnId.equals(returnId))).get();
-    final List<Map<String, dynamic>> itemDetails = [];
+    final productIds = items.map((i) => i.productId).toSet().toList();
+    final unitIds = items.map((i) => i.unitId).toSet().toList();
+    final products = productIds.isEmpty ? [] : await (_db.select(_db.products)
+          ..where((tbl) => tbl.id.isIn(productIds)))
+        .get();
+    final units = unitIds.isEmpty ? [] : await (_db.select(_db.productUnits)
+          ..where((tbl) => tbl.id.isIn(unitIds)))
+        .get();
+    final productMap = {for (var p in products) p.id: p};
+    final unitMap = {for (var u in units) u.id: u};
 
-    for (var item in items) {
-      final product = await (_db.select(_db.products)..where((tbl) => tbl.id.equals(item.productId))).getSingleOrNull();
-      final unit = await (_db.select(_db.productUnits)..where((tbl) => tbl.id.equals(item.unitId))).getSingleOrNull();
-      itemDetails.add({
+    final itemDetails = items.map((item) {
+      return {
         'item': item,
-        'product': product,
-        'unit': unit,
-      });
-    }
+        'product': productMap[item.productId],
+        'unit': unitMap[item.unitId],
+      };
+    }).toList();
 
     return {
       'return': ret,
@@ -245,9 +272,11 @@ class ReturnRepository {
       
       // 1. Generate Ref No: RETP-YYYYMMDD-XXXX
       final dateStr = "${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}";
-      final countQuery = _db.select(_db.purchaseReturns)..where((tbl) => tbl.referenceNo.like('RETP-$dateStr-%'));
-      final count = (await countQuery.get()).length + 1;
-      final refNo = "RETP-$dateStr-${count.toString().padLeft(4, '0')}";
+      final countQuery = _db.selectOnly(_db.purchaseReturns)
+        ..addColumns([_db.purchaseReturns.id.count()])
+        ..where(_db.purchaseReturns.referenceNo.like('RETP-$dateStr-%'));
+      final count = (await countQuery.getSingle()).read<int>(_db.purchaseReturns.id.count()) ?? 0;
+      final refNo = "RETP-$dateStr-${(count + 1).toString().padLeft(4, '0')}";
 
       // 2. Insert Purchase Return
       final returnId = await _db.into(_db.purchaseReturns).insert(

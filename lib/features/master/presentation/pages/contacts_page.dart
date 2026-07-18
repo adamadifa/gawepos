@@ -361,6 +361,25 @@ class _CustomerTabContent extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.poppins(fontSize: 11, color: AppConstants.textLightColor),
                               ),
+                            if (item.pointsBalance > 0)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 2),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.card_giftcard_rounded,
+                                        size: 11, color: AppConstants.warningColor),
+                                    const SizedBox(width: 3),
+                                    Text(
+                                      'Poin: ${item.pointsBalance}',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 11,
+                                        color: AppConstants.warningColor,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                           ],
                         ),
                         trailing: Row(
@@ -410,7 +429,7 @@ class _CustomerTabContent extends StatelessWidget {
             },
           ),
         ),
-        
+
         // Add Button Bottom
         Padding(
           padding: const EdgeInsets.all(16.0),

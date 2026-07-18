@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -6,6 +7,7 @@ import '../../../../core/constants/constants.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/widgets/curved_header.dart';
 import '../bloc/inventory_cubit.dart';
+import '../../../../core/utils/scan_sound_helper.dart';
 import 'stock_card_page.dart';
 
 class StockOpnamePage extends StatefulWidget {
@@ -36,12 +38,21 @@ class _StockOpnamePageState extends State<StockOpnamePage> {
     required Product product,
     required List<Map<String, dynamic>> productUnits,
   }) {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => _ProductAdjustmentDialog(
-        product: product,
-        productUnits: productUnits,
-        cubit: context.read<InventoryCubit>(),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radiusMd)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+        ),
+        child: _ProductAdjustmentDialog(
+          product: product,
+          productUnits: productUnits,
+          cubit: context.read<InventoryCubit>(),
+        ),
       ),
     );
   }
@@ -406,7 +417,9 @@ class _StockOpnamePageState extends State<StockOpnamePage> {
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
-          child: Column(
+          child: SafeArea(
+            top: false,
+            child: Column(
             children: [
               const SizedBox(height: 8),
               Container(
@@ -459,6 +472,8 @@ class _StockOpnamePageState extends State<StockOpnamePage> {
                           final code = barcodes.first.rawValue;
                           if (code != null) {
                             scanned = true;
+                            ScanSoundHelper.playBeep();
+                            HapticFeedback.lightImpact();
                             Navigator.pop(ctx, code);
                           }
                         }
@@ -470,26 +485,32 @@ class _StockOpnamePageState extends State<StockOpnamePage> {
               const SizedBox(height: 24),
             ],
           ),
+        ),
         );
       },
-    ).then((code) {
+    ).then((code) async {
       if (code != null && mounted) {
-        _handleBarcodeScanned(code, itemsList);
+        await Future.delayed(const Duration(milliseconds: 300));
+        if (mounted) {
+          _handleBarcodeScanned(code, itemsList);
+        }
       }
     });
   }
 
   void _handleBarcodeScanned(String barcode, List<Map<String, dynamic>> itemsList) {
     try {
-      final match = itemsList.firstWhere(
-        (item) {
-          final Product p = item['product'];
-          return p.barcode == barcode || p.sku == barcode;
-        },
-        orElse: () => <String, dynamic>{},
-      );
+      Map<String, dynamic>? match;
+      for (var item in itemsList) {
+        final Product p = item['product'];
+        if (p.barcode?.trim().toLowerCase() == barcode.trim().toLowerCase() ||
+            p.sku?.trim().toLowerCase() == barcode.trim().toLowerCase()) {
+          match = item;
+          break;
+        }
+      }
 
-      if (match.isNotEmpty) {
+      if (match != null && match.isNotEmpty) {
         final Product product = match['product'];
         
         final productUnits = itemsList.where((item) {
@@ -511,8 +532,14 @@ class _StockOpnamePageState extends State<StockOpnamePage> {
           ),
         );
       }
-    } catch (e) {
-      // ignore
+    } catch (e, stack) {
+      debugPrint('Error _handleBarcodeScanned: $e\n$stack');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: AppConstants.errorColor,
+        ),
+      );
     }
   }
 }
@@ -563,169 +590,196 @@ class _ProductAdjustmentDialogState extends State<_ProductAdjustmentDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-      ),
-      title: Text(
-        'Sesuaikan Stok (Opname)',
-        style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16),
-      ),
-      content: SizedBox(
-        width: MediaQuery.of(context).size.width * 0.9,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                widget.product.name,
-                style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 15, color: AppConstants.textDarkColor),
-              ),
-              if (widget.product.sku != null)
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
                 Text(
-                  'SKU: ${widget.product.sku}',
-                  style: const TextStyle(fontSize: 11, color: AppConstants.textLightColor),
+                  'Sesuaikan Stok (Opname)',
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16),
                 ),
-              const Divider(height: 24),
-              ...widget.productUnits.map((uMap) {
-                final ProductUnit unit = uMap['unit'];
-                final InventoryData? inv = uMap['inventory'];
-                final double currentStock = inv?.quantity ?? 0.0;
-                final double diff = _differences[unit.id] ?? 0.0;
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Text(
+              widget.product.name,
+              style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 15, color: AppConstants.textDarkColor),
+            ),
+            if (widget.product.sku != null)
+              Text(
+                'SKU: ${widget.product.sku}',
+                style: const TextStyle(fontSize: 11, color: AppConstants.textLightColor),
+              ),
+            const Divider(height: 24),
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.45,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Satuan: ${unit.name}',
-                          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 12, color: AppConstants.textDarkColor),
-                        ),
-                        Text(
-                          'Stok Sistem: $currentStock',
-                          style: const TextStyle(fontSize: 11, color: AppConstants.textLightColor),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        Expanded(
-                          flex: 3,
-                          child: TextField(
-                            controller: _controllers[unit.id],
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            decoration: const InputDecoration(
-                              labelText: 'Stok Riil (Fisik) *',
-                              contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                            ),
-                            onChanged: (val) {
-                              final pStock = double.tryParse(val) ?? 0.0;
-                              setState(() {
-                                _physicalStocks[unit.id] = pStock;
-                                _differences[unit.id] = pStock - currentStock;
-                              });
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 2,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                            decoration: BoxDecoration(
-                              color: diff == 0
-                                  ? AppConstants.backgroundColor
-                                  : diff > 0
-                                      ? AppConstants.successColor.withValues(alpha: 0.06)
-                                      : AppConstants.errorColor.withValues(alpha: 0.06),
-                              borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                              border: Border.all(
-                                color: diff == 0
-                                    ? AppConstants.borderLightColor
-                                    : diff > 0
-                                        ? AppConstants.successColor.withValues(alpha: 0.15)
-                                        : AppConstants.errorColor.withValues(alpha: 0.15),
+                    ...widget.productUnits.map((uMap) {
+                      final ProductUnit unit = uMap['unit'];
+                      final InventoryData? inv = uMap['inventory'];
+                      final double currentStock = inv?.quantity ?? 0.0;
+                      final double diff = _differences[unit.id] ?? 0.0;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Satuan: ${unit.name}',
+                                style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 12, color: AppConstants.textDarkColor),
                               ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                '${diff > 0 ? "+" : ""}${diff.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '')}',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  color: diff == 0
-                                      ? AppConstants.textDarkColor
-                                      : diff > 0
-                                          ? AppConstants.successColor
-                                          : AppConstants.errorColor,
+                              Text(
+                                'Stok Sistem: $currentStock',
+                                style: const TextStyle(fontSize: 11, color: AppConstants.textLightColor),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: TextField(
+                                  controller: _controllers[unit.id],
+                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Stok Riil (Fisik) *',
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  ),
+                                  onChanged: (val) {
+                                    final pStock = double.tryParse(val) ?? 0.0;
+                                    setState(() {
+                                      _physicalStocks[unit.id] = pStock;
+                                      _differences[unit.id] = pStock - currentStock;
+                                    });
+                                  },
                                 ),
                               ),
-                            ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 2,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+                                  decoration: BoxDecoration(
+                                    color: diff == 0
+                                        ? AppConstants.backgroundColor
+                                        : diff > 0
+                                            ? AppConstants.successColor.withValues(alpha: 0.06)
+                                            : AppConstants.errorColor.withValues(alpha: 0.06),
+                                    borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                                    border: Border.all(
+                                      color: diff == 0
+                                          ? AppConstants.borderLightColor
+                                          : diff > 0
+                                              ? AppConstants.successColor.withValues(alpha: 0.15)
+                                              : AppConstants.errorColor.withValues(alpha: 0.15),
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '${diff > 0 ? "+" : ""}${diff.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '')}',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: diff == 0
+                                            ? AppConstants.textDarkColor
+                                            : diff > 0
+                                                ? AppConstants.successColor
+                                                : AppConstants.errorColor,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 16),
+                        ],
+                      );
+                    }),
+                    TextField(
+                      controller: _notesController,
+                      decoration: const InputDecoration(
+                        labelText: 'Alasan / Catatan Penyesuaian',
+                        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                      ),
+                      maxLines: 2,
                     ),
-                    const SizedBox(height: 16),
                   ],
-                );
-              }),
-              TextField(
-                controller: _notesController,
-                decoration: const InputDecoration(
-                  labelText: 'Alasan / Catatan Penyesuaian',
-                  contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                 ),
-                maxLines: 2,
               ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('BATAL'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      final List<Map<String, dynamic>> adjustments = [];
+                      for (var uMap in widget.productUnits) {
+                        final ProductUnit unit = uMap['unit'];
+                        final InventoryData? inv = uMap['inventory'];
+                        final double currentStock = inv?.quantity ?? 0.0;
+                        final double pStock = _physicalStocks[unit.id] ?? currentStock;
+                        final diff = pStock - currentStock;
+
+                        if (diff != 0) {
+                          adjustments.add({
+                            'unitId': unit.id,
+                            'theoreticalQty': currentStock,
+                            'physicalQty': pStock,
+                          });
+                        }
+                      }
+
+                      final notes = _notesController.text.trim();
+
+                      if (adjustments.isEmpty) {
+                        Navigator.pop(context);
+                        return;
+                      }
+
+                      widget.cubit.adjustStockMultiple(
+                        productId: widget.product.id,
+                        adjustments: adjustments,
+                        notes: notes.isEmpty ? null : notes,
+                      );
+                      Navigator.pop(context);
+                    },
+                    child: const Text('SIMPAN'),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('BATAL'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            final List<Map<String, dynamic>> adjustments = [];
-            for (var uMap in widget.productUnits) {
-              final ProductUnit unit = uMap['unit'];
-              final InventoryData? inv = uMap['inventory'];
-              final double currentStock = inv?.quantity ?? 0.0;
-              final double pStock = _physicalStocks[unit.id] ?? currentStock;
-              final diff = pStock - currentStock;
-
-              if (diff != 0) {
-                adjustments.add({
-                  'unitId': unit.id,
-                  'theoreticalQty': currentStock,
-                  'physicalQty': pStock,
-                });
-              }
-            }
-
-            final notes = _notesController.text.trim();
-
-            if (adjustments.isEmpty) {
-              Navigator.pop(context);
-              return;
-            }
-
-            widget.cubit.adjustStockMultiple(
-              productId: widget.product.id,
-              adjustments: adjustments,
-              notes: notes.isEmpty ? null : notes,
-            );
-            Navigator.pop(context);
-          },
-          child: const Text('SIMPAN'),
-        ),
-      ],
     );
   }
 }

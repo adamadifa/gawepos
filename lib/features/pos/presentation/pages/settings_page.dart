@@ -6,6 +6,7 @@ import '../../../auth/presentation/bloc/auth_cubit.dart';
 import '../../../auth/presentation/pages/user_management_page.dart';
 import '../../../auth/presentation/pages/role_permissions_page.dart';
 import 'database_management_page.dart';
+import 'points_settings_page.dart';
 import 'printer_settings_page.dart';
 import 'shop_settings_page.dart';
 
@@ -70,6 +71,16 @@ class SettingsPage extends StatelessWidget {
             title: 'Printer Bluetooth',
             subtitle: 'Hubungkan printer thermal kasir dan lakukan uji test print.',
             destination: const PrinterSettingsPage(),
+          ),
+          const SizedBox(height: 12),
+          _buildMenuCard(
+            context: context,
+            icon: Icons.card_giftcard_rounded,
+            iconColor: Colors.orange.shade600,
+            bgColor: Colors.orange.shade50,
+            title: 'Poin Pelanggan',
+            subtitle: 'Aktifkan/nonaktifkan poin, atur nilai tukar & penukaran poin.',
+            destination: const PointsSettingsPage(),
           ),
           const SizedBox(height: 12),
           _buildMenuCard(

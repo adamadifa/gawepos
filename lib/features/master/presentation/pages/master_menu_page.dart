@@ -8,6 +8,7 @@ import 'categories_brands_page.dart';
 import 'contacts_page.dart';
 import 'products_list_page.dart';
 import '../../../inventory/presentation/pages/stock_opname_page.dart';
+import '../../../inventory/presentation/pages/stock_adjustment_page.dart';
 
 class MasterMenuPage extends StatelessWidget {
   const MasterMenuPage({super.key});
@@ -230,12 +231,27 @@ class MasterMenuPage extends StatelessWidget {
                         icon: Icons.warehouse_rounded,
                         title: 'Stok & Opname',
                         subtitle: 'Penyesuaian stok produk & riwayat mutasi barang',
-                        color: const Color(0xFF7C3AED), // Violet
+                        color: const Color(0xFF7C3AED),
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
                               builder: (context) => const StockOpnamePage(),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      _buildMenuCard(
+                        icon: Icons.compare_arrows_rounded,
+                        title: 'Stok Masuk / Keluar',
+                        subtitle: 'Tambah atau kurangi stok secara manual',
+                        color: const Color(0xFF0891B2),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const StockAdjustmentPage(),
                             ),
                           );
                         },

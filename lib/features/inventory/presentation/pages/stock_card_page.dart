@@ -53,11 +53,15 @@ class _StockCardPageState extends State<StockCardPage> {
   Color _getTypeColor(String type) {
     switch (type) {
       case 'sale':
-        return AppConstants.errorColor; // Penjualan (Stok Keluar)
+        return AppConstants.errorColor;
       case 'purchase':
-        return AppConstants.successColor; // Pembelian (Stok Masuk)
+        return AppConstants.successColor;
       case 'opname':
-        return AppConstants.primaryColor; // Penyesuaian
+        return AppConstants.primaryColor;
+      case 'manual_in':
+        return AppConstants.successColor;
+      case 'manual_out':
+        return AppConstants.errorColor;
       default:
         return AppConstants.textLightColor;
     }
@@ -73,6 +77,10 @@ class _StockCardPageState extends State<StockCardPage> {
         return 'Opname (Penyesuaian)';
       case 'void':
         return 'Batal Transaksi';
+      case 'manual_in':
+        return 'Stok Masuk Manual';
+      case 'manual_out':
+        return 'Stok Keluar Manual';
       default:
         return type.toUpperCase();
     }
@@ -86,6 +94,10 @@ class _StockCardPageState extends State<StockCardPage> {
         return Icons.call_received_rounded;
       case 'opname':
         return Icons.tune_rounded;
+      case 'manual_in':
+        return Icons.add_circle_outline_rounded;
+      case 'manual_out':
+        return Icons.remove_circle_outline_rounded;
       default:
         return Icons.swap_horiz_rounded;
     }

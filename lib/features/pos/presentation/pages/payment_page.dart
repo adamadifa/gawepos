@@ -4,7 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/constants.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/di/injection.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../data/sales_repository.dart';
 import '../bloc/cart_cubit.dart';
 import '../bloc/sales_cubit.dart';
 import 'payment_success_page.dart';
@@ -29,9 +31,22 @@ class _PaymentPageState extends State<PaymentPage>
     with TickerProviderStateMixin {
   final _amountPaidController = TextEditingController();
   final _notesController = TextEditingController();
+  final _redeemPointsController = TextEditingController();
   String _paymentMethod = 'cash';
   double _amountPaid = 0.0;
   double _changeAmount = 0.0;
+
+  final SalesRepository _salesRepo = getIt<SalesRepository>();
+
+  Map<String, int> _pointsSettings = {
+    'enabled': 0,
+    'earnRate': 1000,
+    'redeemValue': 10,
+    'minRedeem': 100,
+  };
+  int _customerPointsBalance = 0;
+  int _pointsRedeemed = 0;
+  double _pointsDiscount = 0.0;
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -78,6 +93,7 @@ class _PaymentPageState extends State<PaymentPage>
     _amountPaid = widget.cart.grandTotal;
     _amountPaidController.text = _formatNumber(_amountPaid.toStringAsFixed(0));
     _calculateChange();
+    _loadPointsData();
 
     _pulseController = AnimationController(
       vsync: this,
@@ -103,7 +119,23 @@ class _PaymentPageState extends State<PaymentPage>
     _slideController.dispose();
     _amountPaidController.dispose();
     _notesController.dispose();
+    _redeemPointsController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadPointsData() async {
+    final customerId = widget.cart.selectedCustomer?.id;
+    if (customerId == null) return;
+
+    _pointsSettings = await _salesRepo.getPointsSettings();
+    if (_pointsSettings['enabled'] == 0) return;
+
+    try {
+      final balance = await _salesRepo.getCustomerPointsBalance(customerId);
+      if (mounted) {
+        setState(() => _customerPointsBalance = balance);
+      }
+    } catch (_) {}
   }
 
   void _calculateChange() {
@@ -192,14 +224,21 @@ class _PaymentPageState extends State<PaymentPage>
         }
     ];
 
+    final effectiveGrandTotal = widget.cart.grandTotal;
+    final earnRate = _pointsSettings['earnRate'] ?? 1000;
+    final actualPaid = _paymentMethod == 'debt'
+        ? _amountPaid
+        : (_paymentMethod == 'cash' ? _amountPaid : effectiveGrandTotal);
+    final pointsEarned = actualPaid >= earnRate ? (actualPaid ~/ earnRate) : 0;
+
     context.read<SalesCubit>().checkout(
           userId: widget.user.id,
           cashierSessionId: widget.session.id,
           subtotal: widget.cart.subtotal,
           discountAmount: widget.cart.discountAmount,
           taxAmount: widget.cart.taxAmount,
-          grandTotal: widget.cart.grandTotal,
-          paidAmount: _paymentMethod == 'debt' ? _amountPaid : (_paymentMethod == 'cash' ? _amountPaid : widget.cart.grandTotal),
+          grandTotal: effectiveGrandTotal,
+          paidAmount: actualPaid,
           changeAmount: _changeAmount,
           downPayment: _paymentMethod == 'debt' ? _amountPaid : 0.0,
           cartItems: cartItemsMap,
@@ -208,6 +247,9 @@ class _PaymentPageState extends State<PaymentPage>
           notes: _notesController.text.trim().isEmpty
               ? null
               : _notesController.text.trim(),
+          pointsEarned: pointsEarned,
+          pointsRedeemed: _pointsRedeemed,
+          pointsDiscount: _pointsDiscount,
         );
   }
 
@@ -219,6 +261,12 @@ class _PaymentPageState extends State<PaymentPage>
     return BlocListener<SalesCubit, SalesState>(
       listener: (context, state) {
         if (state is SalesSuccess) {
+          final earnRate = _pointsSettings['earnRate'] ?? 1000;
+          final actualPaid = _paymentMethod == 'debt'
+              ? _amountPaid
+              : (_paymentMethod == 'cash' ? _amountPaid : widget.cart.grandTotal);
+          final earned = actualPaid >= earnRate ? (actualPaid ~/ earnRate) : 0;
+
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -227,6 +275,8 @@ class _PaymentPageState extends State<PaymentPage>
                 user: widget.user,
                 session: widget.session,
                 cart: widget.cart,
+                pointsEarned: earned,
+                pointsRedeemed: _pointsRedeemed,
               ),
             ),
           );
@@ -412,6 +462,11 @@ class _PaymentPageState extends State<PaymentPage>
                             )
                           : _buildNonCashInfo(),
                     ),
+
+                    // Poin Pelanggan
+                    if (_pointsSettings['enabled'] == 1 && widget.cart.selectedCustomer != null)
+                      _buildPointsCard(),
+                    const SizedBox(height: 12),
 
                     // Catatan Transaksi
                     _buildSectionLabel('Catatan Transaksi', Icons.edit_note_rounded),
@@ -1116,6 +1171,177 @@ class _PaymentPageState extends State<PaymentPage>
       ),
     ),
       ),
+    );
+  }
+
+  Widget _buildPointsCard() {
+    final earnRate = _pointsSettings['earnRate'] ?? 1000;
+    final redeemValue = _pointsSettings['redeemValue'] ?? 10;
+    final minRedeem = _pointsSettings['minRedeem'] ?? 100;
+    final pointsEarnEstimate = widget.cart.grandTotal >= earnRate
+        ? (widget.cart.grandTotal ~/ earnRate)
+        : 0;
+    final maxRedeemable = _customerPointsBalance;
+    final canRedeem = maxRedeemable >= minRedeem;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionLabel('Poin Pelanggan', Icons.card_giftcard_rounded),
+        const SizedBox(height: 6),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppConstants.borderLightColor),
+          ),
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: AppConstants.warningColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.card_giftcard_rounded,
+                        color: AppConstants.warningColor, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.cart.selectedCustomer?.name ?? '',
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppConstants.textDarkColor,
+                          ),
+                        ),
+                        Text(
+                          'Saldo poin: $_customerPointsBalance poin',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: AppConstants.textLightColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppConstants.primaryColor.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      '+$pointsEarnEstimate poin',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: AppConstants.primaryColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (canRedeem) ...[
+                const SizedBox(height: 12),
+                Divider(color: AppConstants.borderLightColor, height: 1),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Text(
+                      'Tukar poin:',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: AppConstants.textLightColor,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 100,
+                      height: 36,
+                      child: TextField(
+                        controller: _redeemPointsController,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: const [
+                          _NumberInputFormatter(),
+                        ],
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: AppConstants.textDarkColor,
+                        ),
+                        decoration: InputDecoration(
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(6),
+                            borderSide: BorderSide.none,
+                          ),
+                          filled: true,
+                          fillColor: AppConstants.backgroundColor,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                          hintText: '0',
+                          hintStyle: GoogleFonts.poppins(fontSize: 12),
+                        ),
+                        onChanged: (val) {
+                          final raw = val.replaceAll('.', '');
+                          final points = int.tryParse(raw) ?? 0;
+                          final clamped = points > maxRedeemable
+                              ? maxRedeemable
+                              : (points < 0 ? 0 : points);
+                          final disc = clamped >= minRedeem
+                              ? (clamped * redeemValue).toDouble()
+                              : 0.0;
+                          if (clamped != points) {
+                            final clampedStr = clamped.toString();
+                            _redeemPointsController.value = TextEditingValue(
+                              text: clamped == 0 ? '' : _formatNumber(clampedStr),
+                              selection: TextSelection.collapsed(
+                                offset: clamped == 0 ? 0 : _formatNumber(clampedStr).length,
+                              ),
+                            );
+                          }
+                          setState(() {
+                            _pointsRedeemed = clamped;
+                            _pointsDiscount = disc;
+                          });
+                        },
+                      ),
+                    ),
+                    const Spacer(),
+                    if (_pointsRedeemed > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppConstants.successColor.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          '-${CurrencyFormatter.format(_pointsDiscount)}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: AppConstants.successColor,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
 

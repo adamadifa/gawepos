@@ -55,6 +55,8 @@ class CartState {
   final double globalDiscount;
   final bool isGlobalDiscountPercentage;
   final double taxPercentage;
+  final int redeemedPoints;
+  final double pointsDiscount;
 
   CartState({
     required this.items,
@@ -62,6 +64,8 @@ class CartState {
     this.globalDiscount = 0.0,
     this.isGlobalDiscountPercentage = false,
     this.taxPercentage = 0.0,
+    this.redeemedPoints = 0,
+    this.pointsDiscount = 0.0,
   });
 
   double get subtotal => items.fold(0.0, (sum, item) => sum + item.subtotal);
@@ -75,7 +79,7 @@ class CartState {
 
   double get taxAmount => (subtotal - discountAmount) * (taxPercentage / 100);
 
-  double get grandTotal => subtotal - discountAmount + taxAmount;
+  double get grandTotal => subtotal - discountAmount + taxAmount - pointsDiscount;
 
   CartState copyWith({
     List<CartItem>? items,
@@ -83,6 +87,8 @@ class CartState {
     double? globalDiscount,
     bool? isGlobalDiscountPercentage,
     double? taxPercentage,
+    int? redeemedPoints,
+    double? pointsDiscount,
     bool clearCustomer = false,
   }) {
     return CartState(
@@ -91,6 +97,8 @@ class CartState {
       globalDiscount: globalDiscount ?? this.globalDiscount,
       isGlobalDiscountPercentage: isGlobalDiscountPercentage ?? this.isGlobalDiscountPercentage,
       taxPercentage: taxPercentage ?? this.taxPercentage,
+      redeemedPoints: redeemedPoints ?? this.redeemedPoints,
+      pointsDiscount: pointsDiscount ?? this.pointsDiscount,
     );
   }
 }
@@ -213,6 +221,22 @@ class CartCubit extends Cubit<CartState> {
     emit(state.copyWith(
       selectedCustomer: customer,
       clearCustomer: customer == null,
+      redeemedPoints: 0,
+      pointsDiscount: 0.0,
+    ));
+  }
+
+  void applyPointsRedemption(int points, double discountAmount) {
+    emit(state.copyWith(
+      redeemedPoints: points,
+      pointsDiscount: discountAmount,
+    ));
+  }
+
+  void clearPointsRedemption() {
+    emit(state.copyWith(
+      redeemedPoints: 0,
+      pointsDiscount: 0.0,
     ));
   }
 
@@ -221,7 +245,10 @@ class CartCubit extends Cubit<CartState> {
   }
 
   void clearCart() {
-    emit(CartState(items: [], taxPercentage: state.taxPercentage));
+    emit(CartState(
+      items: [],
+      taxPercentage: state.taxPercentage,
+    ));
   }
 
   double _getPriceForUnit(int unitId, List<ProductPrice> matrix, {required double quantity}) {

@@ -3244,8 +3244,27 @@ class $CustomersTable extends Customers
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _pointsBalanceMeta = const VerificationMeta(
+    'pointsBalance',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, name, phone, email, address];
+  late final GeneratedColumn<int> pointsBalance = GeneratedColumn<int>(
+    'points_balance',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    phone,
+    email,
+    address,
+    pointsBalance,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -3287,6 +3306,15 @@ class $CustomersTable extends Customers
         address.isAcceptableOrUnknown(data['address']!, _addressMeta),
       );
     }
+    if (data.containsKey('points_balance')) {
+      context.handle(
+        _pointsBalanceMeta,
+        pointsBalance.isAcceptableOrUnknown(
+          data['points_balance']!,
+          _pointsBalanceMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -3316,6 +3344,10 @@ class $CustomersTable extends Customers
         DriftSqlType.string,
         data['${effectivePrefix}address'],
       ),
+      pointsBalance: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}points_balance'],
+      )!,
     );
   }
 
@@ -3331,12 +3363,14 @@ class Customer extends DataClass implements Insertable<Customer> {
   final String? phone;
   final String? email;
   final String? address;
+  final int pointsBalance;
   const Customer({
     required this.id,
     required this.name,
     this.phone,
     this.email,
     this.address,
+    required this.pointsBalance,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -3352,6 +3386,7 @@ class Customer extends DataClass implements Insertable<Customer> {
     if (!nullToAbsent || address != null) {
       map['address'] = Variable<String>(address);
     }
+    map['points_balance'] = Variable<int>(pointsBalance);
     return map;
   }
 
@@ -3368,6 +3403,7 @@ class Customer extends DataClass implements Insertable<Customer> {
       address: address == null && nullToAbsent
           ? const Value.absent()
           : Value(address),
+      pointsBalance: Value(pointsBalance),
     );
   }
 
@@ -3382,6 +3418,7 @@ class Customer extends DataClass implements Insertable<Customer> {
       phone: serializer.fromJson<String?>(json['phone']),
       email: serializer.fromJson<String?>(json['email']),
       address: serializer.fromJson<String?>(json['address']),
+      pointsBalance: serializer.fromJson<int>(json['pointsBalance']),
     );
   }
   @override
@@ -3393,6 +3430,7 @@ class Customer extends DataClass implements Insertable<Customer> {
       'phone': serializer.toJson<String?>(phone),
       'email': serializer.toJson<String?>(email),
       'address': serializer.toJson<String?>(address),
+      'pointsBalance': serializer.toJson<int>(pointsBalance),
     };
   }
 
@@ -3402,12 +3440,14 @@ class Customer extends DataClass implements Insertable<Customer> {
     Value<String?> phone = const Value.absent(),
     Value<String?> email = const Value.absent(),
     Value<String?> address = const Value.absent(),
+    int? pointsBalance,
   }) => Customer(
     id: id ?? this.id,
     name: name ?? this.name,
     phone: phone.present ? phone.value : this.phone,
     email: email.present ? email.value : this.email,
     address: address.present ? address.value : this.address,
+    pointsBalance: pointsBalance ?? this.pointsBalance,
   );
   Customer copyWithCompanion(CustomersCompanion data) {
     return Customer(
@@ -3416,6 +3456,9 @@ class Customer extends DataClass implements Insertable<Customer> {
       phone: data.phone.present ? data.phone.value : this.phone,
       email: data.email.present ? data.email.value : this.email,
       address: data.address.present ? data.address.value : this.address,
+      pointsBalance: data.pointsBalance.present
+          ? data.pointsBalance.value
+          : this.pointsBalance,
     );
   }
 
@@ -3426,13 +3469,15 @@ class Customer extends DataClass implements Insertable<Customer> {
           ..write('name: $name, ')
           ..write('phone: $phone, ')
           ..write('email: $email, ')
-          ..write('address: $address')
+          ..write('address: $address, ')
+          ..write('pointsBalance: $pointsBalance')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, phone, email, address);
+  int get hashCode =>
+      Object.hash(id, name, phone, email, address, pointsBalance);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -3441,7 +3486,8 @@ class Customer extends DataClass implements Insertable<Customer> {
           other.name == this.name &&
           other.phone == this.phone &&
           other.email == this.email &&
-          other.address == this.address);
+          other.address == this.address &&
+          other.pointsBalance == this.pointsBalance);
 }
 
 class CustomersCompanion extends UpdateCompanion<Customer> {
@@ -3450,12 +3496,14 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
   final Value<String?> phone;
   final Value<String?> email;
   final Value<String?> address;
+  final Value<int> pointsBalance;
   const CustomersCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.phone = const Value.absent(),
     this.email = const Value.absent(),
     this.address = const Value.absent(),
+    this.pointsBalance = const Value.absent(),
   });
   CustomersCompanion.insert({
     this.id = const Value.absent(),
@@ -3463,6 +3511,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     this.phone = const Value.absent(),
     this.email = const Value.absent(),
     this.address = const Value.absent(),
+    this.pointsBalance = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Customer> custom({
     Expression<int>? id,
@@ -3470,6 +3519,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     Expression<String>? phone,
     Expression<String>? email,
     Expression<String>? address,
+    Expression<int>? pointsBalance,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -3477,6 +3527,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
       if (phone != null) 'phone': phone,
       if (email != null) 'email': email,
       if (address != null) 'address': address,
+      if (pointsBalance != null) 'points_balance': pointsBalance,
     });
   }
 
@@ -3486,6 +3537,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     Value<String?>? phone,
     Value<String?>? email,
     Value<String?>? address,
+    Value<int>? pointsBalance,
   }) {
     return CustomersCompanion(
       id: id ?? this.id,
@@ -3493,6 +3545,7 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
       phone: phone ?? this.phone,
       email: email ?? this.email,
       address: address ?? this.address,
+      pointsBalance: pointsBalance ?? this.pointsBalance,
     );
   }
 
@@ -3514,6 +3567,9 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
     if (address.present) {
       map['address'] = Variable<String>(address.value);
     }
+    if (pointsBalance.present) {
+      map['points_balance'] = Variable<int>(pointsBalance.value);
+    }
     return map;
   }
 
@@ -3524,7 +3580,8 @@ class CustomersCompanion extends UpdateCompanion<Customer> {
           ..write('name: $name, ')
           ..write('phone: $phone, ')
           ..write('email: $email, ')
-          ..write('address: $address')
+          ..write('address: $address, ')
+          ..write('pointsBalance: $pointsBalance')
           ..write(')'))
         .toString();
   }
@@ -13307,6 +13364,470 @@ class PurchaseReturnItemsCompanion extends UpdateCompanion<PurchaseReturnItem> {
   }
 }
 
+class $PointTransactionsTable extends PointTransactions
+    with TableInfo<$PointTransactionsTable, PointTransaction> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PointTransactionsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _customerIdMeta = const VerificationMeta(
+    'customerId',
+  );
+  @override
+  late final GeneratedColumn<int> customerId = GeneratedColumn<int>(
+    'customer_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES customers (id)',
+    ),
+  );
+  static const VerificationMeta _orderIdMeta = const VerificationMeta(
+    'orderId',
+  );
+  @override
+  late final GeneratedColumn<int> orderId = GeneratedColumn<int>(
+    'order_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES orders (id) ON DELETE SET NULL',
+    ),
+  );
+  static const VerificationMeta _typeMeta = const VerificationMeta('type');
+  @override
+  late final GeneratedColumn<String> type = GeneratedColumn<String>(
+    'type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _pointsMeta = const VerificationMeta('points');
+  @override
+  late final GeneratedColumn<int> points = GeneratedColumn<int>(
+    'points',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    customerId,
+    orderId,
+    type,
+    points,
+    description,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'point_transactions';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PointTransaction> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('customer_id')) {
+      context.handle(
+        _customerIdMeta,
+        customerId.isAcceptableOrUnknown(data['customer_id']!, _customerIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_customerIdMeta);
+    }
+    if (data.containsKey('order_id')) {
+      context.handle(
+        _orderIdMeta,
+        orderId.isAcceptableOrUnknown(data['order_id']!, _orderIdMeta),
+      );
+    }
+    if (data.containsKey('type')) {
+      context.handle(
+        _typeMeta,
+        type.isAcceptableOrUnknown(data['type']!, _typeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_typeMeta);
+    }
+    if (data.containsKey('points')) {
+      context.handle(
+        _pointsMeta,
+        points.isAcceptableOrUnknown(data['points']!, _pointsMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_pointsMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PointTransaction map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PointTransaction(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      customerId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}customer_id'],
+      )!,
+      orderId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}order_id'],
+      ),
+      type: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}type'],
+      )!,
+      points: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}points'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $PointTransactionsTable createAlias(String alias) {
+    return $PointTransactionsTable(attachedDatabase, alias);
+  }
+}
+
+class PointTransaction extends DataClass
+    implements Insertable<PointTransaction> {
+  final int id;
+  final int customerId;
+  final int? orderId;
+  final String type;
+  final int points;
+  final String? description;
+  final DateTime createdAt;
+  const PointTransaction({
+    required this.id,
+    required this.customerId,
+    this.orderId,
+    required this.type,
+    required this.points,
+    this.description,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['customer_id'] = Variable<int>(customerId);
+    if (!nullToAbsent || orderId != null) {
+      map['order_id'] = Variable<int>(orderId);
+    }
+    map['type'] = Variable<String>(type);
+    map['points'] = Variable<int>(points);
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  PointTransactionsCompanion toCompanion(bool nullToAbsent) {
+    return PointTransactionsCompanion(
+      id: Value(id),
+      customerId: Value(customerId),
+      orderId: orderId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(orderId),
+      type: Value(type),
+      points: Value(points),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory PointTransaction.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PointTransaction(
+      id: serializer.fromJson<int>(json['id']),
+      customerId: serializer.fromJson<int>(json['customerId']),
+      orderId: serializer.fromJson<int?>(json['orderId']),
+      type: serializer.fromJson<String>(json['type']),
+      points: serializer.fromJson<int>(json['points']),
+      description: serializer.fromJson<String?>(json['description']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'customerId': serializer.toJson<int>(customerId),
+      'orderId': serializer.toJson<int?>(orderId),
+      'type': serializer.toJson<String>(type),
+      'points': serializer.toJson<int>(points),
+      'description': serializer.toJson<String?>(description),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  PointTransaction copyWith({
+    int? id,
+    int? customerId,
+    Value<int?> orderId = const Value.absent(),
+    String? type,
+    int? points,
+    Value<String?> description = const Value.absent(),
+    DateTime? createdAt,
+  }) => PointTransaction(
+    id: id ?? this.id,
+    customerId: customerId ?? this.customerId,
+    orderId: orderId.present ? orderId.value : this.orderId,
+    type: type ?? this.type,
+    points: points ?? this.points,
+    description: description.present ? description.value : this.description,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  PointTransaction copyWithCompanion(PointTransactionsCompanion data) {
+    return PointTransaction(
+      id: data.id.present ? data.id.value : this.id,
+      customerId: data.customerId.present
+          ? data.customerId.value
+          : this.customerId,
+      orderId: data.orderId.present ? data.orderId.value : this.orderId,
+      type: data.type.present ? data.type.value : this.type,
+      points: data.points.present ? data.points.value : this.points,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PointTransaction(')
+          ..write('id: $id, ')
+          ..write('customerId: $customerId, ')
+          ..write('orderId: $orderId, ')
+          ..write('type: $type, ')
+          ..write('points: $points, ')
+          ..write('description: $description, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    customerId,
+    orderId,
+    type,
+    points,
+    description,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PointTransaction &&
+          other.id == this.id &&
+          other.customerId == this.customerId &&
+          other.orderId == this.orderId &&
+          other.type == this.type &&
+          other.points == this.points &&
+          other.description == this.description &&
+          other.createdAt == this.createdAt);
+}
+
+class PointTransactionsCompanion extends UpdateCompanion<PointTransaction> {
+  final Value<int> id;
+  final Value<int> customerId;
+  final Value<int?> orderId;
+  final Value<String> type;
+  final Value<int> points;
+  final Value<String?> description;
+  final Value<DateTime> createdAt;
+  const PointTransactionsCompanion({
+    this.id = const Value.absent(),
+    this.customerId = const Value.absent(),
+    this.orderId = const Value.absent(),
+    this.type = const Value.absent(),
+    this.points = const Value.absent(),
+    this.description = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  PointTransactionsCompanion.insert({
+    this.id = const Value.absent(),
+    required int customerId,
+    this.orderId = const Value.absent(),
+    required String type,
+    required int points,
+    this.description = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : customerId = Value(customerId),
+       type = Value(type),
+       points = Value(points);
+  static Insertable<PointTransaction> custom({
+    Expression<int>? id,
+    Expression<int>? customerId,
+    Expression<int>? orderId,
+    Expression<String>? type,
+    Expression<int>? points,
+    Expression<String>? description,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (customerId != null) 'customer_id': customerId,
+      if (orderId != null) 'order_id': orderId,
+      if (type != null) 'type': type,
+      if (points != null) 'points': points,
+      if (description != null) 'description': description,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  PointTransactionsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? customerId,
+    Value<int?>? orderId,
+    Value<String>? type,
+    Value<int>? points,
+    Value<String?>? description,
+    Value<DateTime>? createdAt,
+  }) {
+    return PointTransactionsCompanion(
+      id: id ?? this.id,
+      customerId: customerId ?? this.customerId,
+      orderId: orderId ?? this.orderId,
+      type: type ?? this.type,
+      points: points ?? this.points,
+      description: description ?? this.description,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (customerId.present) {
+      map['customer_id'] = Variable<int>(customerId.value);
+    }
+    if (orderId.present) {
+      map['order_id'] = Variable<int>(orderId.value);
+    }
+    if (type.present) {
+      map['type'] = Variable<String>(type.value);
+    }
+    if (points.present) {
+      map['points'] = Variable<int>(points.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PointTransactionsCompanion(')
+          ..write('id: $id, ')
+          ..write('customerId: $customerId, ')
+          ..write('orderId: $orderId, ')
+          ..write('type: $type, ')
+          ..write('points: $points, ')
+          ..write('description: $description, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -13351,9 +13872,147 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   );
   late final $PurchaseReturnItemsTable purchaseReturnItems =
       $PurchaseReturnItemsTable(this);
+  late final $PointTransactionsTable pointTransactions =
+      $PointTransactionsTable(this);
   late final Index productsBarcodeIdx = Index(
     'products_barcode_idx',
     'CREATE INDEX products_barcode_idx ON products (barcode)',
+  );
+  late final Index productsNameIdx = Index(
+    'products_name_idx',
+    'CREATE INDEX products_name_idx ON products (name)',
+  );
+  late final Index productsSkuIdx = Index(
+    'products_sku_idx',
+    'CREATE INDEX products_sku_idx ON products (sku)',
+  );
+  late final Index productUnitsProductIdx = Index(
+    'product_units_product_idx',
+    'CREATE INDEX product_units_product_idx ON product_units (product_id)',
+  );
+  late final Index productPricesProductUnitTierIdx = Index(
+    'product_prices_product_unit_tier_idx',
+    'CREATE INDEX product_prices_product_unit_tier_idx ON product_prices (product_id, unit_id, price_tier_id)',
+  );
+  late final Index inventoryProductUnitIdx = Index(
+    'inventory_product_unit_idx',
+    'CREATE INDEX inventory_product_unit_idx ON inventory (product_id, unit_id)',
+  );
+  late final Index stockMovementsProductIdx = Index(
+    'stock_movements_product_idx',
+    'CREATE INDEX stock_movements_product_idx ON stock_movements (product_id)',
+  );
+  late final Index stockMovementsCreatedIdx = Index(
+    'stock_movements_created_idx',
+    'CREATE INDEX stock_movements_created_idx ON stock_movements (created_at)',
+  );
+  late final Index cashierSessionsUserIdx = Index(
+    'cashier_sessions_user_idx',
+    'CREATE INDEX cashier_sessions_user_idx ON cashier_sessions (user_id)',
+  );
+  late final Index cashierSessionsStatusIdx = Index(
+    'cashier_sessions_status_idx',
+    'CREATE INDEX cashier_sessions_status_idx ON cashier_sessions (status)',
+  );
+  late final Index ordersSessionIdx = Index(
+    'orders_session_idx',
+    'CREATE INDEX orders_session_idx ON orders (cashier_session_id)',
+  );
+  late final Index ordersStatusIdx = Index(
+    'orders_status_idx',
+    'CREATE INDEX orders_status_idx ON orders (status)',
+  );
+  late final Index ordersCreatedIdx = Index(
+    'orders_created_idx',
+    'CREATE INDEX orders_created_idx ON orders (created_at)',
+  );
+  late final Index ordersCustomerIdx = Index(
+    'orders_customer_idx',
+    'CREATE INDEX orders_customer_idx ON orders (customer_id)',
+  );
+  late final Index orderItemsOrderIdx = Index(
+    'order_items_order_idx',
+    'CREATE INDEX order_items_order_idx ON order_items (order_id)',
+  );
+  late final Index orderItemsProductIdx = Index(
+    'order_items_product_idx',
+    'CREATE INDEX order_items_product_idx ON order_items (product_id)',
+  );
+  late final Index orderPaymentsOrderIdx = Index(
+    'order_payments_order_idx',
+    'CREATE INDEX order_payments_order_idx ON order_payments (order_id)',
+  );
+  late final Index posHeldOrdersUserIdx = Index(
+    'pos_held_orders_user_idx',
+    'CREATE INDEX pos_held_orders_user_idx ON pos_held_orders (user_id)',
+  );
+  late final Index expensesDateIdx = Index(
+    'expenses_date_idx',
+    'CREATE INDEX expenses_date_idx ON expenses (date)',
+  );
+  late final Index purchasesSupplierIdx = Index(
+    'purchases_supplier_idx',
+    'CREATE INDEX purchases_supplier_idx ON purchases (supplier_id)',
+  );
+  late final Index purchasesStatusIdx = Index(
+    'purchases_status_idx',
+    'CREATE INDEX purchases_status_idx ON purchases (status)',
+  );
+  late final Index purchasesCreatedIdx = Index(
+    'purchases_created_idx',
+    'CREATE INDEX purchases_created_idx ON purchases (created_at)',
+  );
+  late final Index purchaseItemsPurchaseIdx = Index(
+    'purchase_items_purchase_idx',
+    'CREATE INDEX purchase_items_purchase_idx ON purchase_items (purchase_id)',
+  );
+  late final Index customerDebtsCustomerIdx = Index(
+    'customer_debts_customer_idx',
+    'CREATE INDEX customer_debts_customer_idx ON customer_debts (customer_id)',
+  );
+  late final Index customerDebtsOrderIdx = Index(
+    'customer_debts_order_idx',
+    'CREATE INDEX customer_debts_order_idx ON customer_debts (order_id)',
+  );
+  late final Index customerDebtsStatusIdx = Index(
+    'customer_debts_status_idx',
+    'CREATE INDEX customer_debts_status_idx ON customer_debts (status)',
+  );
+  late final Index customerDebtPaymentsDebtIdx = Index(
+    'customer_debt_payments_debt_idx',
+    'CREATE INDEX customer_debt_payments_debt_idx ON customer_debt_payments (customer_debt_id)',
+  );
+  late final Index supplierDebtsSupplierIdx = Index(
+    'supplier_debts_supplier_idx',
+    'CREATE INDEX supplier_debts_supplier_idx ON supplier_debts (supplier_id)',
+  );
+  late final Index supplierDebtsPurchaseIdx = Index(
+    'supplier_debts_purchase_idx',
+    'CREATE INDEX supplier_debts_purchase_idx ON supplier_debts (purchase_id)',
+  );
+  late final Index supplierDebtPaymentsDebtIdx = Index(
+    'supplier_debt_payments_debt_idx',
+    'CREATE INDEX supplier_debt_payments_debt_idx ON supplier_debt_payments (supplier_debt_id)',
+  );
+  late final Index salesReturnsSessionIdx = Index(
+    'sales_returns_session_idx',
+    'CREATE INDEX sales_returns_session_idx ON sales_returns (cashier_session_id)',
+  );
+  late final Index salesReturnItemsReturnIdx = Index(
+    'sales_return_items_return_idx',
+    'CREATE INDEX sales_return_items_return_idx ON sales_return_items (sales_return_id)',
+  );
+  late final Index purchaseReturnsSessionIdx = Index(
+    'purchase_returns_session_idx',
+    'CREATE INDEX purchase_returns_session_idx ON purchase_returns (cashier_session_id)',
+  );
+  late final Index purchaseReturnItemsReturnIdx = Index(
+    'purchase_return_items_return_idx',
+    'CREATE INDEX purchase_return_items_return_idx ON purchase_return_items (purchase_return_id)',
+  );
+  late final Index pointTransactionsCustomerIdx = Index(
+    'point_transactions_customer_idx',
+    'CREATE INDEX point_transactions_customer_idx ON point_transactions (customer_id)',
   );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -13390,7 +14049,42 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     salesReturnItems,
     purchaseReturns,
     purchaseReturnItems,
+    pointTransactions,
     productsBarcodeIdx,
+    productsNameIdx,
+    productsSkuIdx,
+    productUnitsProductIdx,
+    productPricesProductUnitTierIdx,
+    inventoryProductUnitIdx,
+    stockMovementsProductIdx,
+    stockMovementsCreatedIdx,
+    cashierSessionsUserIdx,
+    cashierSessionsStatusIdx,
+    ordersSessionIdx,
+    ordersStatusIdx,
+    ordersCreatedIdx,
+    ordersCustomerIdx,
+    orderItemsOrderIdx,
+    orderItemsProductIdx,
+    orderPaymentsOrderIdx,
+    posHeldOrdersUserIdx,
+    expensesDateIdx,
+    purchasesSupplierIdx,
+    purchasesStatusIdx,
+    purchasesCreatedIdx,
+    purchaseItemsPurchaseIdx,
+    customerDebtsCustomerIdx,
+    customerDebtsOrderIdx,
+    customerDebtsStatusIdx,
+    customerDebtPaymentsDebtIdx,
+    supplierDebtsSupplierIdx,
+    supplierDebtsPurchaseIdx,
+    supplierDebtPaymentsDebtIdx,
+    salesReturnsSessionIdx,
+    salesReturnItemsReturnIdx,
+    purchaseReturnsSessionIdx,
+    purchaseReturnItemsReturnIdx,
+    pointTransactionsCustomerIdx,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -13561,6 +14255,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
         limitUpdateKind: UpdateKind.delete,
       ),
       result: [TableUpdate('purchase_return_items', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'orders',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('point_transactions', kind: UpdateKind.update)],
     ),
   ]);
 }
@@ -17936,6 +18637,7 @@ typedef $$CustomersTableCreateCompanionBuilder =
       Value<String?> phone,
       Value<String?> email,
       Value<String?> address,
+      Value<int> pointsBalance,
     });
 typedef $$CustomersTableUpdateCompanionBuilder =
     CustomersCompanion Function({
@@ -17944,6 +18646,7 @@ typedef $$CustomersTableUpdateCompanionBuilder =
       Value<String?> phone,
       Value<String?> email,
       Value<String?> address,
+      Value<int> pointsBalance,
     });
 
 final class $$CustomersTableReferences
@@ -18031,6 +18734,30 @@ final class $$CustomersTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$PointTransactionsTable, List<PointTransaction>>
+  _pointTransactionsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.pointTransactions,
+        aliasName: $_aliasNameGenerator(
+          db.customers.id,
+          db.pointTransactions.customerId,
+        ),
+      );
+
+  $$PointTransactionsTableProcessedTableManager get pointTransactionsRefs {
+    final manager = $$PointTransactionsTableTableManager(
+      $_db,
+      $_db.pointTransactions,
+    ).filter((f) => f.customerId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _pointTransactionsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$CustomersTableFilterComposer
@@ -18064,6 +18791,11 @@ class $$CustomersTableFilterComposer
 
   ColumnFilters<String> get address => $composableBuilder(
     column: $table.address,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get pointsBalance => $composableBuilder(
+    column: $table.pointsBalance,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -18166,6 +18898,31 @@ class $$CustomersTableFilterComposer
     );
     return f(composer);
   }
+
+  Expression<bool> pointTransactionsRefs(
+    Expression<bool> Function($$PointTransactionsTableFilterComposer f) f,
+  ) {
+    final $$PointTransactionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pointTransactions,
+      getReferencedColumn: (t) => t.customerId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PointTransactionsTableFilterComposer(
+            $db: $db,
+            $table: $db.pointTransactions,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$CustomersTableOrderingComposer
@@ -18201,6 +18958,11 @@ class $$CustomersTableOrderingComposer
     column: $table.address,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get pointsBalance => $composableBuilder(
+    column: $table.pointsBalance,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$CustomersTableAnnotationComposer
@@ -18226,6 +18988,11 @@ class $$CustomersTableAnnotationComposer
 
   GeneratedColumn<String> get address =>
       $composableBuilder(column: $table.address, builder: (column) => column);
+
+  GeneratedColumn<int> get pointsBalance => $composableBuilder(
+    column: $table.pointsBalance,
+    builder: (column) => column,
+  );
 
   Expression<T> ordersRefs<T extends Object>(
     Expression<T> Function($$OrdersTableAnnotationComposer a) f,
@@ -18326,6 +19093,32 @@ class $$CustomersTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> pointTransactionsRefs<T extends Object>(
+    Expression<T> Function($$PointTransactionsTableAnnotationComposer a) f,
+  ) {
+    final $$PointTransactionsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.pointTransactions,
+          getReferencedColumn: (t) => t.customerId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PointTransactionsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.pointTransactions,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$CustomersTableTableManager
@@ -18346,6 +19139,7 @@ class $$CustomersTableTableManager
             bool posHeldOrdersRefs,
             bool customerDebtsRefs,
             bool salesReturnsRefs,
+            bool pointTransactionsRefs,
           })
         > {
   $$CustomersTableTableManager(_$AppDatabase db, $CustomersTable table)
@@ -18366,12 +19160,14 @@ class $$CustomersTableTableManager
                 Value<String?> phone = const Value.absent(),
                 Value<String?> email = const Value.absent(),
                 Value<String?> address = const Value.absent(),
+                Value<int> pointsBalance = const Value.absent(),
               }) => CustomersCompanion(
                 id: id,
                 name: name,
                 phone: phone,
                 email: email,
                 address: address,
+                pointsBalance: pointsBalance,
               ),
           createCompanionCallback:
               ({
@@ -18380,12 +19176,14 @@ class $$CustomersTableTableManager
                 Value<String?> phone = const Value.absent(),
                 Value<String?> email = const Value.absent(),
                 Value<String?> address = const Value.absent(),
+                Value<int> pointsBalance = const Value.absent(),
               }) => CustomersCompanion.insert(
                 id: id,
                 name: name,
                 phone: phone,
                 email: email,
                 address: address,
+                pointsBalance: pointsBalance,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -18401,6 +19199,7 @@ class $$CustomersTableTableManager
                 posHeldOrdersRefs = false,
                 customerDebtsRefs = false,
                 salesReturnsRefs = false,
+                pointTransactionsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -18409,6 +19208,7 @@ class $$CustomersTableTableManager
                     if (posHeldOrdersRefs) db.posHeldOrders,
                     if (customerDebtsRefs) db.customerDebts,
                     if (salesReturnsRefs) db.salesReturns,
+                    if (pointTransactionsRefs) db.pointTransactions,
                   ],
                   addJoins: null,
                   getPrefetchedDataCallback: (items) async {
@@ -18497,6 +19297,27 @@ class $$CustomersTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (pointTransactionsRefs)
+                        await $_getPrefetchedData<
+                          Customer,
+                          $CustomersTable,
+                          PointTransaction
+                        >(
+                          currentTable: table,
+                          referencedTable: $$CustomersTableReferences
+                              ._pointTransactionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$CustomersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).pointTransactionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.customerId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -18522,6 +19343,7 @@ typedef $$CustomersTableProcessedTableManager =
         bool posHeldOrdersRefs,
         bool customerDebtsRefs,
         bool salesReturnsRefs,
+        bool pointTransactionsRefs,
       })
     >;
 typedef $$SuppliersTableCreateCompanionBuilder =
@@ -20744,6 +21566,30 @@ final class $$OrdersTableReferences
       manager.$state.copyWith(prefetchedData: cache),
     );
   }
+
+  static MultiTypedResultKey<$PointTransactionsTable, List<PointTransaction>>
+  _pointTransactionsRefsTable(_$AppDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.pointTransactions,
+        aliasName: $_aliasNameGenerator(
+          db.orders.id,
+          db.pointTransactions.orderId,
+        ),
+      );
+
+  $$PointTransactionsTableProcessedTableManager get pointTransactionsRefs {
+    final manager = $$PointTransactionsTableTableManager(
+      $_db,
+      $_db.pointTransactions,
+    ).filter((f) => f.orderId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _pointTransactionsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
 }
 
 class $$OrdersTableFilterComposer
@@ -20975,6 +21821,31 @@ class $$OrdersTableFilterComposer
           }) => $$SalesReturnsTableFilterComposer(
             $db: $db,
             $table: $db.salesReturns,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> pointTransactionsRefs(
+    Expression<bool> Function($$PointTransactionsTableFilterComposer f) f,
+  ) {
+    final $$PointTransactionsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.pointTransactions,
+      getReferencedColumn: (t) => t.orderId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PointTransactionsTableFilterComposer(
+            $db: $db,
+            $table: $db.pointTransactions,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -21349,6 +22220,32 @@ class $$OrdersTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> pointTransactionsRefs<T extends Object>(
+    Expression<T> Function($$PointTransactionsTableAnnotationComposer a) f,
+  ) {
+    final $$PointTransactionsTableAnnotationComposer composer =
+        $composerBuilder(
+          composer: this,
+          getCurrentColumn: (t) => t.id,
+          referencedTable: $db.pointTransactions,
+          getReferencedColumn: (t) => t.orderId,
+          builder:
+              (
+                joinBuilder, {
+                $addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer,
+              }) => $$PointTransactionsTableAnnotationComposer(
+                $db: $db,
+                $table: $db.pointTransactions,
+                $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+                joinBuilder: joinBuilder,
+                $removeJoinBuilderFromRootComposer:
+                    $removeJoinBuilderFromRootComposer,
+              ),
+        );
+    return f(composer);
+  }
 }
 
 class $$OrdersTableTableManager
@@ -21372,6 +22269,7 @@ class $$OrdersTableTableManager
             bool orderPaymentsRefs,
             bool customerDebtsRefs,
             bool salesReturnsRefs,
+            bool pointTransactionsRefs,
           })
         > {
   $$OrdersTableTableManager(_$AppDatabase db, $OrdersTable table)
@@ -21468,6 +22366,7 @@ class $$OrdersTableTableManager
                 orderPaymentsRefs = false,
                 customerDebtsRefs = false,
                 salesReturnsRefs = false,
+                pointTransactionsRefs = false,
               }) {
                 return PrefetchHooks(
                   db: db,
@@ -21476,6 +22375,7 @@ class $$OrdersTableTableManager
                     if (orderPaymentsRefs) db.orderPayments,
                     if (customerDebtsRefs) db.customerDebts,
                     if (salesReturnsRefs) db.salesReturns,
+                    if (pointTransactionsRefs) db.pointTransactions,
                   ],
                   addJoins:
                       <
@@ -21621,6 +22521,27 @@ class $$OrdersTableTableManager
                               ),
                           typedResults: items,
                         ),
+                      if (pointTransactionsRefs)
+                        await $_getPrefetchedData<
+                          Order,
+                          $OrdersTable,
+                          PointTransaction
+                        >(
+                          currentTable: table,
+                          referencedTable: $$OrdersTableReferences
+                              ._pointTransactionsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$OrdersTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).pointTransactionsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.orderId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
                     ];
                   },
                 );
@@ -21649,6 +22570,7 @@ typedef $$OrdersTableProcessedTableManager =
         bool orderPaymentsRefs,
         bool customerDebtsRefs,
         bool salesReturnsRefs,
+        bool pointTransactionsRefs,
       })
     >;
 typedef $$OrderItemsTableCreateCompanionBuilder =
@@ -29111,6 +30033,464 @@ typedef $$PurchaseReturnItemsTableProcessedTableManager =
         bool unitId,
       })
     >;
+typedef $$PointTransactionsTableCreateCompanionBuilder =
+    PointTransactionsCompanion Function({
+      Value<int> id,
+      required int customerId,
+      Value<int?> orderId,
+      required String type,
+      required int points,
+      Value<String?> description,
+      Value<DateTime> createdAt,
+    });
+typedef $$PointTransactionsTableUpdateCompanionBuilder =
+    PointTransactionsCompanion Function({
+      Value<int> id,
+      Value<int> customerId,
+      Value<int?> orderId,
+      Value<String> type,
+      Value<int> points,
+      Value<String?> description,
+      Value<DateTime> createdAt,
+    });
+
+final class $$PointTransactionsTableReferences
+    extends
+        BaseReferences<
+          _$AppDatabase,
+          $PointTransactionsTable,
+          PointTransaction
+        > {
+  $$PointTransactionsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $CustomersTable _customerIdTable(_$AppDatabase db) =>
+      db.customers.createAlias(
+        $_aliasNameGenerator(db.pointTransactions.customerId, db.customers.id),
+      );
+
+  $$CustomersTableProcessedTableManager get customerId {
+    final $_column = $_itemColumn<int>('customer_id')!;
+
+    final manager = $$CustomersTableTableManager(
+      $_db,
+      $_db.customers,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_customerIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+
+  static $OrdersTable _orderIdTable(_$AppDatabase db) => db.orders.createAlias(
+    $_aliasNameGenerator(db.pointTransactions.orderId, db.orders.id),
+  );
+
+  $$OrdersTableProcessedTableManager? get orderId {
+    final $_column = $_itemColumn<int>('order_id');
+    if ($_column == null) return null;
+    final manager = $$OrdersTableTableManager(
+      $_db,
+      $_db.orders,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_orderIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$PointTransactionsTableFilterComposer
+    extends Composer<_$AppDatabase, $PointTransactionsTable> {
+  $$PointTransactionsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get points => $composableBuilder(
+    column: $table.points,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$CustomersTableFilterComposer get customerId {
+    final $$CustomersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.customerId,
+      referencedTable: $db.customers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CustomersTableFilterComposer(
+            $db: $db,
+            $table: $db.customers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$OrdersTableFilterComposer get orderId {
+    final $$OrdersTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.orderId,
+      referencedTable: $db.orders,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$OrdersTableFilterComposer(
+            $db: $db,
+            $table: $db.orders,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PointTransactionsTableOrderingComposer
+    extends Composer<_$AppDatabase, $PointTransactionsTable> {
+  $$PointTransactionsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get type => $composableBuilder(
+    column: $table.type,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get points => $composableBuilder(
+    column: $table.points,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$CustomersTableOrderingComposer get customerId {
+    final $$CustomersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.customerId,
+      referencedTable: $db.customers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CustomersTableOrderingComposer(
+            $db: $db,
+            $table: $db.customers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$OrdersTableOrderingComposer get orderId {
+    final $$OrdersTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.orderId,
+      referencedTable: $db.orders,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$OrdersTableOrderingComposer(
+            $db: $db,
+            $table: $db.orders,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PointTransactionsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PointTransactionsTable> {
+  $$PointTransactionsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get type =>
+      $composableBuilder(column: $table.type, builder: (column) => column);
+
+  GeneratedColumn<int> get points =>
+      $composableBuilder(column: $table.points, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$CustomersTableAnnotationComposer get customerId {
+    final $$CustomersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.customerId,
+      referencedTable: $db.customers,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$CustomersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.customers,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+
+  $$OrdersTableAnnotationComposer get orderId {
+    final $$OrdersTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.orderId,
+      referencedTable: $db.orders,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$OrdersTableAnnotationComposer(
+            $db: $db,
+            $table: $db.orders,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PointTransactionsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PointTransactionsTable,
+          PointTransaction,
+          $$PointTransactionsTableFilterComposer,
+          $$PointTransactionsTableOrderingComposer,
+          $$PointTransactionsTableAnnotationComposer,
+          $$PointTransactionsTableCreateCompanionBuilder,
+          $$PointTransactionsTableUpdateCompanionBuilder,
+          (PointTransaction, $$PointTransactionsTableReferences),
+          PointTransaction,
+          PrefetchHooks Function({bool customerId, bool orderId})
+        > {
+  $$PointTransactionsTableTableManager(
+    _$AppDatabase db,
+    $PointTransactionsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PointTransactionsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PointTransactionsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PointTransactionsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> customerId = const Value.absent(),
+                Value<int?> orderId = const Value.absent(),
+                Value<String> type = const Value.absent(),
+                Value<int> points = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => PointTransactionsCompanion(
+                id: id,
+                customerId: customerId,
+                orderId: orderId,
+                type: type,
+                points: points,
+                description: description,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int customerId,
+                Value<int?> orderId = const Value.absent(),
+                required String type,
+                required int points,
+                Value<String?> description = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => PointTransactionsCompanion.insert(
+                id: id,
+                customerId: customerId,
+                orderId: orderId,
+                type: type,
+                points: points,
+                description: description,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$PointTransactionsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({customerId = false, orderId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (customerId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.customerId,
+                                referencedTable:
+                                    $$PointTransactionsTableReferences
+                                        ._customerIdTable(db),
+                                referencedColumn:
+                                    $$PointTransactionsTableReferences
+                                        ._customerIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+                    if (orderId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.orderId,
+                                referencedTable:
+                                    $$PointTransactionsTableReferences
+                                        ._orderIdTable(db),
+                                referencedColumn:
+                                    $$PointTransactionsTableReferences
+                                        ._orderIdTable(db)
+                                        .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$PointTransactionsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PointTransactionsTable,
+      PointTransaction,
+      $$PointTransactionsTableFilterComposer,
+      $$PointTransactionsTableOrderingComposer,
+      $$PointTransactionsTableAnnotationComposer,
+      $$PointTransactionsTableCreateCompanionBuilder,
+      $$PointTransactionsTableUpdateCompanionBuilder,
+      (PointTransaction, $$PointTransactionsTableReferences),
+      PointTransaction,
+      PrefetchHooks Function({bool customerId, bool orderId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -29175,4 +30555,6 @@ class $AppDatabaseManager {
       $$PurchaseReturnsTableTableManager(_db, _db.purchaseReturns);
   $$PurchaseReturnItemsTableTableManager get purchaseReturnItems =>
       $$PurchaseReturnItemsTableTableManager(_db, _db.purchaseReturnItems);
+  $$PointTransactionsTableTableManager get pointTransactions =>
+      $$PointTransactionsTableTableManager(_db, _db.pointTransactions);
 }

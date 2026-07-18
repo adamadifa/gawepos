@@ -60,6 +60,21 @@ class MasterRepository {
     return await (_db.delete(_db.customers)..where((tbl) => tbl.id.equals(id))).go();
   }
 
+  // ─── POINTS ────────────────────────────────────────────────────────
+  Future<List<PointTransaction>> getPointsHistory(int customerId) async {
+    return await (_db.select(_db.pointTransactions)
+          ..where((tbl) => tbl.customerId.equals(customerId))
+          ..orderBy([(t) => OrderingTerm(expression: t.createdAt, mode: OrderingMode.desc)]))
+        .get();
+  }
+
+  Future<int> getCustomerPointsBalance(int customerId) async {
+    final customer = await (_db.select(_db.customers)
+          ..where((tbl) => tbl.id.equals(customerId)))
+        .getSingleOrNull();
+    return customer?.pointsBalance ?? 0;
+  }
+
   // ─── SUPPLIERS CRUD ────────────────────────────────────────────────
   Future<List<Supplier>> getSuppliers() async {
     return await _db.select(_db.suppliers).get();
@@ -193,24 +208,58 @@ class MasterRepository {
       // 1. Update product info
       await _db.update(_db.products).replace(product);
 
-      // 2. Hapus unit & harga lama untuk di-insert ulang secara bersih
-      await (_db.delete(_db.productUnits)..where((tbl) => tbl.productId.equals(product.id))).go();
-      await (_db.delete(_db.productPrices)..where((tbl) => tbl.productId.equals(product.id))).go();
+      // Get currently stored units for this product
+      final existingUnitsInDb = await (_db.select(_db.productUnits)
+            ..where((tbl) => tbl.productId.equals(product.id)))
+          .get();
+      final existingUnitIds = existingUnitsInDb.map((u) => u.id).toSet();
 
-      // 3. Insert unit baru
+      // We will map incoming (possibly temporary/fake) IDs to the real generated/reused database IDs
       final unitIdMap = <int, int>{};
+      final incomingUsedUnitIds = <int>{};
+
+      // 2. Process units (update or insert)
       for (var unit in units) {
-        final companion = unit.copyWith(
-          productId: Value(product.id),
-          id: const Value.absent(), // Biarkan auto increment baru
-        );
-        final unitId = await _db.into(_db.productUnits).insert(companion);
-        if (unit.id.present) {
-          unitIdMap[unit.id.value] = unitId;
+        final hasValidId = unit.id.present && existingUnitIds.contains(unit.id.value);
+
+        if (hasValidId) {
+          // Existing unit: Update it
+          final companion = unit.copyWith(
+            productId: Value(product.id),
+          );
+          await (_db.update(_db.productUnits)
+                ..where((tbl) => tbl.id.equals(unit.id.value)))
+              .write(companion);
+          
+          unitIdMap[unit.id.value] = unit.id.value;
+          incomingUsedUnitIds.add(unit.id.value);
+        } else {
+          // New unit: Insert it
+          final companion = unit.copyWith(
+            productId: Value(product.id),
+            id: const Value.absent(), // auto increment
+          );
+          final newUnitId = await _db.into(_db.productUnits).insert(companion);
+          if (unit.id.present) {
+            unitIdMap[unit.id.value] = newUnitId;
+          }
         }
       }
 
-      // 4. Insert harga baru
+      // 3. Delete units that are not in the incoming list
+      final unitsToDelete = existingUnitIds.difference(incomingUsedUnitIds);
+      if (unitsToDelete.isNotEmpty) {
+        await (_db.delete(_db.productUnits)
+              ..where((tbl) => tbl.id.isIn(unitsToDelete)))
+            .go();
+      }
+
+      // 4. Delete existing prices for this product and insert new ones
+      await (_db.delete(_db.productPrices)
+            ..where((tbl) => tbl.productId.equals(product.id)))
+          .go();
+
+      // 5. Insert new prices mapping unit IDs appropriately
       for (var price in prices) {
         final tempUnitId = price.unitId.value;
         final realUnitId = unitIdMap[tempUnitId] ?? tempUnitId;

@@ -108,6 +108,8 @@ class PrintService {
     final List<Map<String, dynamic>> items = details['items'];
     final List<OrderPayment> payments = details['payments'];
     final Customer? customer = details['customer'];
+    final int pointsEarned = details['pointsEarned'] as int? ?? 0;
+    final int pointsRedeemed = details['pointsRedeemed'] as int? ?? 0;
 
     // 4. Ambil setting detail toko
     final shopName = await _salesRepository.getSetting('shop_name') ?? 'Toko POS Mobile';
@@ -240,6 +242,18 @@ class PrintService {
 
       bytes += generator.text("--------------------------------", styles: const PosStyles(align: PosAlign.center));
       bytes += generator.feed(1);
+
+      // --- POIN ---
+      if (pointsEarned > 0 || pointsRedeemed > 0) {
+        bytes += generator.text("--------------------------------", styles: const PosStyles(align: PosAlign.center));
+        if (pointsEarned > 0) {
+          bytes += generator.text("Poin didapat: +$pointsEarned", styles: const PosStyles(align: PosAlign.center));
+        }
+        if (pointsRedeemed > 0) {
+          bytes += generator.text("Poin ditukar: -$pointsRedeemed", styles: const PosStyles(align: PosAlign.center));
+        }
+        bytes += generator.feed(1);
+      }
 
       // --- FOOTER CUSTOM NOTES ---
       if (receiptHeader.isNotEmpty) {

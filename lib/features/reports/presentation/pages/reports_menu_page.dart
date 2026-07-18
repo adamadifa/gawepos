@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/constants.dart';
-import 'owner_dashboard_page.dart';
 import 'pnl_report_page.dart';
 import 'shift_report_page.dart';
 import 'sales_report_page.dart';
@@ -10,6 +9,7 @@ import 'stock_report_page.dart';
 import 'purchase_report_page.dart';
 import 'debts_receivables_report_page.dart';
 import 'return_report_page.dart';
+import 'points_report_page.dart';
 import 'product_analysis_report_page.dart';
 
 class ReportsMenuPage extends StatelessWidget {
@@ -81,6 +81,13 @@ class ReportsMenuPage extends StatelessWidget {
         'icon': Icons.outbox_rounded,
         'color': AppConstants.errorColor,
         'page': const ExpensesReportPage(),
+      },
+      {
+        'title': 'Poin Pelanggan',
+        'desc': 'Riwayat perolehan & penukaran poin pelanggan.',
+        'icon': Icons.card_giftcard_rounded,
+        'color': Colors.orange,
+        'page': const PointsReportPage(),
       },
     ];
 

@@ -13,24 +13,35 @@ class SalesRepository {
     final categories = await _db.select(_db.categories).get();
     final brandMap = {for (final b in brands) b.id: b.name};
     final categoryMap = {for (final c in categories) c.id: c.name};
-    final List<Map<String, dynamic>> results = [];
-    
-    for (var product in products) {
-      final units = await (_db.select(_db.productUnits)
-            ..where((tbl) => tbl.productId.equals(product.id)))
-          .get();
-      final prices = await (_db.select(_db.productPrices)
-            ..where((tbl) => tbl.productId.equals(product.id)))
-          .get();
-      results.add({
+
+    if (products.isEmpty) return [];
+
+    final productIds = products.map((p) => p.id).toList();
+    final allUnits = await (_db.select(_db.productUnits)
+          ..where((tbl) => tbl.productId.isIn(productIds)))
+        .get();
+    final allPrices = await (_db.select(_db.productPrices)
+          ..where((tbl) => tbl.productId.isIn(productIds)))
+        .get();
+
+    final unitsByProduct = <int, List<ProductUnit>>{};
+    for (var u in allUnits) {
+      unitsByProduct.putIfAbsent(u.productId, () => []).add(u);
+    }
+    final pricesByProduct = <int, List<ProductPrice>>{};
+    for (var p in allPrices) {
+      pricesByProduct.putIfAbsent(p.productId, () => []).add(p);
+    }
+
+    return products.map((product) {
+      return {
         'product': product,
-        'units': units,
-        'prices': prices,
+        'units': unitsByProduct[product.id] ?? [],
+        'prices': pricesByProduct[product.id] ?? [],
         'brandName': brandMap[product.brandId],
         'categoryName': categoryMap[product.categoryId],
-      });
-    }
-    return results;
+      };
+    }).toList();
   }
 
   // Menyimpan pesanan lengkap secara atomik dalam satu transaksi database Drift
@@ -48,15 +59,19 @@ class SalesRepository {
     double downPayment = 0.0,
     int? customerId,
     String? notes,
+    int pointsEarned = 0,
+    int pointsRedeemed = 0,
+    double pointsDiscount = 0.0,
   }) async {
     return await _db.transaction(() async {
       // 1. Generate nomor referensi transaksi: TRX-YYYYMMDD-XXXX
       final now = DateTime.now();
       final dateStr = "${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}";
-      final countQuery = _db.select(_db.orders)
-        ..where((tbl) => tbl.referenceNo.like('TRX-$dateStr-%'));
-      final count = (await countQuery.get()).length + 1;
-      final refNo = "TRX-$dateStr-${count.toString().padLeft(4, '0')}";
+      final countQuery = _db.selectOnly(_db.orders)
+        ..addColumns([_db.orders.id.count()])
+        ..where(_db.orders.referenceNo.like('TRX-$dateStr-%'));
+      final count = (await countQuery.getSingle()).read<int>(_db.orders.id.count()) ?? 0;
+      final refNo = "TRX-$dateStr-${(count + 1).toString().padLeft(4, '0')}";
 
       final isDebt = payments.any((p) => p['method'] == 'debt');
       final paymentStatusValue = isDebt 
@@ -181,6 +196,43 @@ class SalesRepository {
             );
       }
 
+      // 5. Insert Point Transactions (jika pelanggan dipilih & points_enabled)
+      if (customerId != null && (pointsEarned > 0 || pointsRedeemed > 0)) {
+        if (pointsEarned > 0) {
+          await _db.into(_db.pointTransactions).insert(
+                PointTransactionsCompanion.insert(
+                  customerId: customerId,
+                  orderId: Value(orderId),
+                  type: 'earn',
+                  points: pointsEarned,
+                  description: Value('Transaksi $refNo'),
+                  createdAt: Value(now),
+                ),
+              );
+        }
+        if (pointsRedeemed > 0) {
+          await _db.into(_db.pointTransactions).insert(
+                PointTransactionsCompanion.insert(
+                  customerId: customerId,
+                  orderId: Value(orderId),
+                  type: 'redeem',
+                  points: -pointsRedeemed,
+                  description: Value('Penukaran poin transaksi $refNo'),
+                  createdAt: Value(now),
+                ),
+              );
+        }
+        // Update saldo poin pelanggan
+        final customer = await (_db.select(_db.customers)
+              ..where((tbl) => tbl.id.equals(customerId)))
+            .getSingle();
+        await _db.update(_db.customers).replace(
+              customer.copyWith(
+                pointsBalance: customer.pointsBalance + pointsEarned - pointsRedeemed,
+              ),
+            );
+      }
+
       return orderId;
     });
   }
@@ -231,6 +283,27 @@ class SalesRepository {
         );
   }
 
+  // --- POINTS SETTINGS ---
+  Future<Map<String, int>> getPointsSettings() async {
+    final enabled = await getSetting('points_enabled');
+    final earnRate = await getSetting('points_earn_rate');
+    final redeemValue = await getSetting('points_redeem_value');
+    final minRedeem = await getSetting('points_min_redeem');
+    return {
+      'enabled': enabled == '1' ? 1 : 0,
+      'earnRate': int.tryParse(earnRate ?? '1000') ?? 1000,
+      'redeemValue': int.tryParse(redeemValue ?? '10') ?? 10,
+      'minRedeem': int.tryParse(minRedeem ?? '100') ?? 100,
+    };
+  }
+
+  Future<int> getCustomerPointsBalance(int customerId) async {
+    final customer = await (_db.select(_db.customers)
+          ..where((tbl) => tbl.id.equals(customerId)))
+        .getSingleOrNull();
+    return customer?.pointsBalance ?? 0;
+  }
+
   // --- COMPLETED ORDERS HELPERS ---
   Future<List<Order>> getRecentOrders({int limit = 50}) async {
     return await (_db.select(_db.orders)
@@ -244,17 +317,25 @@ class SalesRepository {
     if (order == null) return null;
 
     final items = await (_db.select(_db.orderItems)..where((tbl) => tbl.orderId.equals(orderId))).get();
-    final List<Map<String, dynamic>> itemsWithDetails = [];
-    
-    for (var item in items) {
-      final product = await (_db.select(_db.products)..where((tbl) => tbl.id.equals(item.productId))).getSingleOrNull();
-      final unit = await (_db.select(_db.productUnits)..where((tbl) => tbl.id.equals(item.unitId))).getSingleOrNull();
-      itemsWithDetails.add({
+
+    final productIds = items.map((i) => i.productId).toSet().toList();
+    final unitIds = items.map((i) => i.unitId).toSet().toList();
+    final products = await (_db.select(_db.products)
+          ..where((tbl) => tbl.id.isIn(productIds)))
+        .get();
+    final units = await (_db.select(_db.productUnits)
+          ..where((tbl) => tbl.id.isIn(unitIds)))
+        .get();
+    final productMap = {for (var p in products) p.id: p};
+    final unitMap = {for (var u in units) u.id: u};
+
+    final itemsWithDetails = items.map((item) {
+      return {
         'item': item,
-        'product': product,
-        'unit': unit,
-      });
-    }
+        'product': productMap[item.productId],
+        'unit': unitMap[item.unitId],
+      };
+    }).toList();
 
     final payments = await (_db.select(_db.orderPayments)..where((tbl) => tbl.orderId.equals(orderId))).get();
     
@@ -265,12 +346,24 @@ class SalesRepository {
 
     final session = await (_db.select(_db.cashierSessions)..where((tbl) => tbl.id.equals(order.cashierSessionId))).getSingleOrNull();
 
+    final pointTxns = await (_db.select(_db.pointTransactions)
+          ..where((tbl) => tbl.orderId.equals(orderId)))
+        .get();
+    int pointsEarned = 0;
+    int pointsRedeemed = 0;
+    for (var txn in pointTxns) {
+      if (txn.type == 'earn') pointsEarned += txn.points;
+      if (txn.type == 'redeem') pointsRedeemed += txn.points.abs();
+    }
+
     return {
       'order': order,
       'items': itemsWithDetails,
       'payments': payments,
       'customer': customer,
       'session': session,
+      'pointsEarned': pointsEarned,
+      'pointsRedeemed': pointsRedeemed,
     };
   }
 

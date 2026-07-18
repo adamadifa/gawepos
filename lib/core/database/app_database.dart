@@ -44,6 +44,8 @@ class Brands extends Table {
 
 // 5. Produk
 @TableIndex(name: 'products_barcode_idx', columns: {#barcode})
+@TableIndex(name: 'products_name_idx', columns: {#name})
+@TableIndex(name: 'products_sku_idx', columns: {#sku})
 class Products extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get brandId => integer().nullable().references(Brands, #id, onDelete: KeyAction.setNull)();
@@ -62,6 +64,7 @@ class Products extends Table {
 }
 
 // 6. Satuan Unit Produk (Pcs, Box, dst.)
+@TableIndex(name: 'product_units_product_idx', columns: {#productId})
 class ProductUnits extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get productId => integer().references(Products, #id, onDelete: KeyAction.cascade)();
@@ -77,6 +80,7 @@ class PriceTiers extends Table {
 }
 
 // 8. Matriks Harga Jual Produk
+@TableIndex(name: 'product_prices_product_unit_tier_idx', columns: {#productId, #unitId, #priceTierId})
 class ProductPrices extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get productId => integer().references(Products, #id, onDelete: KeyAction.cascade)();
@@ -93,6 +97,7 @@ class Customers extends Table {
   TextColumn get phone => text().nullable()();
   TextColumn get email => text().nullable()();
   TextColumn get address => text().nullable()();
+  IntColumn get pointsBalance => integer().withDefault(const Constant(0))();
 }
 
 // 10. Pemasok (Suppliers)
@@ -105,6 +110,7 @@ class Suppliers extends Table {
 }
 
 // 11. Stok Inventori Aktif
+@TableIndex(name: 'inventory_product_unit_idx', columns: {#productId, #unitId})
 class Inventory extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get productId => integer().references(Products, #id, onDelete: KeyAction.cascade)();
@@ -113,6 +119,8 @@ class Inventory extends Table {
 }
 
 // 12. Mutasi Keluar-Masuk Stok
+@TableIndex(name: 'stock_movements_product_idx', columns: {#productId})
+@TableIndex(name: 'stock_movements_created_idx', columns: {#createdAt})
 class StockMovements extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get productId => integer().references(Products, #id)();
@@ -125,6 +133,8 @@ class StockMovements extends Table {
 }
 
 // 13. Sesi Kasir (Shift)
+@TableIndex(name: 'cashier_sessions_user_idx', columns: {#userId})
+@TableIndex(name: 'cashier_sessions_status_idx', columns: {#status})
 class CashierSessions extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get userId => integer().references(Users, #id)();
@@ -138,6 +148,10 @@ class CashierSessions extends Table {
 }
 
 // 14. Transaksi Penjualan (Orders)
+@TableIndex(name: 'orders_session_idx', columns: {#cashierSessionId})
+@TableIndex(name: 'orders_status_idx', columns: {#status})
+@TableIndex(name: 'orders_created_idx', columns: {#createdAt})
+@TableIndex(name: 'orders_customer_idx', columns: {#customerId})
 class Orders extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get userId => integer().references(Users, #id)();
@@ -157,6 +171,8 @@ class Orders extends Table {
 }
 
 // 15. Item Detail Penjualan
+@TableIndex(name: 'order_items_order_idx', columns: {#orderId})
+@TableIndex(name: 'order_items_product_idx', columns: {#productId})
 class OrderItems extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get orderId => integer().references(Orders, #id, onDelete: KeyAction.cascade)();
@@ -170,6 +186,7 @@ class OrderItems extends Table {
 }
 
 // 16. Metode Pembayaran Detail
+@TableIndex(name: 'order_payments_order_idx', columns: {#orderId})
 class OrderPayments extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get orderId => integer().references(Orders, #id, onDelete: KeyAction.cascade)();
@@ -179,6 +196,7 @@ class OrderPayments extends Table {
 }
 
 // 17. Draft Penjualan Ditahan (Hold / Recall)
+@TableIndex(name: 'pos_held_orders_user_idx', columns: {#userId})
 class PosHeldOrders extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get userId => integer().references(Users, #id)();
@@ -189,6 +207,7 @@ class PosHeldOrders extends Table {
 }
 
 // 18. Pengeluaran Toko (Expenses)
+@TableIndex(name: 'expenses_date_idx', columns: {#date})
 class Expenses extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get categoryName => text()(); // e.g., 'Operasional', 'Listrik', 'Lainnya'
@@ -205,6 +224,9 @@ class Settings extends Table {
 }
 
 // 20. Pembelian dari Supplier
+@TableIndex(name: 'purchases_supplier_idx', columns: {#supplierId})
+@TableIndex(name: 'purchases_status_idx', columns: {#status})
+@TableIndex(name: 'purchases_created_idx', columns: {#createdAt})
 class Purchases extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get supplierId => integer().references(Suppliers, #id)();
@@ -219,6 +241,7 @@ class Purchases extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+@TableIndex(name: 'purchase_items_purchase_idx', columns: {#purchaseId})
 class PurchaseItems extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get purchaseId => integer().references(Purchases, #id, onDelete: KeyAction.cascade)();
@@ -238,6 +261,9 @@ class RolePermissions extends Table {
 }
 
 // 22. Piutang Pelanggan (Customer Debts / Bon)
+@TableIndex(name: 'customer_debts_customer_idx', columns: {#customerId})
+@TableIndex(name: 'customer_debts_order_idx', columns: {#orderId})
+@TableIndex(name: 'customer_debts_status_idx', columns: {#status})
 class CustomerDebts extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get customerId => integer().references(Customers, #id, onDelete: KeyAction.cascade)();
@@ -249,6 +275,7 @@ class CustomerDebts extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+@TableIndex(name: 'customer_debt_payments_debt_idx', columns: {#customerDebtId})
 class CustomerDebtPayments extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get customerDebtId => integer().references(CustomerDebts, #id, onDelete: KeyAction.cascade)();
@@ -258,6 +285,8 @@ class CustomerDebtPayments extends Table {
 }
 
 // 23. Hutang ke Supplier (Supplier Debts)
+@TableIndex(name: 'supplier_debts_supplier_idx', columns: {#supplierId})
+@TableIndex(name: 'supplier_debts_purchase_idx', columns: {#purchaseId})
 class SupplierDebts extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get supplierId => integer().references(Suppliers, #id, onDelete: KeyAction.cascade)();
@@ -269,6 +298,7 @@ class SupplierDebts extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+@TableIndex(name: 'supplier_debt_payments_debt_idx', columns: {#supplierDebtId})
 class SupplierDebtPayments extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get supplierDebtId => integer().references(SupplierDebts, #id, onDelete: KeyAction.cascade)();
@@ -278,6 +308,7 @@ class SupplierDebtPayments extends Table {
 }
 
 // 24. Retur Penjualan (Customer Returns)
+@TableIndex(name: 'sales_returns_session_idx', columns: {#cashierSessionId})
 class SalesReturns extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get orderId => integer().nullable().references(Orders, #id, onDelete: KeyAction.setNull)();
@@ -290,6 +321,7 @@ class SalesReturns extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+@TableIndex(name: 'sales_return_items_return_idx', columns: {#salesReturnId})
 class SalesReturnItems extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get salesReturnId => integer().references(SalesReturns, #id, onDelete: KeyAction.cascade)();
@@ -301,6 +333,7 @@ class SalesReturnItems extends Table {
 }
 
 // 25. Retur Pembelian (Supplier Returns)
+@TableIndex(name: 'purchase_returns_session_idx', columns: {#cashierSessionId})
 class PurchaseReturns extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get purchaseId => integer().nullable().references(Purchases, #id, onDelete: KeyAction.setNull)();
@@ -313,6 +346,7 @@ class PurchaseReturns extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+@TableIndex(name: 'purchase_return_items_return_idx', columns: {#purchaseReturnId})
 class PurchaseReturnItems extends Table {
   IntColumn get id => integer().autoIncrement()();
   IntColumn get purchaseReturnId => integer().references(PurchaseReturns, #id, onDelete: KeyAction.cascade)();
@@ -321,6 +355,18 @@ class PurchaseReturnItems extends Table {
   RealColumn get quantity => real()();
   RealColumn get costPrice => real()();
   RealColumn get subtotal => real()();
+}
+
+// 26. Riwayat Poin Pelanggan
+@TableIndex(name: 'point_transactions_customer_idx', columns: {#customerId})
+class PointTransactions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get customerId => integer().references(Customers, #id)();
+  IntColumn? get orderId => integer().nullable().references(Orders, #id, onDelete: KeyAction.setNull)();
+  TextColumn get type => text()(); // 'earn' / 'redeem' / 'expire' / 'adjust'
+  IntColumn get points => integer()(); // positif = earn, negatif = redeem/expire
+  TextColumn get description => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
 @DriftDatabase(tables: [
@@ -354,12 +400,13 @@ class PurchaseReturnItems extends Table {
   SalesReturnItems,
   PurchaseReturns,
   PurchaseReturnItems,
+  PointTransactions,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -390,23 +437,18 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(products, products.allowManualPrice);
             await m.addColumn(orderItems, orderItems.minQtyApplied);
           }
+          if (from < 7) {
+            await m.addColumn(customers, customers.pointsBalance);
+            await m.createTable(pointTransactions);
+          }
         },
         beforeOpen: (details) async {
-          // Fix any missing payment_type column or null values in purchases
-          try {
-            final columns = await customSelect("PRAGMA table_info(purchases);").get();
-            final hasPaymentType = columns.any((row) => row.read<String>('name') == 'payment_type');
-            if (!hasPaymentType) {
-              await customStatement("ALTER TABLE purchases ADD COLUMN payment_type TEXT DEFAULT 'cash';");
-            }
-            await customStatement("UPDATE purchases SET payment_type = 'cash' WHERE payment_type IS NULL;");
-
-            final hasDownPayment = columns.any((row) => row.read<String>('name') == 'down_payment');
-            if (!hasDownPayment) {
-              await customStatement("ALTER TABLE purchases ADD COLUMN down_payment REAL DEFAULT 0.0;");
-            }
-            await customStatement("UPDATE purchases SET down_payment = 0.0 WHERE down_payment IS NULL;");
-          } catch (_) {}
+          // PRAGMA tuning — dijalankan setiap koneksi dibuka
+          await customStatement('PRAGMA foreign_keys = ON');
+          await customStatement('PRAGMA journal_mode = WAL');
+          await customStatement('PRAGMA synchronous = NORMAL');
+          await customStatement('PRAGMA cache_size = -64000');
+          await customStatement('PRAGMA temp_store = MEMORY');
 
           if (details.wasCreated || (details.hadUpgrade && (details.versionBefore ?? 0) < 2)) {
             final adminExists = await (select(rolePermissions)..where((tbl) => tbl.role.equals('admin'))).getSingleOrNull();

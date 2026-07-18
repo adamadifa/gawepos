@@ -12,17 +12,20 @@ class PurchaseRepository {
           ..orderBy([(tbl) => OrderingTerm(expression: tbl.createdAt, mode: OrderingMode.desc)]))
         .get();
 
-    final List<Map<String, dynamic>> results = [];
-    for (var p in purchases) {
-      final supplier = await (_db.select(_db.suppliers)
-            ..where((tbl) => tbl.id.equals(p.supplierId)))
-          .getSingleOrNull();
-      results.add({
+    if (purchases.isEmpty) return [];
+
+    final supplierIds = purchases.map((p) => p.supplierId).toSet().toList();
+    final suppliers = await (_db.select(_db.suppliers)
+          ..where((tbl) => tbl.id.isIn(supplierIds)))
+        .get();
+    final supplierMap = {for (var s in suppliers) s.id: s};
+
+    return purchases.map((p) {
+      return {
         'purchase': p,
-        'supplier': supplier,
-      });
-    }
-    return results;
+        'supplier': supplierMap[p.supplierId],
+      };
+    }).toList();
   }
 
   // Get single purchase order details (items & supplier info)
@@ -41,21 +44,24 @@ class PurchaseRepository {
           ..where((tbl) => tbl.purchaseId.equals(purchaseId)))
         .get();
 
-    final List<Map<String, dynamic>> itemDetails = [];
-    for (var item in items) {
-      final product = await (_db.select(_db.products)
-            ..where((tbl) => tbl.id.equals(item.productId)))
-          .getSingleOrNull();
-      final unit = await (_db.select(_db.productUnits)
-            ..where((tbl) => tbl.id.equals(item.unitId)))
-          .getSingleOrNull();
+    final productIds = items.map((i) => i.productId).toSet().toList();
+    final unitIds = items.map((i) => i.unitId).toSet().toList();
+    final products = await (_db.select(_db.products)
+          ..where((tbl) => tbl.id.isIn(productIds)))
+        .get();
+    final units = await (_db.select(_db.productUnits)
+          ..where((tbl) => tbl.id.isIn(unitIds)))
+        .get();
+    final productMap = {for (var p in products) p.id: p};
+    final unitMap = {for (var u in units) u.id: u};
 
-      itemDetails.add({
+    final itemDetails = items.map((item) {
+      return {
         'item': item,
-        'product': product,
-        'unit': unit,
-      });
-    }
+        'product': productMap[item.productId],
+        'unit': unitMap[item.unitId],
+      };
+    }).toList();
 
     return {
       'purchase': purchase,
@@ -77,10 +83,11 @@ class PurchaseRepository {
       // 1. Generate Ref No: PUR-YYYYMMDD-XXXX
       final now = DateTime.now();
       final dateStr = "${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}";
-      final countQuery = _db.select(_db.purchases)
-        ..where((tbl) => tbl.referenceNo.like('PUR-$dateStr-%'));
-      final count = (await countQuery.get()).length + 1;
-      final refNo = "PUR-$dateStr-${count.toString().padLeft(4, '0')}";
+      final countQuery = _db.selectOnly(_db.purchases)
+        ..addColumns([_db.purchases.id.count()])
+        ..where(_db.purchases.referenceNo.like('PUR-$dateStr-%'));
+      final count = (await countQuery.getSingle()).read<int>(_db.purchases.id.count()) ?? 0;
+      final refNo = "PUR-$dateStr-${(count + 1).toString().padLeft(4, '0')}";
 
       // Calculate Subtotal & Grand Total
       double subtotal = 0.0;

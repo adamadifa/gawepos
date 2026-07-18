@@ -175,7 +175,9 @@ class _LoginPageState extends State<LoginPage> {
                   const BorderRadius.vertical(top: Radius.circular(28)),
               child: Container(
                 color: AppConstants.backgroundColor,
-                child: SingleChildScrollView(
+                child: SafeArea(
+                  top: false,
+                  child: SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(24, 28, 24, 32),
                   child: Center(
                     child: Container(
@@ -364,6 +366,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
               ),
+            ),
             ),
           ),
         ],

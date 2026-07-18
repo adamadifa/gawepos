@@ -166,7 +166,9 @@ class _OnboardingPageState extends State<OnboardingPage> {
           ),
 
           Expanded(
-            child: SingleChildScrollView(
+            child: SafeArea(
+              top: false,
+              child: SingleChildScrollView(
               padding: const EdgeInsets.fromLTRB(
                 AppConstants.paddingMd,
                 0,
@@ -334,6 +336,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                 ),
               ),
             ),
+          ),
           ),
         ],
       ),

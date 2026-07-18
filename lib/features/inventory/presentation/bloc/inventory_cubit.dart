@@ -97,4 +97,27 @@ class InventoryCubit extends Cubit<InventoryState> {
       emit(InventoryError('Gagal melakukan penyesuaian stok: $e'));
     }
   }
+
+  Future<void> adjustStockManual({
+    required int productId,
+    required int unitId,
+    required double quantity,
+    required bool isAddition,
+    String? notes,
+  }) async {
+    emit(InventoryLoading());
+    try {
+      await _repository.adjustStockManual(
+        productId: productId,
+        unitId: unitId,
+        quantity: quantity,
+        isAddition: isAddition,
+        notes: notes,
+      );
+      emit(InventorySuccess());
+      await loadInventory();
+    } catch (e) {
+      emit(InventoryError('Gagal melakukan penyesuaian stok manual: $e'));
+    }
+  }
 }

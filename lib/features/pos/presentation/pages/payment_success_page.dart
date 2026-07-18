@@ -13,6 +13,8 @@ class PaymentSuccessPage extends StatefulWidget {
   final User user;
   final CashierSession session;
   final CartState cart;
+  final int pointsEarned;
+  final int pointsRedeemed;
 
   const PaymentSuccessPage({
     super.key,
@@ -20,6 +22,8 @@ class PaymentSuccessPage extends StatefulWidget {
     required this.user,
     required this.session,
     required this.cart,
+    this.pointsEarned = 0,
+    this.pointsRedeemed = 0,
   });
 
   @override
@@ -281,6 +285,52 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
                                             ),
                                           ),
                                           const SizedBox(height: 16),
+
+                                          if (widget.pointsEarned > 0 || widget.pointsRedeemed > 0) ...[
+                                            Divider(
+                                              color: AppConstants.borderLightColor,
+                                              height: 1,
+                                            ),
+                                            const SizedBox(height: 12),
+                                            if (widget.pointsEarned > 0)
+                                              Row(
+                                                children: [
+                                                  const Icon(Icons.card_giftcard_rounded,
+                                                      size: 16, color: AppConstants.warningColor),
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    'Poin didapat: +${widget.pointsEarned}',
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 12,
+                                                      color: AppConstants.successColor,
+                                                      fontWeight: FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            if (widget.pointsRedeemed > 0)
+                                              Padding(
+                                                padding: EdgeInsets.only(
+                                                  top: widget.pointsEarned > 0 ? 4 : 0,
+                                                ),
+                                                child: Row(
+                                                  children: [
+                                                    const Icon(Icons.redeem_rounded,
+                                                        size: 16, color: AppConstants.warningColor),
+                                                    const SizedBox(width: 6),
+                                                    Text(
+                                                      'Poin ditukar: -${widget.pointsRedeemed}',
+                                                      style: GoogleFonts.poppins(
+                                                        fontSize: 12,
+                                                        color: AppConstants.textLightColor,
+                                                        fontWeight: FontWeight.w500,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            const SizedBox(height: 12),
+                                          ],
                                         ],
                                       ),
                                     ),
@@ -326,7 +376,7 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
           ),
           if (_isPrinting)
             Container(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha: 0.3),
               child: const Center(
                 child: Card(
                   child: Padding(

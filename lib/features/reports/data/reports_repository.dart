@@ -27,82 +27,110 @@ class ReportsRepository {
     final startOfDay = start ?? DateTime(now.year, now.month, now.day);
     final endOfDay = end ?? DateTime(now.year, now.month, now.day, 23, 59, 59);
 
-    // Fetch Today's Orders
+    // --- Aggregate penjualan (1 query vs N+1) ---
+    final aggQuery = _db.selectOnly(_db.orders)
+      ..addColumns([
+        _db.orders.subtotal.sum(),
+        _db.orders.discountAmount.sum(),
+        _db.orders.taxAmount.sum(),
+        _db.orders.grandTotal.sum(),
+        _db.orders.id.count(),
+      ])
+      ..where(_db.orders.createdAt.isBiggerOrEqualValue(startOfDay) &
+             _db.orders.createdAt.isSmallerOrEqualValue(endOfDay) &
+             _db.orders.status.equals('completed'));
+    final aggRow = await aggQuery.getSingle();
+
+    double totalGrossSales = aggRow.read<double>(_db.orders.subtotal.sum()) ?? 0.0;
+    double totalDiscount = aggRow.read<double>(_db.orders.discountAmount.sum()) ?? 0.0;
+    double totalTax = aggRow.read<double>(_db.orders.taxAmount.sum()) ?? 0.0;
+    double totalNetSales = aggRow.read<double>(_db.orders.grandTotal.sum()) ?? 0.0;
+    final transactionCount = aggRow.read<int>(_db.orders.id.count()) ?? 0;
+
+    // --- Hitung HPP batch (1 query untuk semua items) ---
     final todayOrders = await (_db.select(_db.orders)
-          ..where((tbl) => tbl.createdAt.isBiggerOrEqualValue(startOfDay) & tbl.createdAt.isSmallerOrEqualValue(endOfDay) & tbl.status.equals('completed')))
-        .get();
+        ..where((tbl) => tbl.createdAt.isBiggerOrEqualValue(startOfDay) &
+                         tbl.createdAt.isSmallerOrEqualValue(endOfDay) &
+                         tbl.status.equals('completed')))
+      .get();
+    final todayOrderIds = todayOrders.map((o) => o.id).toList();
 
-    double totalGrossSales = 0.0;
-    double totalDiscount = 0.0;
-    double totalTax = 0.0;
-    double totalNetSales = 0.0;
     double totalHpp = 0.0;
-
-    for (var order in todayOrders) {
-      totalGrossSales += order.subtotal;
-      totalDiscount += order.discountAmount;
-      totalTax += order.taxAmount;
-      totalNetSales += order.grandTotal;
-
-      // Calculate HPP for this order
+    if (todayOrderIds.isNotEmpty) {
       final items = await (_db.select(_db.orderItems)
-            ..where((tbl) => tbl.orderId.equals(order.id)))
+            ..where((tbl) => tbl.orderId.isIn(todayOrderIds)))
           .get();
-
-      for (var item in items) {
-        final cost = await getProductCostPrice(item.productId, item.unitId, item.price);
-        totalHpp += (item.quantity * cost);
-      }
+      totalHpp = await _calculateBatchHpp(items);
     }
 
-    // Fetch Today's Sales Returns
-    final todaySalesReturns = await (_db.select(_db.salesReturns)
-          ..where((tbl) => tbl.createdAt.isBiggerOrEqualValue(startOfDay) & tbl.createdAt.isSmallerOrEqualValue(endOfDay)))
-        .get();
-    double totalSalesReturns = 0.0;
+    // --- Returns (aggregate) ---
+    final retAgg = _db.selectOnly(_db.salesReturns)
+      ..addColumns([_db.salesReturns.refundAmount.sum()])
+      ..where(_db.salesReturns.createdAt.isBiggerOrEqualValue(startOfDay) &
+              _db.salesReturns.createdAt.isSmallerOrEqualValue(endOfDay));
+    final retRow = await retAgg.getSingle();
+    double totalSalesReturns = retRow.read<double>(_db.salesReturns.refundAmount.sum()) ?? 0.0;
+
     double totalReturnedHpp = 0.0;
-    for (var ret in todaySalesReturns) {
-      totalSalesReturns += ret.refundAmount;
-      final retItems = await (_db.select(_db.salesReturnItems)
-            ..where((tbl) => tbl.salesReturnId.equals(ret.id)))
-          .get();
-      for (var item in retItems) {
-        final cost = await getProductCostPrice(item.productId, item.unitId, item.price);
-        totalReturnedHpp += (item.quantity * cost);
+    if (totalSalesReturns > 0) {
+      final todaySalesReturns = await (_db.select(_db.salesReturns)
+          ..where((tbl) => tbl.createdAt.isBiggerOrEqualValue(startOfDay) &
+                           tbl.createdAt.isSmallerOrEqualValue(endOfDay))
+        ).get();
+      final returnIds = todaySalesReturns.map((r) => r.id).toList();
+
+      if (returnIds.isNotEmpty) {
+        final retItems = await (_db.select(_db.salesReturnItems)
+              ..where((tbl) => tbl.salesReturnId.isIn(returnIds)))
+            .get();
+        totalReturnedHpp = await _calculateBatchHpp(retItems);
       }
     }
 
     totalNetSales = totalNetSales - totalSalesReturns;
     totalHpp = totalHpp - totalReturnedHpp;
-
     final grossProfit = totalNetSales - totalHpp;
 
-    // Fetch Today's Expenses
-    final todayExpenses = await (_db.select(_db.expenses)
-          ..where((tbl) => tbl.date.isBiggerOrEqualValue(startOfDay) & tbl.date.isSmallerOrEqualValue(endOfDay)))
-        .get();
-
-    double totalExpenses = todayExpenses.fold(0.0, (sum, exp) => sum + exp.amount);
+    // --- Expenses (aggregate) ---
+    final expAgg = _db.selectOnly(_db.expenses)
+      ..addColumns([_db.expenses.amount.sum()])
+      ..where(_db.expenses.date.isBiggerOrEqualValue(startOfDay) &
+              _db.expenses.date.isSmallerOrEqualValue(endOfDay));
+    final expRow = await expAgg.getSingle();
+    final totalExpenses = expRow.read<double>(_db.expenses.amount.sum()) ?? 0.0;
     final netProfit = grossProfit - totalExpenses;
 
-    // Last 7 days trend
+    // --- Last 7 days trend (optimasi: 2 query total) ---
+    final weekStart = now.subtract(const Duration(days: 6));
+    final startWeek = DateTime(weekStart.year, weekStart.month, weekStart.day);
+    final endWeek = DateTime(now.year, now.month, now.day, 23, 59, 59);
+
+    final weekOrders = await (_db.select(_db.orders)
+          ..where((tbl) => tbl.createdAt.isBiggerOrEqualValue(startWeek) &
+                           tbl.createdAt.isSmallerOrEqualValue(endWeek) &
+                           tbl.status.equals('completed'))
+          ..orderBy([(tbl) => OrderingTerm(expression: tbl.createdAt, mode: OrderingMode.asc)]))
+        .get();
+
+    final weekReturns = await (_db.select(_db.salesReturns)
+          ..where((tbl) => tbl.createdAt.isBiggerOrEqualValue(startWeek) &
+                           tbl.createdAt.isSmallerOrEqualValue(endWeek))
+          ..orderBy([(tbl) => OrderingTerm(expression: tbl.createdAt, mode: OrderingMode.asc)]))
+        .get();
+
     final List<Map<String, dynamic>> trendData = [];
     for (int i = 6; i >= 0; i--) {
       final targetDate = now.subtract(Duration(days: i));
-      final start = DateTime(targetDate.year, targetDate.month, targetDate.day);
-      final end = DateTime(targetDate.year, targetDate.month, targetDate.day, 23, 59, 59);
+      final dayStart = DateTime(targetDate.year, targetDate.month, targetDate.day);
+      final dayEnd = DateTime(targetDate.year, targetDate.month, targetDate.day, 23, 59, 59);
 
-      final daysOrders = await (_db.select(_db.orders)
-            ..where((tbl) => tbl.createdAt.isBiggerOrEqualValue(start) & tbl.createdAt.isSmallerOrEqualValue(end) & tbl.status.equals('completed')))
-          .get();
-
-      final daysReturns = await (_db.select(_db.salesReturns)
-            ..where((tbl) => tbl.createdAt.isBiggerOrEqualValue(start) & tbl.createdAt.isSmallerOrEqualValue(end)))
-          .get();
-
-      final totalSales = daysOrders.fold<double>(0.0, (sum, o) => sum + o.grandTotal);
-      final totalReturns = daysReturns.fold<double>(0.0, (sum, r) => sum + r.refundAmount);
-      final total = (totalSales - totalReturns).clamp(0.0, double.infinity);
+      final daySales = weekOrders
+          .where((o) => o.createdAt.isAfter(dayStart.subtract(const Duration(seconds: 1))) && o.createdAt.isBefore(dayEnd.add(const Duration(seconds: 1))))
+          .fold<double>(0.0, (sum, o) => sum + o.grandTotal);
+      final dayRet = weekReturns
+          .where((r) => r.createdAt.isAfter(dayStart.subtract(const Duration(seconds: 1))) && r.createdAt.isBefore(dayEnd.add(const Duration(seconds: 1))))
+          .fold<double>(0.0, (sum, r) => sum + r.refundAmount);
+      final total = (daySales - dayRet).clamp(0.0, double.infinity);
 
       trendData.add({
         'day': '${targetDate.day}/${targetDate.month}',
@@ -110,62 +138,76 @@ class ReportsRepository {
       });
     }
 
-    // Best Sellers Today (Top 5)
-    // Gather all today's items
-    final Map<int, double> productQtyMap = {};
-    for (var order in todayOrders) {
+    // --- Best Sellers (1 query items, batch fetch products) ---
+    final List<Map<String, dynamic>> bestSellers = [];
+    if (todayOrderIds.isNotEmpty) {
       final items = await (_db.select(_db.orderItems)
-            ..where((tbl) => tbl.orderId.equals(order.id)))
+            ..where((tbl) => tbl.orderId.isIn(todayOrderIds)))
           .get();
+
+      final Map<int, double> productQtyMap = {};
       for (var item in items) {
         productQtyMap[item.productId] = (productQtyMap[item.productId] ?? 0) + item.quantity;
       }
-    }
 
-    final List<Map<String, dynamic>> bestSellers = [];
-    final sortedProductIds = productQtyMap.keys.toList()
-      ..sort((a, b) => productQtyMap[b]!.compareTo(productQtyMap[a]!));
+      final sortedProductIds = productQtyMap.keys.toList()
+        ..sort((a, b) => productQtyMap[b]!.compareTo(productQtyMap[a]!));
 
-    final top5 = sortedProductIds.take(5);
-    for (var prodId in top5) {
-      final prod = await (_db.select(_db.products)
-            ..where((tbl) => tbl.id.equals(prodId)))
-          .getSingleOrNull();
-      if (prod != null) {
-        bestSellers.add({
-          'name': prod.name,
-          'qty': productQtyMap[prodId],
-        });
+      final top5Ids = sortedProductIds.take(5).toList();
+      if (top5Ids.isNotEmpty) {
+        final products = await (_db.select(_db.products)
+              ..where((tbl) => tbl.id.isIn(top5Ids)))
+            .get();
+        final productMap = {for (var p in products) p.id: p};
+        for (var prodId in top5Ids) {
+          final prod = productMap[prodId];
+          if (prod != null) {
+            bestSellers.add({
+              'name': prod.name,
+              'qty': productQtyMap[prodId],
+            });
+          }
+        }
       }
     }
 
-    // Low Stock Alert
+    // --- Low Stock Alert (batch fetch) ---
     final List<Map<String, dynamic>> lowStockAlerts = [];
     final activeProducts = await (_db.select(_db.products)
           ..where((tbl) => tbl.isStockManaged.equals(true) & tbl.isActive.equals(true)))
         .get();
 
-    for (var p in activeProducts) {
-      // Get stock units
-      final units = await (_db.select(_db.productUnits)
-            ..where((tbl) => tbl.productId.equals(p.id)))
+    if (activeProducts.isNotEmpty) {
+      final activeProductIds = activeProducts.map((p) => p.id).toList();
+      final allUnits = await (_db.select(_db.productUnits)
+            ..where((tbl) => tbl.productId.isIn(activeProductIds)))
+          .get();
+      final allInventory = await (_db.select(_db.inventory)
+            ..where((tbl) => tbl.productId.isIn(activeProductIds)))
           .get();
 
-      for (var u in units) {
-        final inv = await (_db.select(_db.inventory)
-              ..where((tbl) => tbl.productId.equals(p.id) & tbl.unitId.equals(u.id)))
-            .getSingleOrNull();
+      final invMap = <String, InventoryData>{};
+      for (var inv in allInventory) {
+        invMap['${inv.productId}_${inv.unitId}'] = inv;
+      }
+      final unitsByProduct = <int, List<ProductUnit>>{};
+      for (var u in allUnits) {
+        unitsByProduct.putIfAbsent(u.productId, () => []).add(u);
+      }
 
-        final currentQty = inv?.quantity ?? 0.0;
-        // Check alert using base unit or general check (conversion factor conversion could be done,
-        // but checking unit stock relative to minStockAlert is standard)
-        if (currentQty <= p.minStockAlert) {
-          lowStockAlerts.add({
-            'product': p,
-            'unit': u,
-            'currentStock': currentQty,
-            'minAlert': p.minStockAlert,
-          });
+      for (var p in activeProducts) {
+        final units = unitsByProduct[p.id] ?? [];
+        for (var u in units) {
+          final inv = invMap['${p.id}_${u.id}'];
+          final currentQty = inv?.quantity ?? 0.0;
+          if (currentQty <= p.minStockAlert) {
+            lowStockAlerts.add({
+              'product': p,
+              'unit': u,
+              'currentStock': currentQty,
+              'minAlert': p.minStockAlert,
+            });
+          }
         }
       }
     }
@@ -179,68 +221,107 @@ class ReportsRepository {
       'grossProfit': grossProfit,
       'expenses': totalExpenses,
       'netProfit': netProfit,
-      'transactionCount': todayOrders.length,
+      'transactionCount': transactionCount,
       'trend': trendData,
       'bestSellers': bestSellers,
       'lowStock': lowStockAlerts,
     };
   }
 
+  // Helper: batch hitung HPP untuk list of items (order items / return items)
+  Future<double> _calculateBatchHpp(List<dynamic> items) async {
+    if (items.isEmpty) return 0.0;
+
+    // Extract unique product/unit pairs
+    final productUnitPairs = <String>{};
+    for (var item in items) {
+      productUnitPairs.add('${item.productId}_${item.unitId}');
+    }
+
+    double totalHpp = 0.0;
+    for (var pair in productUnitPairs) {
+      final parts = pair.split('_');
+      final productId = int.parse(parts[0]);
+      final unitId = int.parse(parts[1]);
+
+      final cost = await getProductCostPrice(productId, unitId, 0.0);
+      final qty = items
+          .where((i) => i.productId == productId && i.unitId == unitId)
+          .fold<double>(0.0, (sum, i) => sum + i.quantity);
+      totalHpp += qty * cost;
+    }
+    return totalHpp;
+  }
+
   // Get Custom range Laba Rugi Report
   Future<Map<String, dynamic>> getPnLReport(DateTime start, DateTime end) async {
-    final orders = await (_db.select(_db.orders)
-          ..where((tbl) => tbl.createdAt.isBiggerOrEqualValue(start) & tbl.createdAt.isSmallerOrEqualValue(end) & tbl.status.equals('completed')))
-        .get();
+    // Aggregate query
+    final agg = _db.selectOnly(_db.orders)
+      ..addColumns([
+        _db.orders.subtotal.sum(),
+        _db.orders.discountAmount.sum(),
+        _db.orders.taxAmount.sum(),
+        _db.orders.grandTotal.sum(),
+      ])
+      ..where(_db.orders.createdAt.isBiggerOrEqualValue(start) &
+              _db.orders.createdAt.isSmallerOrEqualValue(end) &
+              _db.orders.status.equals('completed'));
+    final row = await agg.getSingle();
 
-    double totalGrossSales = 0.0;
-    double totalDiscount = 0.0;
-    double totalTax = 0.0;
-    double totalNetSales = 0.0;
+    double totalGrossSales = row.read<double>(_db.orders.subtotal.sum()) ?? 0.0;
+    double totalDiscount = row.read<double>(_db.orders.discountAmount.sum()) ?? 0.0;
+    double totalTax = row.read<double>(_db.orders.taxAmount.sum()) ?? 0.0;
+    double totalNetSales = row.read<double>(_db.orders.grandTotal.sum()) ?? 0.0;
     double totalHpp = 0.0;
 
-    for (var order in orders) {
-      totalGrossSales += order.subtotal;
-      totalDiscount += order.discountAmount;
-      totalTax += order.taxAmount;
-      totalNetSales += order.grandTotal;
+    final pnlOrders = await (_db.select(_db.orders)
+        ..where((tbl) => tbl.createdAt.isBiggerOrEqualValue(start) &
+                         tbl.createdAt.isSmallerOrEqualValue(end) &
+                         tbl.status.equals('completed'))
+    ).get();
+    final orderIds = pnlOrders.map((o) => o.id).toList();
 
+    if (orderIds.isNotEmpty) {
       final items = await (_db.select(_db.orderItems)
-            ..where((tbl) => tbl.orderId.equals(order.id)))
+            ..where((tbl) => tbl.orderId.isIn(orderIds)))
           .get();
-
-      for (var item in items) {
-        final cost = await getProductCostPrice(item.productId, item.unitId, item.price);
-        totalHpp += (item.quantity * cost);
-      }
+      totalHpp = await _calculateBatchHpp(items);
     }
 
     // Fetch Sales Returns
-    final periodSalesReturns = await (_db.select(_db.salesReturns)
-          ..where((tbl) => tbl.createdAt.isBiggerOrEqualValue(start) & tbl.createdAt.isSmallerOrEqualValue(end)))
-        .get();
-    double totalSalesReturns = 0.0;
+    final retAgg = _db.selectOnly(_db.salesReturns)
+      ..addColumns([_db.salesReturns.refundAmount.sum()])
+      ..where(_db.salesReturns.createdAt.isBiggerOrEqualValue(start) &
+              _db.salesReturns.createdAt.isSmallerOrEqualValue(end));
+    final retRow = await retAgg.getSingle();
+    final totalSalesReturns = retRow.read<double>(_db.salesReturns.refundAmount.sum()) ?? 0.0;
+
     double totalReturnedHpp = 0.0;
-    for (var ret in periodSalesReturns) {
-      totalSalesReturns += ret.refundAmount;
-      final retItems = await (_db.select(_db.salesReturnItems)
-            ..where((tbl) => tbl.salesReturnId.equals(ret.id)))
-          .get();
-      for (var item in retItems) {
-        final cost = await getProductCostPrice(item.productId, item.unitId, item.price);
-        totalReturnedHpp += (item.quantity * cost);
+    if (totalSalesReturns > 0) {
+      final pnlReturns = await (_db.select(_db.salesReturns)
+          ..where((tbl) => tbl.createdAt.isBiggerOrEqualValue(start) &
+                           tbl.createdAt.isSmallerOrEqualValue(end))
+        ).get();
+      final returnIds = pnlReturns.map((r) => r.id).toList();
+
+      if (returnIds.isNotEmpty) {
+        final retItems = await (_db.select(_db.salesReturnItems)
+              ..where((tbl) => tbl.salesReturnId.isIn(returnIds)))
+            .get();
+        totalReturnedHpp = await _calculateBatchHpp(retItems);
       }
     }
 
     totalNetSales = totalNetSales - totalSalesReturns;
     totalHpp = totalHpp - totalReturnedHpp;
-
     final grossProfit = totalNetSales - totalHpp;
 
-    final expenses = await (_db.select(_db.expenses)
-          ..where((tbl) => tbl.date.isBiggerOrEqualValue(start) & tbl.date.isSmallerOrEqualValue(end)))
-        .get();
-
-    double totalExpenses = expenses.fold(0.0, (sum, exp) => sum + exp.amount);
+    final expAgg = _db.selectOnly(_db.expenses)
+      ..addColumns([_db.expenses.amount.sum()])
+      ..where(_db.expenses.date.isBiggerOrEqualValue(start) &
+              _db.expenses.date.isSmallerOrEqualValue(end));
+    final expRow = await expAgg.getSingle();
+    final totalExpenses = expRow.read<double>(_db.expenses.amount.sum()) ?? 0.0;
     final netProfit = grossProfit - totalExpenses;
 
     return {
@@ -356,78 +437,108 @@ class ReportsRepository {
 
   // 1. Transaction Report (Laporan Transaksi)
   Future<List<Map<String, dynamic>>> getTransactionReport(DateTime start, DateTime end) async {
-    final query = _db.select(_db.orders)
-      ..where((tbl) => tbl.createdAt.isBiggerOrEqualValue(start) & tbl.createdAt.isSmallerOrEqualValue(end) & tbl.status.equals('completed'))
-      ..orderBy([(tbl) => OrderingTerm(expression: tbl.createdAt, mode: OrderingMode.desc)]);
-
-    final ordersList = await query.get();
-    final List<Map<String, dynamic>> report = [];
-
-    for (var order in ordersList) {
-      final customer = order.customerId != null
-          ? await (_db.select(_db.customers)..where((tbl) => tbl.id.equals(order.customerId!))).getSingleOrNull()
-          : null;
-
-      final payments = await (_db.select(_db.orderPayments)..where((tbl) => tbl.orderId.equals(order.id))).get();
-      final paymentMethods = payments.map((p) => p.paymentMethod).join(', ');
-
-      final items = await (_db.select(_db.orderItems)
-            ..where((tbl) => tbl.orderId.equals(order.id)))
-          .get();
-
-      final List<Map<String, dynamic>> itemDetails = [];
-      for (var item in items) {
-        final prod = await (_db.select(_db.products)
-              ..where((tbl) => tbl.id.equals(item.productId)))
-            .getSingleOrNull();
-        final unit = await (_db.select(_db.productUnits)
-              ..where((tbl) => tbl.id.equals(item.unitId)))
-            .getSingleOrNull();
-        itemDetails.add({
-          'productName': prod?.name ?? 'Produk Tidak Dikenal',
-          'unitName': unit?.name ?? '',
-          'quantity': item.quantity,
-          'price': item.price,
-          'subtotal': item.subtotal,
-        });
-      }
-
-      report.add({
-        'order': order,
-        'customerName': customer?.name ?? 'Umum',
-        'paymentMethods': paymentMethods.isEmpty ? 'Tunai' : paymentMethods,
-        'items': itemDetails,
-      });
-    }
-    return report;
-  }
-
-  // 2. Product Sales Report (Laporan Penjualan per Produk)
-  Future<List<Map<String, dynamic>>> getProductSalesReport(DateTime start, DateTime end) async {
     final ordersList = await (_db.select(_db.orders)
-          ..where((tbl) => tbl.createdAt.isBiggerOrEqualValue(start) & tbl.createdAt.isSmallerOrEqualValue(end) & tbl.status.equals('completed')))
+          ..where((tbl) => tbl.createdAt.isBiggerOrEqualValue(start) & tbl.createdAt.isSmallerOrEqualValue(end) & tbl.status.equals('completed'))
+          ..orderBy([(tbl) => OrderingTerm(expression: tbl.createdAt, mode: OrderingMode.desc)]))
         .get();
 
     if (ordersList.isEmpty) return [];
 
+    final customerIds = ordersList.where((o) => o.customerId != null).map((o) => o.customerId!).toSet().toList();
     final orderIds = ordersList.map((o) => o.id).toList();
+
+    final customers = customerIds.isEmpty ? [] : await (_db.select(_db.customers)
+          ..where((tbl) => tbl.id.isIn(customerIds)))
+        .get();
+    final customerMap = {for (var c in customers) c.id: c};
+
+    final allPayments = await (_db.select(_db.orderPayments)
+          ..where((tbl) => tbl.orderId.isIn(orderIds)))
+        .get();
+    final paymentsByOrder = <int, List<OrderPayment>>{};
+    for (var p in allPayments) {
+      paymentsByOrder.putIfAbsent(p.orderId, () => []).add(p);
+    }
+
+    final allItems = await (_db.select(_db.orderItems)
+          ..where((tbl) => tbl.orderId.isIn(orderIds)))
+        .get();
+    final itemsByOrder = <int, List<OrderItem>>{};
+    for (var item in allItems) {
+      itemsByOrder.putIfAbsent(item.orderId, () => []).add(item);
+    }
+
+    final productIds = allItems.map((i) => i.productId).toSet().toList();
+    final unitIds = allItems.map((i) => i.unitId).toSet().toList();
+    final products = productIds.isEmpty ? [] : await (_db.select(_db.products)
+          ..where((tbl) => tbl.id.isIn(productIds)))
+        .get();
+    final units = unitIds.isEmpty ? [] : await (_db.select(_db.productUnits)
+          ..where((tbl) => tbl.id.isIn(unitIds)))
+        .get();
+    final productMap = {for (var p in products) p.id: p};
+    final unitMap = {for (var u in units) u.id: u};
+
+    return ordersList.map((order) {
+      final customer = customerMap[order.customerId];
+      final payments = paymentsByOrder[order.id] ?? [];
+      final paymentMethods = payments.map((p) => p.paymentMethod).join(', ');
+      final items = itemsByOrder[order.id] ?? [];
+
+      final itemDetails = items.map((item) {
+        return {
+          'productName': productMap[item.productId]?.name ?? 'Produk Tidak Dikenal',
+          'unitName': unitMap[item.unitId]?.name ?? '',
+          'quantity': item.quantity,
+          'price': item.price,
+          'subtotal': item.subtotal,
+        };
+      }).toList();
+
+      return {
+        'order': order,
+        'customerName': customer?.name ?? 'Umum',
+        'paymentMethods': paymentMethods.isEmpty ? 'Tunai' : paymentMethods,
+        'items': itemDetails,
+      };
+    }).toList();
+  }
+
+  // 2. Product Sales Report (Laporan Penjualan per Produk)
+  Future<List<Map<String, dynamic>>> getProductSalesReport(DateTime start, DateTime end) async {
+    final prodSalesOrders = await (_db.select(_db.orders)
+        ..where((tbl) => tbl.createdAt.isBiggerOrEqualValue(start) & tbl.createdAt.isSmallerOrEqualValue(end) & tbl.status.equals('completed'))
+    ).get();
+    final orderIds = prodSalesOrders.map((o) => o.id).toList();
+
+    if (orderIds.isEmpty) return [];
 
     final items = await (_db.select(_db.orderItems)
           ..where((tbl) => tbl.orderId.isIn(orderIds)))
         .get();
+
+    final uniqueProductIds = items.map((i) => i.productId).toSet().toList();
+    final uniqueUnitIds = items.map((i) => i.unitId).toSet().toList();
+
+    final products = uniqueProductIds.isEmpty ? [] : await (_db.select(_db.products)
+          ..where((tbl) => tbl.id.isIn(uniqueProductIds)))
+        .get();
+    final units = uniqueUnitIds.isEmpty ? [] : await (_db.select(_db.productUnits)
+          ..where((tbl) => tbl.id.isIn(uniqueUnitIds)))
+        .get();
+    final productMap = {for (var p in products) p.id: p};
+    final unitMap = {for (var u in units) u.id: u};
 
     final Map<String, Map<String, dynamic>> productStats = {};
 
     for (var item in items) {
       final key = '${item.productId}_${item.unitId}';
       if (!productStats.containsKey(key)) {
-        final prod = await (_db.select(_db.products)..where((tbl) => tbl.id.equals(item.productId))).getSingleOrNull();
-        final unit = await (_db.select(_db.productUnits)..where((tbl) => tbl.id.equals(item.unitId))).getSingleOrNull();
         final cost = await getProductCostPrice(item.productId, item.unitId, item.price);
 
         productStats[key] = {
-          'productName': prod?.name ?? 'Produk Tidak Dikenal',
-          'unitName': unit?.name ?? '',
+          'productName': productMap[item.productId]?.name ?? 'Produk Tidak Dikenal',
+          'unitName': unitMap[item.unitId]?.name ?? '',
           'quantity': 0.0,
           'revenue': 0.0,
           'cost': cost,
@@ -437,8 +548,8 @@ class ReportsRepository {
 
       final stats = productStats[key]!;
       final qty = item.quantity;
-      final revenue = item.subtotal - item.discountAmount; // net item revenue
-      final totalCost = qty * stats['cost'];
+      final revenue = item.subtotal - item.discountAmount;
+      final totalCost = qty * (stats['cost'] as double);
       final profit = revenue - totalCost;
 
       stats['quantity'] = (stats['quantity'] as double) + qty;
@@ -460,25 +571,23 @@ class ReportsRepository {
 
     if (ordersList.isEmpty) return [];
 
-    final Map<int?, Map<String, dynamic>> customerStats = {};
+    final custIds = ordersList.where((o) => o.customerId != null).map((o) => o.customerId!).toSet().toList();
+    final customers = custIds.isEmpty ? [] : await (_db.select(_db.customers)
+          ..where((tbl) => tbl.id.isIn(custIds)))
+        .get();
+    final customerMap = {for (var c in customers) c.id: c.name};
 
+    final Map<int?, Map<String, dynamic>> customerStats = {};
     for (var order in ordersList) {
       final custId = order.customerId;
       if (!customerStats.containsKey(custId)) {
-        String name = 'Pelanggan Umum';
-        if (custId != null) {
-          final cust = await (_db.select(_db.customers)..where((tbl) => tbl.id.equals(custId))).getSingleOrNull();
-          if (cust != null) name = cust.name;
-        }
-
         customerStats[custId] = {
           'customerId': custId,
-          'customerName': name,
+          'customerName': customerMap[custId] ?? 'Pelanggan Umum',
           'transactionCount': 0,
           'totalSpent': 0.0,
         };
       }
-
       final stats = customerStats[custId]!;
       stats['transactionCount'] = (stats['transactionCount'] as int) + 1;
       stats['totalSpent'] = (stats['totalSpent'] as double) + order.grandTotal;
@@ -500,50 +609,60 @@ class ReportsRepository {
 
   // 5. Purchase Transaction Report (Laporan Transaksi Pembelian)
   Future<List<Map<String, dynamic>>> getPurchaseReport(DateTime start, DateTime end) async {
-    final query = _db.select(_db.purchases)
-      ..where((tbl) => tbl.createdAt.isBiggerOrEqualValue(start) & tbl.createdAt.isSmallerOrEqualValue(end))
-      ..orderBy([(tbl) => OrderingTerm(expression: tbl.createdAt, mode: OrderingMode.desc)]);
+    final purchasesList = await (_db.select(_db.purchases)
+          ..where((tbl) => tbl.createdAt.isBiggerOrEqualValue(start) & tbl.createdAt.isSmallerOrEqualValue(end))
+          ..orderBy([(tbl) => OrderingTerm(expression: tbl.createdAt, mode: OrderingMode.desc)]))
+        .get();
 
-    final purchasesList = await query.get();
-    final List<Map<String, dynamic>> report = [];
+    if (purchasesList.isEmpty) return [];
 
-    for (var p in purchasesList) {
-      final supplier = p.supplierId != null
-          ? await (_db.select(_db.suppliers)..where((tbl) => tbl.id.equals(p.supplierId!))).getSingleOrNull()
-          : null;
+    final supplierIds = purchasesList.map((p) => p.supplierId).toSet().toList();
+    final suppliers = await (_db.select(_db.suppliers)
+          ..where((tbl) => tbl.id.isIn(supplierIds)))
+        .get();
+    final supplierMap = {for (var s in suppliers) s.id: s.name};
 
-      report.add({
+    return purchasesList.map((p) {
+      return {
         'purchase': p,
-        'supplierName': supplier?.name ?? 'Tanpa Supplier',
-      });
-    }
-    return report;
+        'supplierName': supplierMap[p.supplierId] ?? 'Tanpa Supplier',
+      };
+    }).toList();
   }
 
   // 6. Product Purchase Report (Laporan Pembelian per Produk)
   Future<List<Map<String, dynamic>>> getProductPurchaseReport(DateTime start, DateTime end) async {
-    final purchasesList = await (_db.select(_db.purchases)
-          ..where((tbl) => tbl.createdAt.isBiggerOrEqualValue(start) & tbl.createdAt.isSmallerOrEqualValue(end)))
-        .get();
+    final prodPurchOrders = await (_db.select(_db.purchases)
+        ..where((tbl) => tbl.createdAt.isBiggerOrEqualValue(start) & tbl.createdAt.isSmallerOrEqualValue(end))
+    ).get();
+    final purchaseIds = prodPurchOrders.map((p) => p.id).toList();
 
-    if (purchasesList.isEmpty) return [];
-    final purchaseIds = purchasesList.map((p) => p.id).toList();
+    if (purchaseIds.isEmpty) return [];
 
     final items = await (_db.select(_db.purchaseItems)
           ..where((tbl) => tbl.purchaseId.isIn(purchaseIds)))
         .get();
+
+    final uniqueProductIds = items.map((i) => i.productId).toSet().toList();
+    final uniqueUnitIds = items.map((i) => i.unitId).toSet().toList();
+
+    final products = uniqueProductIds.isEmpty ? [] : await (_db.select(_db.products)
+          ..where((tbl) => tbl.id.isIn(uniqueProductIds)))
+        .get();
+    final units = uniqueUnitIds.isEmpty ? [] : await (_db.select(_db.productUnits)
+          ..where((tbl) => tbl.id.isIn(uniqueUnitIds)))
+        .get();
+    final productMap = {for (var p in products) p.id: p};
+    final unitMap = {for (var u in units) u.id: u};
 
     final Map<String, Map<String, dynamic>> productStats = {};
 
     for (var item in items) {
       final key = '${item.productId}_${item.unitId}';
       if (!productStats.containsKey(key)) {
-        final prod = await (_db.select(_db.products)..where((tbl) => tbl.id.equals(item.productId))).getSingleOrNull();
-        final unit = await (_db.select(_db.productUnits)..where((tbl) => tbl.id.equals(item.unitId))).getSingleOrNull();
-
         productStats[key] = {
-          'productName': prod?.name ?? 'Produk Tidak Dikenal',
-          'unitName': unit?.name ?? '',
+          'productName': productMap[item.productId]?.name ?? 'Produk Tidak Dikenal',
+          'unitName': unitMap[item.unitId]?.name ?? '',
           'quantity': 0.0,
           'totalCost': 0.0,
         };
@@ -564,74 +683,62 @@ class ReportsRepository {
   Future<List<Map<String, dynamic>>> getCustomerDebtsReport({DateTime? start, DateTime? end}) async {
     final query = _db.select(_db.customerDebts)
       ..orderBy([(tbl) => OrderingTerm(expression: tbl.createdAt, mode: OrderingMode.desc)]);
-
-    if (start != null) {
-      query.where((tbl) => tbl.createdAt.isBiggerOrEqualValue(start));
-    }
-    if (end != null) {
-      query.where((tbl) => tbl.createdAt.isSmallerOrEqualValue(end));
-    }
+    if (start != null) query.where((tbl) => tbl.createdAt.isBiggerOrEqualValue(start));
+    if (end != null) query.where((tbl) => tbl.createdAt.isSmallerOrEqualValue(end));
 
     final list = await query.get();
-    final List<Map<String, dynamic>> results = [];
+    if (list.isEmpty) return [];
 
-    for (var debt in list) {
-      final customer = await (_db.select(_db.customers)
-            ..where((tbl) => tbl.id.equals(debt.customerId)))
-          .getSingleOrNull();
+    final customerIds = list.map((d) => d.customerId).toSet().toList();
+    final orderIds = list.where((d) => d.orderId != null).map((d) => d.orderId!).toSet().toList();
 
-      Order? order;
-      if (debt.orderId != null) {
-        order = await (_db.select(_db.orders)
-              ..where((tbl) => tbl.id.equals(debt.orderId!)))
-            .getSingleOrNull();
-      }
+    final customers = await (_db.select(_db.customers)
+          ..where((tbl) => tbl.id.isIn(customerIds)))
+        .get();
+    final orders = orderIds.isEmpty ? [] : await (_db.select(_db.orders)
+          ..where((tbl) => tbl.id.isIn(orderIds)))
+        .get();
+    final customerMap = {for (var c in customers) c.id: c.name};
+    final orderMap = {for (var o in orders) o.id: o.referenceNo};
 
-      results.add({
+    return list.map((debt) {
+      return {
         'debt': debt,
-        'customerName': customer?.name ?? 'Pelanggan Umum',
-        'referenceNo': order?.referenceNo ?? '-',
-      });
-    }
-
-    return results;
+        'customerName': customerMap[debt.customerId] ?? 'Pelanggan Umum',
+        'referenceNo': debt.orderId != null ? (orderMap[debt.orderId] ?? '-') : '-',
+      };
+    }).toList();
   }
 
   // Get Supplier Debts (Hutang) Report with optional date range
   Future<List<Map<String, dynamic>>> getSupplierDebtsReport({DateTime? start, DateTime? end}) async {
     final query = _db.select(_db.supplierDebts)
       ..orderBy([(tbl) => OrderingTerm(expression: tbl.createdAt, mode: OrderingMode.desc)]);
-
-    if (start != null) {
-      query.where((tbl) => tbl.createdAt.isBiggerOrEqualValue(start));
-    }
-    if (end != null) {
-      query.where((tbl) => tbl.createdAt.isSmallerOrEqualValue(end));
-    }
+    if (start != null) query.where((tbl) => tbl.createdAt.isBiggerOrEqualValue(start));
+    if (end != null) query.where((tbl) => tbl.createdAt.isSmallerOrEqualValue(end));
 
     final list = await query.get();
-    final List<Map<String, dynamic>> results = [];
+    if (list.isEmpty) return [];
 
-    for (var debt in list) {
-      final supplier = await (_db.select(_db.suppliers)
-            ..where((tbl) => tbl.id.equals(debt.supplierId)))
-          .getSingleOrNull();
+    final supplierIds = list.map((d) => d.supplierId).toSet().toList();
+    final purchaseIds = list.where((d) => d.purchaseId != null).map((d) => d.purchaseId!).toSet().toList();
 
-      Purchase? purchase;
-      if (debt.purchaseId != null) {
-        purchase = await (_db.select(_db.purchases)
-              ..where((tbl) => tbl.id.equals(debt.purchaseId!)))
-            .getSingleOrNull();
-      }
+    final suppliers = await (_db.select(_db.suppliers)
+          ..where((tbl) => tbl.id.isIn(supplierIds)))
+        .get();
+    final purchases = purchaseIds.isEmpty ? [] : await (_db.select(_db.purchases)
+          ..where((tbl) => tbl.id.isIn(purchaseIds)))
+        .get();
+    final supplierMap = {for (var s in suppliers) s.id: s.name};
+    final purchaseMap = {for (var p in purchases) p.id: p.referenceNo};
 
-      results.add({
+    return list.map((debt) {
+      return {
         'debt': debt,
-        'supplierName': supplier?.name ?? 'Supplier Umum',
-        'referenceNo': purchase?.referenceNo ?? '-',
-      });
-    }
-
-    return results;
+        'supplierName': supplierMap[debt.supplierId] ?? 'Supplier Umum',
+        'referenceNo': debt.purchaseId != null ? (purchaseMap[debt.purchaseId] ?? '-') : '-',
+      };
+    }).toList();
   }
 
   // 8. Laporan Retur Penjualan (Customer Returns)
@@ -641,36 +748,57 @@ class ReportsRepository {
           ..orderBy([(tbl) => OrderingTerm(expression: tbl.createdAt, mode: OrderingMode.desc)]))
         .get();
 
-    final List<Map<String, dynamic>> results = [];
-    for (var r in returns) {
-      final customer = r.customerId != null
-          ? await (_db.select(_db.customers)..where((tbl) => tbl.id.equals(r.customerId!))).getSingleOrNull()
-          : null;
+    if (returns.isEmpty) return [];
 
-      final order = r.orderId != null
-          ? await (_db.select(_db.orders)..where((tbl) => tbl.id.equals(r.orderId!))).getSingleOrNull()
-          : null;
+    final customerIds = returns.where((r) => r.customerId != null).map((r) => r.customerId!).toSet().toList();
+    final orderIds = returns.where((r) => r.orderId != null).map((r) => r.orderId!).toSet().toList();
+    final returnIds = returns.map((r) => r.id).toList();
 
-      final items = await (_db.select(_db.salesReturnItems)..where((tbl) => tbl.salesReturnId.equals(r.id))).get();
-      final List<Map<String, dynamic>> itemDetails = [];
-      for (var item in items) {
-        final product = await (_db.select(_db.products)..where((tbl) => tbl.id.equals(item.productId))).getSingleOrNull();
-        final unit = await (_db.select(_db.productUnits)..where((tbl) => tbl.id.equals(item.unitId))).getSingleOrNull();
-        itemDetails.add({
-          'item': item,
-          'product': product,
-          'unit': unit,
-        });
-      }
+    final customers = customerIds.isEmpty ? [] : await (_db.select(_db.customers)
+          ..where((tbl) => tbl.id.isIn(customerIds)))
+        .get();
+    final orders = orderIds.isEmpty ? [] : await (_db.select(_db.orders)
+          ..where((tbl) => tbl.id.isIn(orderIds)))
+        .get();
+    final customerMap = {for (var c in customers) c.id: c};
+    final orderMap = {for (var o in orders) o.id: o};
 
-      results.add({
-        'return': r,
-        'customer': customer,
-        'order': order,
-        'items': itemDetails,
-      });
+    final allItems = await (_db.select(_db.salesReturnItems)
+          ..where((tbl) => tbl.salesReturnId.isIn(returnIds)))
+        .get();
+    final itemsByReturn = <int, List<SalesReturnItem>>{};
+    for (var item in allItems) {
+      itemsByReturn.putIfAbsent(item.salesReturnId, () => []).add(item);
     }
-    return results;
+
+    final productIds = allItems.map((i) => i.productId).toSet().toList();
+    final unitIds = allItems.map((i) => i.unitId).toSet().toList();
+    final products = productIds.isEmpty ? [] : await (_db.select(_db.products)
+          ..where((tbl) => tbl.id.isIn(productIds)))
+        .get();
+    final units = unitIds.isEmpty ? [] : await (_db.select(_db.productUnits)
+          ..where((tbl) => tbl.id.isIn(unitIds)))
+        .get();
+    final productMap = {for (var p in products) p.id: p};
+    final unitMap = {for (var u in units) u.id: u};
+
+    return returns.map((r) {
+      final items = itemsByReturn[r.id] ?? [];
+      final itemDetails = items.map((item) {
+        return {
+          'item': item,
+          'product': productMap[item.productId],
+          'unit': unitMap[item.unitId],
+        };
+      }).toList();
+
+      return {
+        'return': r,
+        'customer': customerMap[r.customerId],
+        'order': orderMap[r.orderId],
+        'items': itemDetails,
+      };
+    }).toList();
   }
 
   // 9. Laporan Retur Pembelian (Supplier Returns)
@@ -680,34 +808,57 @@ class ReportsRepository {
           ..orderBy([(tbl) => OrderingTerm(expression: tbl.createdAt, mode: OrderingMode.desc)]))
         .get();
 
-    final List<Map<String, dynamic>> results = [];
-    for (var r in returns) {
-      final supplier = await (_db.select(_db.suppliers)..where((tbl) => tbl.id.equals(r.supplierId))).getSingleOrNull();
+    if (returns.isEmpty) return [];
 
-      final purchase = r.purchaseId != null
-          ? await (_db.select(_db.purchases)..where((tbl) => tbl.id.equals(r.purchaseId!))).getSingleOrNull()
-          : null;
+    final supplierIds = returns.map((r) => r.supplierId).toSet().toList();
+    final purchaseIds = returns.where((r) => r.purchaseId != null).map((r) => r.purchaseId!).toSet().toList();
+    final returnIds = returns.map((r) => r.id).toList();
 
-      final items = await (_db.select(_db.purchaseReturnItems)..where((tbl) => tbl.purchaseReturnId.equals(r.id))).get();
-      final List<Map<String, dynamic>> itemDetails = [];
-      for (var item in items) {
-        final product = await (_db.select(_db.products)..where((tbl) => tbl.id.equals(item.productId))).getSingleOrNull();
-        final unit = await (_db.select(_db.productUnits)..where((tbl) => tbl.id.equals(item.unitId))).getSingleOrNull();
-        itemDetails.add({
-          'item': item,
-          'product': product,
-          'unit': unit,
-        });
-      }
+    final suppliers = await (_db.select(_db.suppliers)
+          ..where((tbl) => tbl.id.isIn(supplierIds)))
+        .get();
+    final purchases = purchaseIds.isEmpty ? [] : await (_db.select(_db.purchases)
+          ..where((tbl) => tbl.id.isIn(purchaseIds)))
+        .get();
+    final supplierMap = {for (var s in suppliers) s.id: s};
+    final purchaseMap = {for (var o in purchases) o.id: o};
 
-      results.add({
-        'return': r,
-        'supplier': supplier,
-        'purchase': purchase,
-        'items': itemDetails,
-      });
+    final allItems = await (_db.select(_db.purchaseReturnItems)
+          ..where((tbl) => tbl.purchaseReturnId.isIn(returnIds)))
+        .get();
+    final itemsByReturn = <int, List<PurchaseReturnItem>>{};
+    for (var item in allItems) {
+      itemsByReturn.putIfAbsent(item.purchaseReturnId, () => []).add(item);
     }
-    return results;
+
+    final productIds = allItems.map((i) => i.productId).toSet().toList();
+    final unitIds = allItems.map((i) => i.unitId).toSet().toList();
+    final products = productIds.isEmpty ? [] : await (_db.select(_db.products)
+          ..where((tbl) => tbl.id.isIn(productIds)))
+        .get();
+    final units = unitIds.isEmpty ? [] : await (_db.select(_db.productUnits)
+          ..where((tbl) => tbl.id.isIn(unitIds)))
+        .get();
+    final productMap = {for (var p in products) p.id: p};
+    final unitMap = {for (var u in units) u.id: u};
+
+    return returns.map((r) {
+      final items = itemsByReturn[r.id] ?? [];
+      final itemDetails = items.map((item) {
+        return {
+          'item': item,
+          'product': productMap[item.productId],
+          'unit': unitMap[item.unitId],
+        };
+      }).toList();
+
+      return {
+        'return': r,
+        'supplier': supplierMap[r.supplierId],
+        'purchase': purchaseMap[r.purchaseId],
+        'items': itemDetails,
+      };
+    }).toList();
   }
 
   // 10. Laporan Analisis Produk (Terlaris & Tidak Laku)
@@ -716,14 +867,11 @@ class ReportsRepository {
           ..where((tbl) => tbl.createdAt.isBiggerOrEqualValue(start) & tbl.createdAt.isSmallerOrEqualValue(end) & tbl.status.equals('completed')))
         .get();
 
-    final List<Map<String, dynamic>> bestSellers = [];
-    final List<Map<String, dynamic>> slowSellers = [];
-
     final Map<int, double> productBaseQuantities = {};
     final Map<int, double> productRevenues = {};
 
     final allUnits = await _db.select(_db.productUnits).get();
-    final Map<int, ProductUnit> unitMap = {for (var u in allUnits) u.id: u};
+    final unitMap = {for (var u in allUnits) u.id: u};
 
     if (orders.isNotEmpty) {
       final orderIds = orders.map((o) => o.id).toList();
@@ -735,16 +883,33 @@ class ReportsRepository {
         final unit = unitMap[item.unitId];
         final factor = unit?.conversionFactor ?? 1.0;
         final baseQty = item.quantity * factor;
-
         productBaseQuantities[item.productId] = (productBaseQuantities[item.productId] ?? 0.0) + baseQty;
         productRevenues[item.productId] = (productRevenues[item.productId] ?? 0.0) + (item.subtotal - item.discountAmount);
       }
     }
 
     final activeProducts = await (_db.select(_db.products)..where((tbl) => tbl.isActive.equals(true))).get();
-    
+    if (activeProducts.isEmpty) return {'bestSellers': [], 'slowSellers': []};
+
+    final activeProductIds = activeProducts.map((p) => p.id).toList();
+    final productUnitsByProduct = <int, List<ProductUnit>>{};
+    for (var u in allUnits.where((u) => activeProductIds.contains(u.productId))) {
+      productUnitsByProduct.putIfAbsent(u.productId, () => []).add(u);
+    }
+
+    final allInventory = await (_db.select(_db.inventory)
+          ..where((tbl) => tbl.productId.isIn(activeProductIds)))
+        .get();
+    final invMap = <String, double>{};
+    for (var inv in allInventory) {
+      invMap['${inv.productId}_${inv.unitId}'] = inv.quantity;
+    }
+
+    final List<Map<String, dynamic>> bestSellers = [];
+    final List<Map<String, dynamic>> slowSellers = [];
+
     for (var prod in activeProducts) {
-      final productUnits = await (_db.select(_db.productUnits)..where((tbl) => tbl.productId.equals(prod.id))).get();
+      final productUnits = productUnitsByProduct[prod.id] ?? [];
       final baseUnit = productUnits.firstWhere(
         (u) => u.isBase,
         orElse: () => productUnits.isNotEmpty ? productUnits.first : ProductUnit(id: 0, productId: prod.id, name: 'Pcs', conversionFactor: 1.0, isBase: true),
@@ -755,14 +920,11 @@ class ReportsRepository {
 
       double totalBaseStock = 0.0;
       for (var unit in productUnits) {
-        final inv = await (_db.select(_db.inventory)
-              ..where((tbl) => tbl.productId.equals(prod.id) & tbl.unitId.equals(unit.id)))
-            .getSingleOrNull();
-        final stock = inv?.quantity ?? 0.0;
+        final stock = invMap['${prod.id}_${unit.id}'] ?? 0.0;
         totalBaseStock += stock * unit.conversionFactor;
       }
 
-      final Map<String, dynamic> dataMap = {
+      final dataMap = {
         'product': prod,
         'unit': baseUnit,
         'quantity': qtySold,
@@ -782,6 +944,51 @@ class ReportsRepository {
     return {
       'bestSellers': bestSellers,
       'slowSellers': slowSellers,
+    };
+  }
+
+  // 11. Points Report (Laporan Poin Pelanggan)
+  Future<Map<String, dynamic>> getPointsReport(DateTime start, DateTime end) async {
+    final transactions = await (_db.select(_db.pointTransactions)
+          ..where((tbl) => tbl.createdAt.isBiggerOrEqualValue(start) & tbl.createdAt.isSmallerOrEqualValue(end))
+          ..orderBy([(tbl) => OrderingTerm(expression: tbl.createdAt, mode: OrderingMode.desc)]))
+        .get();
+
+    if (transactions.isEmpty) {
+      return {
+        'totalEarned': 0,
+        'totalRedeemed': 0,
+        'netPoints': 0,
+        'transactionCount': 0,
+        'details': [],
+      };
+    }
+
+    int totalEarned = 0;
+    int totalRedeemed = 0;
+
+    final customerIds = transactions.map((t) => t.customerId).toSet().toList();
+    final customers = await (_db.select(_db.customers)
+          ..where((tbl) => tbl.id.isIn(customerIds)))
+        .get();
+    final customerMap = {for (var c in customers) c.id: c.name};
+
+    final details = transactions.map((txn) {
+      if (txn.type == 'earn') totalEarned += txn.points;
+      if (txn.type == 'redeem') totalRedeemed += txn.points.abs();
+
+      return {
+        'transaction': txn,
+        'customerName': customerMap[txn.customerId] ?? 'Pelanggan Tidak Dikenal',
+      };
+    }).toList();
+
+    return {
+      'totalEarned': totalEarned,
+      'totalRedeemed': totalRedeemed,
+      'netPoints': totalEarned - totalRedeemed,
+      'transactionCount': transactions.length,
+      'details': details,
     };
   }
 }

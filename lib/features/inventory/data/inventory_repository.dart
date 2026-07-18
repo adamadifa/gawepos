@@ -69,9 +69,8 @@ class InventoryRepository {
   }) async {
     await _db.transaction(() async {
       final difference = physicalQty - theoreticalQty;
-      if (difference == 0) return; // Tidak ada selisih, tidak perlu simpan
+      if (difference == 0) return;
 
-      // 1. Update atau Insert stok di tabel inventory
       final existing = await (_db.select(_db.inventory)
             ..where((tbl) => tbl.productId.equals(productId) & tbl.unitId.equals(unitId)))
           .getSingleOrNull();
@@ -90,14 +89,61 @@ class InventoryRepository {
             );
       }
 
-      // 2. Catat riwayat di tabel stock_movements
       await _db.into(_db.stockMovements).insert(
             StockMovementsCompanion.insert(
               productId: productId,
               unitId: unitId,
-              quantity: difference, // Bisa positif (masuk) atau negatif (keluar)
+              quantity: difference,
               type: 'opname',
               notes: Value(notes ?? 'Stock Opname Penyesuaian'),
+            ),
+          );
+    });
+  }
+
+  // Manual Stock Adjustment (Barang Masuk / Keluar Manual)
+  Future<void> adjustStockManual({
+    required int productId,
+    required int unitId,
+    required double quantity,
+    required bool isAddition, // true = masuk, false = keluar
+    String? notes,
+  }) async {
+    await _db.transaction(() async {
+      final delta = isAddition ? quantity : -quantity;
+
+      final existing = await (_db.select(_db.inventory)
+            ..where((tbl) => tbl.productId.equals(productId) & tbl.unitId.equals(unitId)))
+          .getSingleOrNull();
+
+      if (existing == null) {
+        if (!isAddition) {
+          throw Exception('Stok tidak mencukupi untuk pengurangan manual');
+        }
+        await _db.into(_db.inventory).insert(
+              InventoryCompanion.insert(
+                productId: productId,
+                unitId: unitId,
+                quantity: Value(quantity),
+              ),
+            );
+      } else {
+        final newQty = existing.quantity + delta;
+        if (newQty < 0) {
+          throw Exception('Stok tidak mencukupi (tersisa ${existing.quantity})');
+        }
+        await _db.update(_db.inventory).replace(
+              existing.copyWith(quantity: newQty),
+            );
+      }
+
+      await _db.into(_db.stockMovements).insert(
+            StockMovementsCompanion.insert(
+              productId: productId,
+              unitId: unitId,
+              quantity: delta,
+              type: isAddition ? 'manual_in' : 'manual_out',
+              notes: Value(notes ?? (isAddition ? 'Penambahan Stok Manual' : 'Pengurangan Stok Manual')),
             ),
           );
     });
