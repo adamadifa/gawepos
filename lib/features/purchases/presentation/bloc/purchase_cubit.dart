@@ -71,6 +71,17 @@ class PurchaseCubit extends Cubit<PurchaseState> {
     }
   }
 
+  Future<void> deletePurchase(int purchaseId) async {
+    emit(PurchaseLoading());
+    try {
+      await _repository.deletePurchase(purchaseId);
+      final list = await _repository.getPurchases();
+      emit(PurchaseLoaded(list));
+    } catch (e) {
+      emit(PurchaseError('Gagal menghapus pesanan pembelian: $e'));
+    }
+  }
+
   Future<List<ProductUnit>> getProductUnits(int productId) async {
     return await _repository.getProductUnits(productId);
   }

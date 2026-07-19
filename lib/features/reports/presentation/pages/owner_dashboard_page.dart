@@ -54,6 +54,61 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
     return '${fmt.format(_startDate)} - ${fmt.format(_endDate)}';
   }
 
+  void _showHppInfoDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.info_outline_rounded, color: AppConstants.primaryColor),
+            const SizedBox(width: 8),
+            Text(
+              'Info Perhitungan HPP',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'HPP (Harga Pokok Penjualan) dihitung per item barang saat penjualan selesai dengan ketentuan:',
+                style: TextStyle(fontSize: 13, color: AppConstants.textDarkColor),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '1. Prioritas Utama (Harga Restok)',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13, color: AppConstants.primaryColor),
+              ),
+              const Text(
+                'Menggunakan harga beli terakhir saat Anda melakukan pembelian/restok barang pada unit satuan yang bersangkutan.',
+                style: TextStyle(fontSize: 12, color: AppConstants.textLightColor),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                '2. Fallback / Cadangan (Belum Restok)',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13, color: AppConstants.primaryColor),
+              ),
+              const Text(
+                'Jika produk belum pernah restok, HPP otomatis dihitung sebesar 60% dari harga jual produk saat transaksi.',
+                style: TextStyle(fontSize: 12, color: AppConstants.textLightColor),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('TUTUP'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _selectDateRange(BuildContext context) async {
     final DateTimeRange? picked = await showDateRangePicker(
       context: context,
@@ -280,6 +335,15 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                             fontSize: 12,
                             color: Colors.white.withValues(alpha: 0.9),
                             fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        GestureDetector(
+                          onTap: () => _showHppInfoDialog(context),
+                          child: Icon(
+                            Icons.info_outline_rounded,
+                            size: 14,
+                            color: Colors.white.withValues(alpha: 0.7),
                           ),
                         ),
                       ],

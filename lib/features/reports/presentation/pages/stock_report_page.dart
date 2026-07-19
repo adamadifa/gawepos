@@ -143,12 +143,25 @@ class _StockReportPageState extends State<StockReportPage> {
                       final productItems = groupedItems[productId]!;
                       final Product product = productItems.first['product'];
 
-                      // Check if any unit is low on stock
-                      final isLowStock = product.isStockManaged && productItems.any((item) {
+                      // Find the unit with the largest conversionFactor
+                      ProductUnit largestUnit = productItems.first['unit'];
+                      for (var item in productItems) {
+                        final ProductUnit unit = item['unit'];
+                        if (unit.conversionFactor > largestUnit.conversionFactor) {
+                          largestUnit = unit;
+                        }
+                      }
+
+                      // Check if total stock (converted to largest unit) is low
+                      double totalBaseQty = 0.0;
+                      for (var item in productItems) {
+                        final ProductUnit unit = item['unit'];
                         final dynamic inv = item['inventory'];
                         final double qty = (inv?.quantity as num?)?.toDouble() ?? 0.0;
-                        return qty <= product.minStockAlert;
-                      });
+                        totalBaseQty += qty * unit.conversionFactor;
+                      }
+                      final double totalLargestQty = totalBaseQty / largestUnit.conversionFactor;
+                      final isLowStock = product.isStockManaged && totalLargestQty <= product.minStockAlert;
 
                       return Card(
                         margin: const EdgeInsets.only(bottom: 10),

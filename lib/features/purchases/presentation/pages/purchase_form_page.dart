@@ -547,12 +547,13 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
                                       Expanded(
                                         flex: 3,
                                         child: TextFormField(
+                                          key: ValueKey('${product.id}_${selectedUnit.id}'),
                                           initialValue: item['costPrice'] == 0.0 ? '' : item['costPrice'].toString(),
                                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                          decoration: const InputDecoration(
-                                            labelText: 'Harga Beli (Pcs)',
+                                          decoration: InputDecoration(
+                                            labelText: 'Harga Beli (${selectedUnit.name})',
                                             prefixText: 'Rp ',
-                                            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                           ),
                                           onChanged: (val) {
                                             final price = double.tryParse(val) ?? 0.0;

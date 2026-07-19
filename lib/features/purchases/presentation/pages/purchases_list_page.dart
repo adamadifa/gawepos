@@ -58,6 +58,40 @@ class _PurchasesListPageState extends State<PurchasesListPage> {
     }
   }
 
+  Future<bool?> _showConfirmDeleteDialog(BuildContext context, bool isReceived) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          isReceived ? 'Batal & Hapus Penerimaan' : 'Hapus Pesanan Pembelian',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: AppConstants.errorColor),
+        ),
+        content: Text(
+          isReceived
+              ? 'Peringatan: Pesanan ini sudah diterima. Jika Anda menghapus pesanan ini, seluruh stok barang yang bertambah dari pesanan ini akan dikurangi kembali secara otomatis dari inventory.\n\nApakah Anda yakin?'
+              : 'Apakah Anda yakin ingin menghapus pesanan pembelian ini? Tindakan ini tidak dapat dibatalkan.',
+          style: GoogleFonts.poppins(fontSize: 13),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Batal',
+              style: GoogleFonts.poppins(color: AppConstants.textLightColor),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Hapus',
+              style: GoogleFonts.poppins(color: AppConstants.errorColor, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showPurchaseDetails(BuildContext context, int purchaseId) {
     showModalBottomSheet(
       context: context,
@@ -260,7 +294,7 @@ class _PurchasesListPageState extends State<PurchasesListPage> {
                       ),
                       const SizedBox(height: 24),
                       // If pending, show confirm receive button
-                      if (purchase.status == 'pending')
+                      if (purchase.status == 'pending') ...[
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
@@ -274,13 +308,44 @@ class _PurchasesListPageState extends State<PurchasesListPage> {
                               Navigator.pop(ctx);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('Penerimaan barang berhasil dikonfirmasi. Stok bertambah!'),
+                                  content: const Text('Penerimaan barang berhasil dikonfirmasi. Stok bertambah!'),
                                   backgroundColor: AppConstants.successColor,
                                 ),
                               );
                             },
                           ),
                         ),
+                        const SizedBox(height: 8),
+                      ],
+                      // Show delete/cancel button for both pending and received status
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppConstants.errorColor,
+                            side: const BorderSide(color: AppConstants.errorColor),
+                          ),
+                          icon: const Icon(Icons.delete_outline_rounded),
+                          label: Text(purchase.status == 'received'
+                              ? 'BATALKAN PENERIMAAN / HAPUS'
+                              : 'BATALKAN / HAPUS PESANAN'),
+                          onPressed: () async {
+                            final confirm = await _showConfirmDeleteDialog(context, purchase.status == 'received');
+                            if (confirm == true && context.mounted) {
+                              context.read<PurchaseCubit>().deletePurchase(purchase.id);
+                              Navigator.pop(ctx);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(purchase.status == 'received'
+                                      ? 'Penerimaan berhasil dibatalkan dan stok dikurangi kembali.'
+                                      : 'Pesanan pembelian berhasil dihapus.'),
+                                  backgroundColor: AppConstants.errorColor,
+                                ),
+                              );
+                            }
+                          },
+                        ),
+                      ),
                     ],
                   ),
                 ),

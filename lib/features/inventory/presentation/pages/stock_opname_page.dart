@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../../core/constants/constants.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/di/injection.dart';
 import '../../../../core/widgets/curved_header.dart';
 import '../bloc/inventory_cubit.dart';
 import '../../../../core/utils/scan_sound_helper.dart';
@@ -223,171 +224,193 @@ class _StockOpnamePageState extends State<StockOpnamePage> {
                             final groupedList = grouped.values.toList();
 
                             if (groupedList.isEmpty) {
-                              return Center(
-                                child: Text(
-                                  'Belum ada data stok.',
-                                  style: GoogleFonts.poppins(color: AppConstants.textLightColor),
+                              return RefreshIndicator(
+                                onRefresh: () async {
+                                  context.read<InventoryCubit>().loadInventory();
+                                },
+                                child: ListView(
+                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  children: [
+                                    SizedBox(
+                                      height: MediaQuery.of(context).size.height * 0.5,
+                                      child: Center(
+                                        child: Text(
+                                          'Belum ada data stok.',
+                                          style: GoogleFonts.poppins(color: AppConstants.textLightColor),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               );
                             }
 
-                            return ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              itemCount: groupedList.length,
-                              itemBuilder: (context, index) {
-                                final item = groupedList[index];
-                                final Product product = item['product'];
-                                final List<Map<String, dynamic>> productUnits = 
-                                    List<Map<String, dynamic>>.from(item['units']);
+                            return RefreshIndicator(
+                              onRefresh: () async {
+                                context.read<InventoryCubit>().loadInventory();
+                              },
+                              child: ListView.builder(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                itemCount: groupedList.length,
+                                itemBuilder: (context, index) {
+                                  final item = groupedList[index];
+                                  final Product product = item['product'];
+                                  final List<Map<String, dynamic>> productUnits = 
+                                      List<Map<String, dynamic>>.from(item['units']);
 
-                                return Card(
-                                  margin: const EdgeInsets.only(bottom: 14),
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-                                    side: const BorderSide(color: AppConstants.borderLightColor),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        // Info Utama Produk & Tombol Opname Produk
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    product.name,
-                                                    style: GoogleFonts.poppins(
-                                                      fontWeight: FontWeight.bold,
-                                                      color: AppConstants.textDarkColor,
-                                                      fontSize: 15,
-                                                    ),
-                                                  ),
-                                                  if (product.sku != null) ...[
-                                                    const SizedBox(height: 2),
-                                                    Text(
-                                                      'SKU: ${product.sku}',
-                                                      style: const TextStyle(
-                                                        fontSize: 11,
-                                                        color: AppConstants.textLightColor,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ],
-                                              ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            ElevatedButton.icon(
-                                              onPressed: () => _showProductAdjustmentDialog(
-                                                context,
-                                                product: product,
-                                                productUnits: productUnits,
-                                              ),
-                                              icon: const Icon(Icons.edit_note_rounded, size: 16),
-                                              label: const Text('OPNAME'),
-                                              style: ElevatedButton.styleFrom(
-                                                padding: const EdgeInsets.symmetric(
-                                                    horizontal: 12, vertical: 8),
-                                                minimumSize: Size.zero,
-                                                shape: RoundedRectangleBorder(
-                                                  borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                                                ),
-                                                textStyle: const TextStyle(
-                                                    fontSize: 11, fontWeight: FontWeight.bold),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 12),
-                                        const Divider(height: 1, color: AppConstants.borderLightColor),
-                                        const SizedBox(height: 12),
-                                        
-                                        // Daftar Satuan Unit untuk Produk ini
-                                        ...productUnits.map((uMap) {
-                                          final ProductUnit unit = uMap['unit'];
-                                          final InventoryData? inv = uMap['inventory'];
-                                          final double currentStock = inv?.quantity ?? 0.0;
-                                          final isLowStock = currentStock <= product.minStockAlert;
-
-                                          return Padding(
-                                            padding: const EdgeInsets.only(bottom: 12),
-                                            child: Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                // Nama Unit & Status Stok
-                                                Row(
+                                  return Card(
+                                    margin: const EdgeInsets.only(bottom: 14),
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                                      side: const BorderSide(color: AppConstants.borderLightColor),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          // Info Utama Produk & Tombol Opname Produk
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
                                                   children: [
-                                                    Container(
-                                                      padding: const EdgeInsets.symmetric(
-                                                          horizontal: 8, vertical: 4),
-                                                      decoration: BoxDecoration(
-                                                        color: isLowStock
-                                                            ? AppConstants.errorColor.withValues(alpha: 0.1)
-                                                            : AppConstants.primaryColor.withValues(alpha: 0.1),
-                                                        borderRadius: BorderRadius.circular(4),
+                                                    Text(
+                                                      product.name,
+                                                      style: GoogleFonts.poppins(
+                                                        fontWeight: FontWeight.bold,
+                                                        color: AppConstants.textDarkColor,
+                                                        fontSize: 15,
                                                       ),
-                                                      child: Text(
-                                                        '$currentStock ${unit.name}',
-                                                        style: TextStyle(
-                                                          fontSize: 12,
-                                                          fontWeight: FontWeight.bold,
-                                                          color: isLowStock
-                                                              ? AppConstants.errorColor
-                                                              : AppConstants.primaryColor,
+                                                    ),
+                                                    if (product.sku != null) ...[
+                                                      const SizedBox(height: 2),
+                                                      Text(
+                                                        'SKU: ${product.sku}',
+                                                        style: const TextStyle(
+                                                          fontSize: 11,
+                                                          color: AppConstants.textLightColor,
                                                         ),
                                                       ),
-                                                    ),
-                                                    const SizedBox(width: 8),
-                                                    Text(
-                                                      unit.name,
-                                                      style: GoogleFonts.poppins(
-                                                        fontWeight: FontWeight.w500,
-                                                        fontSize: 13,
-                                                        color: AppConstants.textDarkColor,
-                                                      ),
-                                                    ),
+                                                    ],
                                                   ],
                                                 ),
-                                                GestureDetector(
-                                                  onTap: () {
-                                                    Navigator.push(
-                                                      context,
-                                                      MaterialPageRoute(
-                                                        builder: (context) => StockCardPage(product: product),
-                                                      ),
-                                                    );
-                                                  },
-                                                  child: const Row(
+                                              ),
+                                              const SizedBox(width: 8),
+                                              ElevatedButton.icon(
+                                                onPressed: () => _showProductAdjustmentDialog(
+                                                  context,
+                                                  product: product,
+                                                  productUnits: productUnits,
+                                                ),
+                                                icon: const Icon(Icons.edit_note_rounded, size: 16),
+                                                label: const Text('OPNAME'),
+                                                style: ElevatedButton.styleFrom(
+                                                  padding: const EdgeInsets.symmetric(
+                                                      horizontal: 12, vertical: 8),
+                                                  minimumSize: Size.zero,
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                                                  ),
+                                                  textStyle: const TextStyle(
+                                                      fontSize: 11, fontWeight: FontWeight.bold),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 12),
+                                          const Divider(height: 1, color: AppConstants.borderLightColor),
+                                          const SizedBox(height: 12),
+                                          
+                                          // Daftar Satuan Unit untuk Produk ini
+                                          ...productUnits.map((uMap) {
+                                            final ProductUnit unit = uMap['unit'];
+                                            final InventoryData? inv = uMap['inventory'];
+                                            final double currentStock = inv?.quantity ?? 0.0;
+                                            final isLowStock = currentStock <= product.minStockAlert;
+
+                                            return Padding(
+                                              padding: const EdgeInsets.only(bottom: 12),
+                                              child: Row(
+                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                children: [
+                                                  // Nama Unit & Status Stok
+                                                  Row(
                                                     children: [
-                                                      Icon(Icons.history_rounded,
-                                                          size: 13, color: AppConstants.primaryColor),
-                                                      SizedBox(width: 4),
+                                                      Container(
+                                                        padding: const EdgeInsets.symmetric(
+                                                            horizontal: 8, vertical: 4),
+                                                        decoration: BoxDecoration(
+                                                          color: isLowStock
+                                                              ? AppConstants.errorColor.withValues(alpha: 0.1)
+                                                              : AppConstants.primaryColor.withValues(alpha: 0.1),
+                                                          borderRadius: BorderRadius.circular(4),
+                                                        ),
+                                                        child: Text(
+                                                          '$currentStock ${unit.name}',
+                                                          style: TextStyle(
+                                                            fontSize: 12,
+                                                            fontWeight: FontWeight.bold,
+                                                            color: isLowStock
+                                                                ? AppConstants.errorColor
+                                                                : AppConstants.primaryColor,
+                                                          ),
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 8),
                                                       Text(
-                                                        'Kartu Stok',
-                                                        style: TextStyle(
-                                                          fontSize: 11,
-                                                          color: AppConstants.primaryColor,
-                                                          fontWeight: FontWeight.w600,
+                                                        unit.name,
+                                                        style: GoogleFonts.poppins(
+                                                          fontWeight: FontWeight.w500,
+                                                          fontSize: 13,
+                                                          color: AppConstants.textDarkColor,
                                                         ),
                                                       ),
                                                     ],
                                                   ),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        }),
-                                      ],
+                                                  GestureDetector(
+                                                    onTap: () {
+                                                      Navigator.push(
+                                                        context,
+                                                        MaterialPageRoute(
+                                                          builder: (context) => BlocProvider<InventoryCubit>(
+                                                            create: (context) => getIt<InventoryCubit>(),
+                                                            child: StockCardPage(product: product),
+                                                          ),
+                                                        ),
+                                                      );
+                                                    },
+                                                    child: const Row(
+                                                      children: [
+                                                        Icon(Icons.history_rounded,
+                                                            size: 13, color: AppConstants.primaryColor),
+                                                        SizedBox(width: 4),
+                                                        Text(
+                                                          'Kartu Stok',
+                                                          style: TextStyle(
+                                                            fontSize: 11,
+                                                            color: AppConstants.primaryColor,
+                                                            fontWeight: FontWeight.w600,
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          }),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                );
-                              },
+                                  );
+                                },
+                              ),
                             );
                           }
                           return const SizedBox();
@@ -564,11 +587,20 @@ class _ProductAdjustmentDialogState extends State<_ProductAdjustmentDialog> {
   final Map<int, double> _physicalStocks = {};
   final Map<int, double> _differences = {};
   final Map<int, TextEditingController> _controllers = {};
+  final List<Map<String, dynamic>> _sortedProductUnits = [];
 
   @override
   void initState() {
     super.initState();
-    for (var uMap in widget.productUnits) {
+    // Copy and sort by conversionFactor descending (largest unit first)
+    _sortedProductUnits.addAll(widget.productUnits);
+    _sortedProductUnits.sort((a, b) {
+      final ProductUnit unitA = a['unit'];
+      final ProductUnit unitB = b['unit'];
+      return unitB.conversionFactor.compareTo(unitA.conversionFactor);
+    });
+
+    for (var uMap in _sortedProductUnits) {
       final ProductUnit unit = uMap['unit'];
       final InventoryData? inv = uMap['inventory'];
       final double currentStock = inv?.quantity ?? 0.0;
@@ -631,7 +663,7 @@ class _ProductAdjustmentDialogState extends State<_ProductAdjustmentDialog> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    ...widget.productUnits.map((uMap) {
+                    ..._sortedProductUnits.map((uMap) {
                       final ProductUnit unit = uMap['unit'];
                       final InventoryData? inv = uMap['inventory'];
                       final double currentStock = inv?.quantity ?? 0.0;
@@ -655,6 +687,7 @@ class _ProductAdjustmentDialogState extends State<_ProductAdjustmentDialog> {
                           ),
                           const SizedBox(height: 6),
                           Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Expanded(
                                 flex: 3,
@@ -677,36 +710,23 @@ class _ProductAdjustmentDialogState extends State<_ProductAdjustmentDialog> {
                               const SizedBox(width: 12),
                               Expanded(
                                 flex: 2,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
-                                  decoration: BoxDecoration(
-                                    color: diff == 0
-                                        ? AppConstants.backgroundColor
-                                        : diff > 0
-                                            ? AppConstants.successColor.withValues(alpha: 0.06)
-                                            : AppConstants.errorColor.withValues(alpha: 0.06),
-                                    borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                                    border: Border.all(
-                                      color: diff == 0
-                                          ? AppConstants.borderLightColor
-                                          : diff > 0
-                                              ? AppConstants.successColor.withValues(alpha: 0.15)
-                                              : AppConstants.errorColor.withValues(alpha: 0.15),
-                                    ),
+                                child: InputDecorator(
+                                  decoration: const InputDecoration(
+                                    labelText: 'Selisih',
+                                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                   ),
-                                  child: Center(
-                                    child: Text(
-                                      '${diff > 0 ? "+" : ""}${diff.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '')}',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: diff == 0
-                                            ? AppConstants.textDarkColor
-                                            : diff > 0
-                                                ? AppConstants.successColor
-                                                : AppConstants.errorColor,
-                                      ),
+                                  child: Text(
+                                    '${diff > 0 ? "+" : ""}${diff.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '')}',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: diff == 0
+                                          ? AppConstants.textDarkColor
+                                          : diff > 0
+                                              ? AppConstants.successColor
+                                              : AppConstants.errorColor,
                                     ),
+                                    textAlign: TextAlign.center,
                                   ),
                                 ),
                               ),
@@ -742,7 +762,7 @@ class _ProductAdjustmentDialogState extends State<_ProductAdjustmentDialog> {
                   child: ElevatedButton(
                     onPressed: () {
                       final List<Map<String, dynamic>> adjustments = [];
-                      for (var uMap in widget.productUnits) {
+                      for (var uMap in _sortedProductUnits) {
                         final ProductUnit unit = uMap['unit'];
                         final InventoryData? inv = uMap['inventory'];
                         final double currentStock = inv?.quantity ?? 0.0;

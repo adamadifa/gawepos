@@ -415,13 +415,21 @@ class _HomePageState extends State<HomePage> {
 
                 // ── Scrollable Content ──────────────────────
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: AppConstants.paddingMd),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Stat card melayang di atas header
+                  child: RefreshIndicator(
+                    color: AppConstants.primaryColor,
+                    onRefresh: () async {
+                      // Refresh session details & expected cash in FutureBuilder by rebuilding
+                      setState(() {});
+                      await Future.delayed(const Duration(milliseconds: 300));
+                    },
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppConstants.paddingMd),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Stat card melayang di atas header
                         widget.session == null
                             ? _buildOpenShiftPromptCard()
                             : FutureBuilder<Map<String, dynamic>?>(
@@ -484,6 +492,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ),
+              ),
               ],
             ),
           ),

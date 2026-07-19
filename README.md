@@ -96,6 +96,18 @@ Aplikasi menggunakan PIN yang di-hash dengan SHA-256 untuk keamanan.
 
 ---
 
+## 📊 Perhitungan Harga Pokok Penjualan (HPP)
+
+Aplikasi GawePOS menggunakan dua metode untuk menentukan Harga Pokok Penjualan (HPP) per produk saat transaksi diselesaikan:
+
+1. **Berdasarkan Harga Beli Terakhir (Prioritas Utama)**:
+   * Mengambil harga beli (`costPrice`) dari data transaksi masuk/restok (`PurchaseItems`) paling terakhir untuk produk dan satuan unit bersangkutan.
+2. **Berdasarkan Persentase Harga Jual (Fallback)**:
+   * Jika produk tersebut belum pernah dibeli/di-restok di sistem (tidak ada riwayat restok), maka HPP dihitung otomatis sebesar **60% dari Harga Jual** item tersebut saat transaksi kasir dilakukan.
+     $$\text{HPP} = \text{Harga Jual} \times 0.6$$
+
+---
+
 ## 📝 Catatan Tambahan Pengembangan (Development Notes)
 1. **Bahasa Komentar**: Seluruh dokumentasi kode dan komentar di dalam kode menggunakan **Bahasa Indonesia**.
 2. **Arsitektur**: Menggunakan 2-layer per fitur (`data/` -> Drift DAO, dan `presentation/` -> Cubit + UI) dengan manajemen state menggunakan `flutter_bloc` (Cubit).

@@ -228,6 +228,56 @@ class PurchaseRepository {
     });
   }
 
+  // Delete purchase order (can delete received purchases by reverting stock)
+  Future<void> deletePurchase(int purchaseId) async {
+    await _db.transaction(() async {
+      final purchase = await (_db.select(_db.purchases)
+            ..where((tbl) => tbl.id.equals(purchaseId)))
+          .getSingleOrNull();
+
+      if (purchase == null) throw Exception('Pesanan pembelian tidak ditemukan');
+
+      if (purchase.status == 'received') {
+        // Fetch all items to revert stock
+        final items = await (_db.select(_db.purchaseItems)
+              ..where((tbl) => tbl.purchaseId.equals(purchaseId)))
+            .get();
+
+        final now = DateTime.now();
+
+        for (var item in items) {
+          // Revert stock: decrease quantity in inventory table
+          final inv = await (_db.select(_db.inventory)
+                ..where((tbl) => tbl.productId.equals(item.productId) & tbl.unitId.equals(item.unitId)))
+              .getSingleOrNull();
+
+          if (inv != null) {
+            final newQty = inv.quantity - item.quantity;
+            await (_db.update(_db.inventory)
+                  ..where((tbl) => tbl.id.equals(inv.id)))
+                .write(InventoryCompanion(quantity: Value(newQty)));
+          }
+
+          // Insert negative stock movement
+          await _db.into(_db.stockMovements).insert(
+                StockMovementsCompanion.insert(
+                  productId: item.productId,
+                  unitId: item.unitId,
+                  quantity: -item.quantity,
+                  type: 'purchase_cancel',
+                  referenceNo: Value(purchase.referenceNo),
+                  notes: Value('Pembatalan Restok Supplier Ref: ${purchase.referenceNo}'),
+                  createdAt: Value(now),
+                ),
+              );
+        }
+      }
+
+      // Delete the purchase (cascading deletes purchase items automatically)
+      await (_db.delete(_db.purchases)..where((tbl) => tbl.id.equals(purchaseId))).go();
+    });
+  }
+
   // Get units for a product
   Future<List<ProductUnit>> getProductUnits(int productId) async {
     return await (_db.select(_db.productUnits)

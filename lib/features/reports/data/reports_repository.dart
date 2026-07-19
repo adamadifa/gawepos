@@ -8,6 +8,7 @@ class ReportsRepository {
 
   // Helper: Get cost price for a product/unit
   Future<double> getProductCostPrice(int productId, int unitId, double fallbackSellPrice) async {
+    // 1. Cari riwayat pembelian dengan satuan yang sama persis
     final purchaseItem = await (_db.select(_db.purchaseItems)
           ..where((tbl) => tbl.productId.equals(productId) & tbl.unitId.equals(unitId))
           ..orderBy([(tbl) => OrderingTerm(expression: tbl.id, mode: OrderingMode.desc)])
@@ -17,7 +18,30 @@ class ReportsRepository {
     if (purchaseItem != null) {
       return purchaseItem.costPrice;
     }
-    // Fallback: 60% of the sale price
+
+    // 2. Jika tidak ada, cari riwayat pembelian dengan satuan LAIN untuk produk ini
+    final anyPurchaseItem = await (_db.select(_db.purchaseItems)
+          ..where((tbl) => tbl.productId.equals(productId))
+          ..orderBy([(tbl) => OrderingTerm(expression: tbl.id, mode: OrderingMode.desc)])
+          ..limit(1))
+        .getSingleOrNull();
+
+    if (anyPurchaseItem != null) {
+      final targetUnit = await (_db.select(_db.productUnits)
+            ..where((tbl) => tbl.id.equals(unitId)))
+          .getSingleOrNull();
+      final purchasedUnit = await (_db.select(_db.productUnits)
+            ..where((tbl) => tbl.id.equals(anyPurchaseItem.unitId)))
+          .getSingleOrNull();
+
+      if (targetUnit != null && purchasedUnit != null && purchasedUnit.conversionFactor > 0) {
+        // Konversi harga beli ke satuan baru: (harga beli satuan lama / konversi satuan lama) * konversi satuan baru
+        final baseCost = anyPurchaseItem.costPrice / purchasedUnit.conversionFactor;
+        return baseCost * targetUnit.conversionFactor;
+      }
+    }
+
+    // 3. Fallback jika belum pernah dibeli sama sekali: 60% dari harga jual
     return fallbackSellPrice * 0.6;
   }
 
@@ -197,17 +221,32 @@ class ReportsRepository {
 
       for (var p in activeProducts) {
         final units = unitsByProduct[p.id] ?? [];
+        if (units.isEmpty) continue;
+
+        // Find the unit with the largest conversionFactor
+        ProductUnit largestUnit = units.first;
+        for (var u in units) {
+          if (u.conversionFactor > largestUnit.conversionFactor) {
+            largestUnit = u;
+          }
+        }
+
+        double totalBaseQty = 0.0;
         for (var u in units) {
           final inv = invMap['${p.id}_${u.id}'];
           final currentQty = inv?.quantity ?? 0.0;
-          if (currentQty <= p.minStockAlert) {
-            lowStockAlerts.add({
-              'product': p,
-              'unit': u,
-              'currentStock': currentQty,
-              'minAlert': p.minStockAlert,
-            });
-          }
+          totalBaseQty += currentQty * u.conversionFactor;
+        }
+
+        final double totalLargestQty = totalBaseQty / largestUnit.conversionFactor;
+
+        if (totalLargestQty <= p.minStockAlert) {
+          lowStockAlerts.add({
+            'product': p,
+            'unit': largestUnit,
+            'currentStock': totalLargestQty,
+            'minAlert': p.minStockAlert,
+          });
         }
       }
     }
@@ -244,10 +283,11 @@ class ReportsRepository {
       final productId = int.parse(parts[0]);
       final unitId = int.parse(parts[1]);
 
-      final cost = await getProductCostPrice(productId, unitId, 0.0);
-      final qty = items
-          .where((i) => i.productId == productId && i.unitId == unitId)
-          .fold<double>(0.0, (sum, i) => sum + i.quantity);
+      final matchingItems = items.where((i) => i.productId == productId && i.unitId == unitId);
+      final firstItem = matchingItems.first;
+      
+      final cost = await getProductCostPrice(productId, unitId, firstItem.price);
+      final qty = matchingItems.fold<double>(0.0, (sum, i) => sum + i.quantity);
       totalHpp += qty * cost;
     }
     return totalHpp;

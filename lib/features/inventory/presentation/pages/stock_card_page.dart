@@ -344,11 +344,11 @@ class _StockCardPageState extends State<StockCardPage> {
                         return Center(child: Text(state.message));
                       }
                       if (state is StockCardLoaded) {
-                        final List<ProductUnit> units = state.units;
+                        final List<ProductUnit> units = List<ProductUnit>.from(state.units)
+                          ..sort((a, b) => b.conversionFactor.compareTo(a.conversionFactor));
 
                         if (units.isNotEmpty && _selectedUnitId == null) {
-                          final baseUnit = units.firstWhere((u) => u.isBase, orElse: () => units.first);
-                          _selectedUnitId = baseUnit.id;
+                          _selectedUnitId = units.first.id;
                         }
 
                         final filteredList = state.movements.where((item) {
@@ -363,122 +363,131 @@ class _StockCardPageState extends State<StockCardPage> {
                               const Divider(height: 1, color: AppConstants.borderLightColor),
                             ],
                             Expanded(
-                              child: filteredList.isEmpty
-                                  ? Center(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(32.0),
-                                        child: Column(
-                                          mainAxisAlignment: MainAxisAlignment.center,
-                                          children: [
-                                            const Icon(Icons.history_rounded,
-                                                size: 48, color: AppConstants.textLightColor),
-                                            const SizedBox(height: 12),
-                                            Text(
-                                              'Belum ada riwayat mutasi stok untuk produk ini pada satuan yang dipilih.',
-                                              textAlign: TextAlign.center,
-                                              style: GoogleFonts.poppins(
-                                                  color: AppConstants.textLightColor, fontSize: 13),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    )
-                                  : ListView.builder(
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                      itemCount: filteredList.length,
-                                      itemBuilder: (context, index) {
-                                        final item = filteredList[index];
-                                        final StockMovement move = item['movement'];
-                                        final ProductUnit unit = item['unit'];
-                                        final color = _getTypeColor(move.type);
-
-                                        return Card(
-                                          margin: const EdgeInsets.only(bottom: 10),
-                                          elevation: 0,
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                                            side: const BorderSide(color: AppConstants.borderLightColor),
-                                          ),
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(12),
-                                            child: Row(
+                              child: RefreshIndicator(
+                                onRefresh: () async {
+                                  _loadData();
+                                },
+                                child: filteredList.isEmpty
+                                    ? ListView(
+                                        physics: const AlwaysScrollableScrollPhysics(),
+                                        children: [
+                                          SizedBox(
+                                            height: MediaQuery.of(context).size.height * 0.5,
+                                            child: Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
                                               children: [
-                                                // Colored icon circle indicator
-                                                Container(
-                                                  width: 40,
-                                                  height: 40,
-                                                  decoration: BoxDecoration(
-                                                    color: color.withValues(alpha: 0.1),
-                                                    shape: BoxShape.circle,
-                                                  ),
-                                                  child: Icon(_getTypeIcon(move.type), color: color, size: 18),
-                                                ),
-                                                const SizedBox(width: 14),
-                                                // Details column
-                                                Expanded(
-                                                  child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    children: [
-                                                      Container(
-                                                        padding: const EdgeInsets.symmetric(
-                                                            horizontal: 6, vertical: 2),
-                                                        decoration: BoxDecoration(
-                                                          color: color.withValues(alpha: 0.1),
-                                                          borderRadius: BorderRadius.circular(4),
-                                                        ),
-                                                        child: Text(
-                                                          _getTypeLabel(move.type),
-                                                          style: TextStyle(
-                                                            fontSize: 10,
-                                                            fontWeight: FontWeight.bold,
-                                                            color: color,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 6),
-                                                      Text(
-                                                        move.createdAt.toString().substring(0, 16),
-                                                        style: const TextStyle(
-                                                          fontSize: 10,
-                                                          color: AppConstants.textLightColor,
-                                                        ),
-                                                      ),
-                                                      const SizedBox(height: 4),
-                                                      if (move.notes != null)
-                                                        Text(
-                                                          move.notes!,
-                                                          style: GoogleFonts.poppins(
-                                                            fontSize: 12,
-                                                            color: AppConstants.textDarkColor,
-                                                            fontWeight: FontWeight.w500,
-                                                          ),
-                                                        ),
-                                                      if (move.referenceNo != null)
-                                                        Text(
-                                                          'Reff: ${move.referenceNo!}',
-                                                          style: const TextStyle(
-                                                              fontSize: 11,
-                                                              color: AppConstants.textLightColor),
-                                                        ),
-                                                    ],
-                                                  ),
-                                                ),
-                                                const SizedBox(width: 12),
-                                                // Qty diff indicator
+                                                const Icon(Icons.history_rounded,
+                                                    size: 48, color: AppConstants.textLightColor),
+                                                const SizedBox(height: 12),
                                                 Text(
-                                                  '${move.quantity > 0 ? "+" : ""}${move.quantity} ${unit.name}',
+                                                  'Belum ada riwayat mutasi stok untuk produk ini pada satuan yang dipilih.',
+                                                  textAlign: TextAlign.center,
                                                   style: GoogleFonts.poppins(
-                                                    fontWeight: FontWeight.bold,
-                                                    fontSize: 14,
-                                                    color: color,
-                                                  ),
+                                                      color: AppConstants.textLightColor, fontSize: 13),
                                                 ),
                                               ],
                                             ),
                                           ),
-                                        );
-                                      },
-                                    ),
+                                        ],
+                                      )
+                                    : ListView.builder(
+                                        physics: const AlwaysScrollableScrollPhysics(),
+                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                        itemCount: filteredList.length,
+                                        itemBuilder: (context, index) {
+                                          final item = filteredList[index];
+                                          final StockMovement move = item['movement'];
+                                          final ProductUnit unit = item['unit'];
+                                          final color = _getTypeColor(move.type);
+
+                                          return Card(
+                                            margin: const EdgeInsets.only(bottom: 10),
+                                            elevation: 0,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                                              side: const BorderSide(color: AppConstants.borderLightColor),
+                                            ),
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(12),
+                                              child: Row(
+                                                children: [
+                                                  // Colored icon circle indicator
+                                                  Container(
+                                                    width: 40,
+                                                    height: 40,
+                                                    decoration: BoxDecoration(
+                                                      color: color.withValues(alpha: 0.1),
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    child: Icon(_getTypeIcon(move.type), color: color, size: 18),
+                                                  ),
+                                                  const SizedBox(width: 14),
+                                                  // Details column
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                                      children: [
+                                                        Container(
+                                                          padding: const EdgeInsets.symmetric(
+                                                              horizontal: 6, vertical: 2),
+                                                          decoration: BoxDecoration(
+                                                            color: color.withValues(alpha: 0.1),
+                                                            borderRadius: BorderRadius.circular(4),
+                                                          ),
+                                                          child: Text(
+                                                            _getTypeLabel(move.type),
+                                                            style: TextStyle(
+                                                              fontSize: 10,
+                                                              fontWeight: FontWeight.bold,
+                                                              color: color,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(height: 6),
+                                                        Text(
+                                                          move.createdAt.toString().substring(0, 16),
+                                                          style: const TextStyle(
+                                                            fontSize: 10,
+                                                            color: AppConstants.textLightColor,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(height: 4),
+                                                        if (move.notes != null)
+                                                          Text(
+                                                            move.notes!,
+                                                            style: GoogleFonts.poppins(
+                                                              fontSize: 12,
+                                                              color: AppConstants.textDarkColor,
+                                                              fontWeight: FontWeight.w500,
+                                                            ),
+                                                          ),
+                                                        if (move.referenceNo != null)
+                                                          Text(
+                                                            'Reff: ${move.referenceNo!}',
+                                                            style: const TextStyle(
+                                                                fontSize: 11,
+                                                                color: AppConstants.textLightColor),
+                                                          ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 12),
+                                                  // Qty diff indicator
+                                                  Text(
+                                                    '${move.quantity > 0 ? "+" : ""}${move.quantity} ${unit.name}',
+                                                    style: GoogleFonts.poppins(
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 14,
+                                                      color: color,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      ),
+                              ),
                             ),
                           ],
                         );
