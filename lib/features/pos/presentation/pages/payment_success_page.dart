@@ -100,7 +100,7 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
 
   @override
   Widget build(BuildContext context) {
-    final themeColor = AppConstants.primaryDarkColor;
+    const themeColor = Color(0xFF0F172A);
 
     return Scaffold(
       backgroundColor: themeColor,
@@ -118,20 +118,20 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
                     children: [
                       // Back/Close button
                       IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
                         onPressed: _finish,
                       ),
                       Text(
-                        'Detail Pembayaran',
+                        'Bukti Pembayaran',
                         style: GoogleFonts.poppins(
                           color: Colors.white,
                           fontSize: 16,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                       // Print button
                       IconButton(
-                        icon: const Icon(Icons.print_rounded, color: Colors.white, size: 24),
+                        icon: const Icon(Icons.print_rounded, color: Colors.white, size: 22),
                         onPressed: _printReceipt,
                         tooltip: 'Cetak Struk',
                       ),

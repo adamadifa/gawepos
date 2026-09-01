@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../core/constants/constants.dart';
 import '../../../../core/database/app_database.dart';
-import '../../../../core/widgets/curved_header.dart';
 import '../bloc/category_cubit.dart';
 import '../bloc/brand_cubit.dart';
 
@@ -35,81 +33,91 @@ class _CategoriesBrandsPageState extends State<CategoriesBrandsPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppConstants.backgroundColor,
-      body: Stack(
-        children: [
-          const CurvedHeader(height: 155),
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Top AppBar
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                            color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      Text(
-                        'Kategori & Merek',
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Top Clean Header
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(6, 6, 12, 10),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                        color: Color(0xFF0F172A), size: 18),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                ),
-                
-                // TabBar Container
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                    ),
-                    child: TabBar(
-                      controller: _tabController,
-                      indicatorColor: Colors.white,
-                      indicatorSize: TabBarIndicatorSize.tab,
-                      labelColor: Colors.white,
-                      unselectedLabelColor: Colors.white70,
-                      labelStyle: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                      unselectedLabelStyle: GoogleFonts.poppins(
-                        fontWeight: FontWeight.normal,
-                        fontSize: 14,
-                      ),
-                      tabs: const [
-                        Tab(text: 'Kategori'),
-                        Tab(text: 'Merek (Brand)'),
-                      ],
+                  const SizedBox(width: 2),
+                  Text(
+                    'Kategori & Merek',
+                    style: GoogleFonts.poppins(
+                      color: const Color(0xFF0F172A),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.2,
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-
-                // TabBar View
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _CategoryTabContent(),
-                      _BrandTabContent(),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+            Container(height: 1, color: const Color(0xFFE2E8F0)),
+            
+            // Segmented TabBar Container
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: TabBar(
+                  controller: _tabController,
+                  indicator: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(9),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  dividerColor: Colors.transparent,
+                  labelColor: const Color(0xFF0F172A),
+                  unselectedLabelColor: const Color(0xFF64748B),
+                  labelStyle: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                  unselectedLabelStyle: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 13,
+                  ),
+                  tabs: const [
+                    Tab(text: 'Kategori Produk'),
+                    Tab(text: 'Merek (Brand)'),
+                  ],
+                ),
+              ),
+            ),
+
+            // TabBar View
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _CategoryTabContent(),
+                  _BrandTabContent(),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -190,7 +198,13 @@ class _CategoryTabContent extends StatelessWidget {
                       const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
-                        child: ElevatedButton(
+                        height: 48,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF0F172A),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
                           onPressed: isNameValid
                               ? () {
                                   final name = _nameController.text.trim();
@@ -209,7 +223,10 @@ class _CategoryTabContent extends StatelessWidget {
                                   Navigator.pop(ctx);
                                 }
                               : null,
-                          child: const Text('SIMPAN'),
+                          child: Text(
+                            category == null ? 'Simpan Kategori' : 'Perbarui Kategori',
+                            style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+                          ),
                         ),
                       ),
                     ],
@@ -227,20 +244,28 @@ class _CategoryTabContent extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Kategori'),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Hapus Kategori',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
         content: Text('Apakah Anda yakin ingin menghapus kategori "${category.name}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('BATAL'),
+            child: Text('Batal', style: GoogleFonts.poppins(color: const Color(0xFF64748B), fontWeight: FontWeight.w600)),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             onPressed: () {
               context.read<CategoryCubit>().deleteCategory(category.id);
               Navigator.pop(ctx);
             },
-            child: const Text('HAPUS'),
+            child: Text('Hapus', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -267,30 +292,39 @@ class _CategoryTabContent extends StatelessWidget {
                   return Center(
                     child: Text(
                       'Belum ada kategori.',
-                      style: GoogleFonts.poppins(color: AppConstants.textLightColor),
+                      style: GoogleFonts.poppins(color: const Color(0xFF94A3B8)),
                     ),
                   );
                 }
                 return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
                   itemCount: list.length,
                   itemBuilder: (context, index) {
                     final item = list[index];
-                    return Card(
+                    return Container(
                       margin: const EdgeInsets.only(bottom: 10),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                        side: const BorderSide(color: AppConstants.borderLightColor),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
                       ),
                       child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        leading: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.category_rounded, color: Color(0xFF0F172A), size: 20),
+                        ),
                         title: Text(
                           item.name,
                           style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                             fontSize: 13,
-                            color: AppConstants.textDarkColor,
+                            color: const Color(0xFF0F172A),
                           ),
                         ),
                         subtitle: item.description != null
@@ -298,7 +332,7 @@ class _CategoryTabContent extends StatelessWidget {
                                 item.description!,
                                 style: GoogleFonts.poppins(
                                   fontSize: 11,
-                                  color: AppConstants.textLightColor,
+                                  color: const Color(0xFF64748B),
                                 ),
                               )
                             : null,
@@ -306,33 +340,33 @@ class _CategoryTabContent extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Material(
-                              color: AppConstants.primaryColor.withValues(alpha: 0.06),
+                              color: const Color(0xFFF1F5F9),
                               borderRadius: BorderRadius.circular(8),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(8),
                                 onTap: () => _showFormDialog(context, category: item),
                                 child: const Padding(
-                                  padding: EdgeInsets.all(8),
+                                  padding: EdgeInsets.all(7),
                                   child: Icon(
                                     Icons.edit_outlined,
-                                    color: AppConstants.primaryColor,
+                                    color: Color(0xFF334155),
                                     size: 16,
                                   ),
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
                             Material(
-                              color: Colors.redAccent.withValues(alpha: 0.06),
+                              color: const Color(0xFFFEF2F2),
                               borderRadius: BorderRadius.circular(8),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(8),
                                 onTap: () => _showDeleteDialog(context, item),
                                 child: const Padding(
-                                  padding: EdgeInsets.all(8),
+                                  padding: EdgeInsets.all(7),
                                   child: Icon(
                                     Icons.delete_outline_rounded,
-                                    color: Colors.redAccent,
+                                    color: Color(0xFFDC2626),
                                     size: 16,
                                   ),
                                 ),
@@ -353,12 +387,21 @@ class _CategoryTabContent extends StatelessWidget {
         // Add Button Bottom
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: ElevatedButton.icon(
-            onPressed: () => _showFormDialog(context),
-            icon: const Icon(Icons.add),
-            label: const Text('TAMBAH KATEGORI'),
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
+          child: SizedBox(
+            height: 48,
+            child: FilledButton.icon(
+              onPressed: () => _showFormDialog(context),
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: Text(
+                'Tambah Kategori',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0F172A),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                minimumSize: const Size.fromHeight(48),
+              ),
             ),
           ),
         ),
@@ -431,7 +474,13 @@ class _BrandTabContent extends StatelessWidget {
                       const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
-                        child: ElevatedButton(
+                        height: 48,
+                        child: FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: const Color(0xFF0F172A),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
                           onPressed: isNameValid
                               ? () {
                                   final name = _nameController.text.trim();
@@ -443,7 +492,10 @@ class _BrandTabContent extends StatelessWidget {
                                   Navigator.pop(ctx);
                                 }
                               : null,
-                          child: const Text('SIMPAN'),
+                          child: Text(
+                            brand == null ? 'Simpan Merek' : 'Perbarui Merek',
+                            style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+                          ),
                         ),
                       ),
                     ],
@@ -461,20 +513,28 @@ class _BrandTabContent extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Merek'),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Hapus Merek',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
         content: Text('Apakah Anda yakin ingin menghapus merek "${brand.name}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('BATAL'),
+            child: Text('Batal', style: GoogleFonts.poppins(color: const Color(0xFF64748B), fontWeight: FontWeight.w600)),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             onPressed: () {
               context.read<BrandCubit>().deleteBrand(brand.id);
               Navigator.pop(ctx);
             },
-            child: const Text('HAPUS'),
+            child: Text('Hapus', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -501,63 +561,72 @@ class _BrandTabContent extends StatelessWidget {
                   return Center(
                     child: Text(
                       'Belum ada merek (brand).',
-                      style: GoogleFonts.poppins(color: AppConstants.textLightColor),
+                      style: GoogleFonts.poppins(color: const Color(0xFF94A3B8)),
                     ),
                   );
                 }
                 return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
                   itemCount: list.length,
                   itemBuilder: (context, index) {
                     final item = list[index];
-                    return Card(
+                    return Container(
                       margin: const EdgeInsets.only(bottom: 10),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                        side: const BorderSide(color: AppConstants.borderLightColor),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
                       ),
                       child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        leading: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF2563EB).withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.stars_rounded, color: Color(0xFF2563EB), size: 20),
+                        ),
                         title: Text(
                           item.name,
                           style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                             fontSize: 13,
-                            color: AppConstants.textDarkColor,
+                            color: const Color(0xFF0F172A),
                           ),
                         ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Material(
-                              color: AppConstants.primaryColor.withValues(alpha: 0.06),
+                              color: const Color(0xFFF1F5F9),
                               borderRadius: BorderRadius.circular(8),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(8),
                                 onTap: () => _showFormDialog(context, brand: item),
                                 child: const Padding(
-                                  padding: EdgeInsets.all(8),
+                                  padding: EdgeInsets.all(7),
                                   child: Icon(
                                     Icons.edit_outlined,
-                                    color: AppConstants.primaryColor,
+                                    color: Color(0xFF334155),
                                     size: 16,
                                   ),
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
                             Material(
-                              color: Colors.redAccent.withValues(alpha: 0.06),
+                              color: const Color(0xFFFEF2F2),
                               borderRadius: BorderRadius.circular(8),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(8),
                                 onTap: () => _showDeleteDialog(context, item),
                                 child: const Padding(
-                                  padding: EdgeInsets.all(8),
+                                  padding: EdgeInsets.all(7),
                                   child: Icon(
                                     Icons.delete_outline_rounded,
-                                    color: Colors.redAccent,
+                                    color: Color(0xFFDC2626),
                                     size: 16,
                                   ),
                                 ),
@@ -578,12 +647,21 @@ class _BrandTabContent extends StatelessWidget {
         // Add Button Bottom
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: ElevatedButton.icon(
-            onPressed: () => _showFormDialog(context),
-            icon: const Icon(Icons.add),
-            label: const Text('TAMBAH MEREK'),
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
+          child: SizedBox(
+            height: 48,
+            child: FilledButton.icon(
+              onPressed: () => _showFormDialog(context),
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: Text(
+                'Tambah Merek',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0F172A),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                minimumSize: const Size.fromHeight(48),
+              ),
             ),
           ),
         ),

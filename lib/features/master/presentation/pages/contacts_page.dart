@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../core/constants/constants.dart';
 import '../../../../core/database/app_database.dart';
-import '../../../../core/widgets/curved_header.dart';
 import '../bloc/customer_cubit.dart';
 import '../bloc/supplier_cubit.dart';
 
@@ -35,81 +33,91 @@ class _ContactsPageState extends State<ContactsPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppConstants.backgroundColor,
-      body: Stack(
-        children: [
-          const CurvedHeader(height: 155),
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Top AppBar
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                            color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      Text(
-                        'Pelanggan & Pemasok',
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Top Clean Header
+            Container(
+              color: Colors.white,
+              padding: const EdgeInsets.fromLTRB(6, 6, 12, 10),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                        color: Color(0xFF0F172A), size: 18),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                ),
-                
-                // TabBar Container
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                    ),
-                    child: TabBar(
-                      controller: _tabController,
-                      indicatorColor: Colors.white,
-                      indicatorSize: TabBarIndicatorSize.tab,
-                      labelColor: Colors.white,
-                      unselectedLabelColor: Colors.white70,
-                      labelStyle: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                      unselectedLabelStyle: GoogleFonts.poppins(
-                        fontWeight: FontWeight.normal,
-                        fontSize: 14,
-                      ),
-                      tabs: const [
-                        Tab(text: 'Pelanggan'),
-                        Tab(text: 'Pemasok (Supplier)'),
-                      ],
+                  const SizedBox(width: 2),
+                  Text(
+                    'Pelanggan & Pemasok',
+                    style: GoogleFonts.poppins(
+                      color: const Color(0xFF0F172A),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.2,
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-
-                // TabBar View
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _CustomerTabContent(),
-                      _SupplierTabContent(),
-                    ],
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+            Container(height: 1, color: const Color(0xFFE2E8F0)),
+            
+            // Segmented TabBar Container
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE2E8F0),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: TabBar(
+                  controller: _tabController,
+                  indicator: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(9),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  dividerColor: Colors.transparent,
+                  labelColor: const Color(0xFF0F172A),
+                  unselectedLabelColor: const Color(0xFF64748B),
+                  labelStyle: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                  unselectedLabelStyle: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 13,
+                  ),
+                  tabs: const [
+                    Tab(text: 'Daftar Pelanggan'),
+                    Tab(text: 'Daftar Pemasok'),
+                  ],
+                ),
+              ),
+            ),
+
+            // TabBar View
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _CustomerTabContent(),
+                  _SupplierTabContent(),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -229,7 +237,13 @@ class _CustomerTabContent extends StatelessWidget {
                         const SizedBox(height: 24),
                         SizedBox(
                           width: double.infinity,
-                          child: ElevatedButton(
+                          height: 48,
+                          child: FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF0F172A),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
                             onPressed: isValid
                                 ? () {
                                     final name = _nameController.text.trim();
@@ -256,7 +270,10 @@ class _CustomerTabContent extends StatelessWidget {
                                     Navigator.pop(ctx);
                                   }
                                 : null,
-                            child: const Text('SIMPAN'),
+                            child: Text(
+                              customer == null ? 'Simpan Pelanggan' : 'Perbarui Pelanggan',
+                              style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+                            ),
                           ),
                         ),
                       ],
@@ -275,20 +292,28 @@ class _CustomerTabContent extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Pelanggan'),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Hapus Pelanggan',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
         content: Text('Apakah Anda yakin ingin menghapus pelanggan "${customer.name}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('BATAL'),
+            child: Text('Batal', style: GoogleFonts.poppins(color: const Color(0xFF64748B), fontWeight: FontWeight.w600)),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             onPressed: () {
               context.read<CustomerCubit>().deleteCustomer(customer.id);
               Navigator.pop(ctx);
             },
-            child: const Text('HAPUS'),
+            child: Text('Hapus', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -314,70 +339,60 @@ class _CustomerTabContent extends StatelessWidget {
                   return Center(
                     child: Text(
                       'Belum ada pelanggan.',
-                      style: GoogleFonts.poppins(color: AppConstants.textLightColor),
+                      style: GoogleFonts.poppins(color: const Color(0xFF94A3B8)),
                     ),
                   );
                 }
                 return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
                   itemCount: list.length,
                   itemBuilder: (context, index) {
                     final item = list[index];
-                    return Card(
+                    return Container(
                       margin: const EdgeInsets.only(bottom: 10),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                        side: const BorderSide(color: AppConstants.borderLightColor),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
                       ),
                       child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        leading: CircleAvatar(
-                          radius: 18,
-                          backgroundColor: AppConstants.primaryColor.withValues(alpha: 0.1),
-                          child: const Icon(Icons.person_outline_rounded,
-                              color: AppConstants.primaryColor, size: 18),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        leading: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.person_rounded, color: Color(0xFF0F172A), size: 20),
                         ),
                         title: Text(
                           item.name,
                           style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                             fontSize: 13,
-                            color: AppConstants.textDarkColor,
+                            color: const Color(0xFF0F172A),
                           ),
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (item.phone != null)
+                            if (item.phone != null && item.phone!.isNotEmpty)
                               Text(
                                 item.phone!,
-                                style: GoogleFonts.poppins(fontSize: 11, color: AppConstants.textLightColor),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: const Color(0xFF64748B),
+                                ),
                               ),
-                            if (item.address != null)
+                            if (item.address != null && item.address!.isNotEmpty)
                               Text(
                                 item.address!,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.poppins(fontSize: 11, color: AppConstants.textLightColor),
-                              ),
-                            if (item.pointsBalance > 0)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 2),
-                                child: Row(
-                                  children: [
-                                    const Icon(Icons.card_giftcard_rounded,
-                                        size: 11, color: AppConstants.warningColor),
-                                    const SizedBox(width: 3),
-                                    Text(
-                                      'Poin: ${item.pointsBalance}',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 11,
-                                        color: AppConstants.warningColor,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
+                                style: GoogleFonts.poppins(
+                                  fontSize: 10.5,
+                                  color: const Color(0xFF94A3B8),
                                 ),
                               ),
                           ],
@@ -386,33 +401,33 @@ class _CustomerTabContent extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Material(
-                              color: AppConstants.primaryColor.withValues(alpha: 0.06),
+                              color: const Color(0xFFF1F5F9),
                               borderRadius: BorderRadius.circular(8),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(8),
                                 onTap: () => _showFormDialog(context, customer: item),
                                 child: const Padding(
-                                  padding: EdgeInsets.all(8),
+                                  padding: EdgeInsets.all(7),
                                   child: Icon(
                                     Icons.edit_outlined,
-                                    color: AppConstants.primaryColor,
+                                    color: Color(0xFF334155),
                                     size: 16,
                                   ),
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
                             Material(
-                              color: Colors.redAccent.withValues(alpha: 0.06),
+                              color: const Color(0xFFFEF2F2),
                               borderRadius: BorderRadius.circular(8),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(8),
                                 onTap: () => _showDeleteDialog(context, item),
                                 child: const Padding(
-                                  padding: EdgeInsets.all(8),
+                                  padding: EdgeInsets.all(7),
                                   child: Icon(
                                     Icons.delete_outline_rounded,
-                                    color: Colors.redAccent,
+                                    color: Color(0xFFDC2626),
                                     size: 16,
                                   ),
                                 ),
@@ -429,16 +444,25 @@ class _CustomerTabContent extends StatelessWidget {
             },
           ),
         ),
-
+        
         // Add Button Bottom
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: ElevatedButton.icon(
-            onPressed: () => _showFormDialog(context),
-            icon: const Icon(Icons.add),
-            label: const Text('TAMBAH PELANGGAN'),
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
+          child: SizedBox(
+            height: 48,
+            child: FilledButton.icon(
+              onPressed: () => _showFormDialog(context),
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: Text(
+                'Tambah Pelanggan',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0F172A),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                minimumSize: const Size.fromHeight(48),
+              ),
             ),
           ),
         ),
@@ -561,7 +585,13 @@ class _SupplierTabContent extends StatelessWidget {
                         const SizedBox(height: 24),
                         SizedBox(
                           width: double.infinity,
-                          child: ElevatedButton(
+                          height: 48,
+                          child: FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF0F172A),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
                             onPressed: isValid
                                 ? () {
                                     final name = _nameController.text.trim();
@@ -588,7 +618,10 @@ class _SupplierTabContent extends StatelessWidget {
                                     Navigator.pop(ctx);
                                   }
                                 : null,
-                            child: const Text('SIMPAN'),
+                            child: Text(
+                              supplier == null ? 'Simpan Pemasok' : 'Perbarui Pemasok',
+                              style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+                            ),
                           ),
                         ),
                       ],
@@ -607,20 +640,28 @@ class _SupplierTabContent extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Pemasok'),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Hapus Pemasok',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+        ),
         content: Text('Apakah Anda yakin ingin menghapus pemasok "${supplier.name}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('BATAL'),
+            child: Text('Batal', style: GoogleFonts.poppins(color: const Color(0xFF64748B), fontWeight: FontWeight.w600)),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             onPressed: () {
               context.read<SupplierCubit>().deleteSupplier(supplier.id);
               Navigator.pop(ctx);
             },
-            child: const Text('HAPUS'),
+            child: Text('Hapus', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -646,52 +687,61 @@ class _SupplierTabContent extends StatelessWidget {
                   return Center(
                     child: Text(
                       'Belum ada pemasok.',
-                      style: GoogleFonts.poppins(color: AppConstants.textLightColor),
+                      style: GoogleFonts.poppins(color: const Color(0xFF94A3B8)),
                     ),
                   );
                 }
                 return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
                   itemCount: list.length,
                   itemBuilder: (context, index) {
                     final item = list[index];
-                    return Card(
+                    return Container(
                       margin: const EdgeInsets.only(bottom: 10),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                        side: const BorderSide(color: AppConstants.borderLightColor),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
                       ),
                       child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                        leading: CircleAvatar(
-                          radius: 18,
-                          backgroundColor: AppConstants.successColor.withValues(alpha: 0.1),
-                          child: const Icon(Icons.local_shipping_outlined,
-                              color: AppConstants.successColor, size: 18),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                        leading: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF059669).withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.local_shipping_rounded, color: Color(0xFF059669), size: 20),
                         ),
                         title: Text(
                           item.name,
                           style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
+                            fontWeight: FontWeight.w700,
                             fontSize: 13,
-                            color: AppConstants.textDarkColor,
+                            color: const Color(0xFF0F172A),
                           ),
                         ),
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (item.phone != null)
+                            if (item.phone != null && item.phone!.isNotEmpty)
                               Text(
                                 item.phone!,
-                                style: GoogleFonts.poppins(fontSize: 11, color: AppConstants.textLightColor),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: const Color(0xFF64748B),
+                                ),
                               ),
-                            if (item.address != null)
+                            if (item.address != null && item.address!.isNotEmpty)
                               Text(
                                 item.address!,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.poppins(fontSize: 11, color: AppConstants.textLightColor),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 10.5,
+                                  color: const Color(0xFF94A3B8),
+                                ),
                               ),
                           ],
                         ),
@@ -699,33 +749,33 @@ class _SupplierTabContent extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Material(
-                              color: AppConstants.primaryColor.withValues(alpha: 0.06),
+                              color: const Color(0xFFF1F5F9),
                               borderRadius: BorderRadius.circular(8),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(8),
                                 onTap: () => _showFormDialog(context, supplier: item),
                                 child: const Padding(
-                                  padding: EdgeInsets.all(8),
+                                  padding: EdgeInsets.all(7),
                                   child: Icon(
                                     Icons.edit_outlined,
-                                    color: AppConstants.primaryColor,
+                                    color: Color(0xFF334155),
                                     size: 16,
                                   ),
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 6),
                             Material(
-                              color: Colors.redAccent.withValues(alpha: 0.06),
+                              color: const Color(0xFFFEF2F2),
                               borderRadius: BorderRadius.circular(8),
                               child: InkWell(
                                 borderRadius: BorderRadius.circular(8),
                                 onTap: () => _showDeleteDialog(context, item),
                                 child: const Padding(
-                                  padding: EdgeInsets.all(8),
+                                  padding: EdgeInsets.all(7),
                                   child: Icon(
                                     Icons.delete_outline_rounded,
-                                    color: Colors.redAccent,
+                                    color: Color(0xFFDC2626),
                                     size: 16,
                                   ),
                                 ),
@@ -746,12 +796,21 @@ class _SupplierTabContent extends StatelessWidget {
         // Add Button Bottom
         Padding(
           padding: const EdgeInsets.all(16.0),
-          child: ElevatedButton.icon(
-            onPressed: () => _showFormDialog(context),
-            icon: const Icon(Icons.add),
-            label: const Text('TAMBAH PEMASOK'),
-            style: ElevatedButton.styleFrom(
-              minimumSize: const Size.fromHeight(48),
+          child: SizedBox(
+            height: 48,
+            child: FilledButton.icon(
+              onPressed: () => _showFormDialog(context),
+              icon: const Icon(Icons.add_rounded, size: 18),
+              label: Text(
+                'Tambah Pemasok',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13),
+              ),
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0F172A),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                minimumSize: const Size.fromHeight(48),
+              ),
             ),
           ),
         ),

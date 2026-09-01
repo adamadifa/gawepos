@@ -7,6 +7,10 @@ import '../../../../core/constants/constants.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/database/app_database.dart';
 import '../bloc/reports_cubit.dart';
+import 'pnl_report_page.dart';
+import 'sales_report_page.dart';
+import 'shift_report_page.dart';
+import 'stock_report_page.dart';
 
 class OwnerDashboardPage extends StatefulWidget {
   const OwnerDashboardPage({super.key});
@@ -58,14 +62,25 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            const Icon(Icons.info_outline_rounded, color: AppConstants.primaryColor),
-            const SizedBox(width: 8),
-            Text(
-              'Info Perhitungan HPP',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppConstants.primaryColor.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.info_outline_rounded, color: AppConstants.primaryColor, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Perhitungan HPP',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16, color: const Color(0xFF0F172A)),
+              ),
             ),
           ],
         ),
@@ -74,35 +89,84 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'HPP (Harga Pokok Penjualan) dihitung per item barang saat penjualan selesai dengan ketentuan:',
-                style: TextStyle(fontSize: 13, color: AppConstants.textDarkColor),
-              ),
-              const SizedBox(height: 12),
               Text(
-                '1. Prioritas Utama (Harga Restok)',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13, color: AppConstants.primaryColor),
+                'HPP (Harga Pokok Penjualan) dihitung per unit barang yang terjual dengan formula akurasi:',
+                style: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF475569), height: 1.4),
               ),
-              const Text(
-                'Menggunakan harga beli terakhir saat Anda melakukan pembelian/restok barang pada unit satuan yang bersangkutan.',
-                style: TextStyle(fontSize: 12, color: AppConstants.textLightColor),
+              const SizedBox(height: 14),
+              _buildDialogInfoCard(
+                title: '1. Riwayat Pembelian Terakhir',
+                desc: 'Mengambil harga restok terakhir dari transaksi pembelian barang.',
+                badge: 'Prioritas',
+                badgeColor: AppConstants.primaryColor,
               ),
-              const SizedBox(height: 12),
-              Text(
-                '2. Fallback / Cadangan (Belum Restok)',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13, color: AppConstants.primaryColor),
-              ),
-              const Text(
-                'Jika produk belum pernah restok, HPP otomatis dihitung sebesar 60% dari harga jual produk saat transaksi.',
-                style: TextStyle(fontSize: 12, color: AppConstants.textLightColor),
+              const SizedBox(height: 10),
+              _buildDialogInfoCard(
+                title: '2. Estimasi Dasar (Fallback)',
+                desc: 'Jika belum pernah ada histori restok, estimasi HPP dihitung 60% dari harga jual.',
+                badge: 'Cadangan',
+                badgeColor: const Color(0xFFD97706),
               ),
             ],
           ),
         ),
         actions: [
-          TextButton(
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF0F172A),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            ),
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('TUTUP'),
+            child: Text('Tutup', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDialogInfoCard({
+    required String title,
+    required String desc,
+    required String badge,
+    required Color badgeColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: const Color(0xFF0F172A)),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: badgeColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  badge,
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 10, color: badgeColor),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            desc,
+            style: GoogleFonts.poppins(fontSize: 11.5, color: const Color(0xFF64748B), height: 1.3),
           ),
         ],
       ),
@@ -122,13 +186,13 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: AppConstants.primaryColor,
+              primary: Color(0xFF0F172A),
               onPrimary: Colors.white,
-              onSurface: AppConstants.textDarkColor,
+              onSurface: Color(0xFF0F172A),
             ),
             textButtonTheme: TextButtonThemeData(
               style: TextButton.styleFrom(
-                foregroundColor: AppConstants.primaryColor,
+                foregroundColor: const Color(0xFF0F172A),
               ),
             ),
           ),
@@ -150,37 +214,79 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(
-          'Dashboard Owner',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 18, color: Colors.white),
-        ),
-        centerTitle: true,
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.white,
         elevation: 0,
-        backgroundColor: AppConstants.primaryColor,
-        foregroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.white),
+        foregroundColor: const Color(0xFF0F172A),
+        centerTitle: false,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Dashboard Eksekutif',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 18, color: const Color(0xFF0F172A)),
+            ),
+            Text(
+              'Ringkasan Finansial & Operasional',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w400, fontSize: 11, color: const Color(0xFF64748B)),
+            ),
+          ],
+        ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded),
-            onPressed: _loadData,
+          Container(
+            margin: const EdgeInsets.only(right: 12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: IconButton(
+              icon: const Icon(Icons.refresh_rounded, size: 20, color: Color(0xFF334155)),
+              tooltip: 'Segarkan Data',
+              onPressed: _loadData,
+            ),
           ),
         ],
       ),
       body: BlocBuilder<ReportsCubit, ReportsState>(
         builder: (context, state) {
           if (state.isDashboardLoading && state.dashboardData == null) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(child: CircularProgressIndicator(color: AppConstants.primaryColor));
           }
           if (state.dashboardError != null && state.dashboardData == null) {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(32),
-                child: Text(
-                  state.dashboardError!,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.poppins(color: AppConstants.errorColor),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.error_outline_rounded, size: 36, color: Colors.red.shade600),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Gagal Memuat Data',
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16, color: const Color(0xFF0F172A)),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      state.dashboardError!,
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.poppins(color: const Color(0xFF64748B), fontSize: 12.5),
+                    ),
+                    const SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      onPressed: _loadData,
+                      icon: const Icon(Icons.refresh_rounded, size: 18),
+                      label: const Text('Coba Lagi'),
+                    ),
+                  ],
                 ),
               ),
             );
@@ -188,286 +294,182 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
           if (state.dashboardData != null) {
             return _buildBody(state.dashboardData!);
           }
-          return const Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator(color: AppConstants.primaryColor));
         },
       ),
     );
   }
 
   Widget _buildBody(Map<String, dynamic> data) {
-    final double grossSales = data['grossSales'] ?? 0.0;
-    final double netProfit = data['netProfit'] ?? 0.0;
-    final double grossProfit = data['grossProfit'] ?? 0.0;
-    final double expenses = data['expenses'] ?? 0.0;
-    final double hpp = data['hpp'] ?? 0.0;
+    final double grossSales = (data['grossSales'] as num?)?.toDouble() ?? 0.0;
+    final double netProfit = (data['netProfit'] as num?)?.toDouble() ?? 0.0;
+    final double grossProfit = (data['grossProfit'] as num?)?.toDouble() ?? 0.0;
+    final double expenses = (data['expenses'] as num?)?.toDouble() ?? 0.0;
+    final double hpp = (data['hpp'] as num?)?.toDouble() ?? 0.0;
     final int transactionCount = data['transactionCount'] ?? 0;
     final List<Map<String, dynamic>> trend = List<Map<String, dynamic>>.from(data['trend'] ?? []);
     final List<Map<String, dynamic>> bestSellers = List<Map<String, dynamic>>.from(data['bestSellers'] ?? []);
     final List<Map<String, dynamic>> lowStock = List<Map<String, dynamic>>.from(data['lowStock'] ?? []);
 
+    final double profitMargin = grossSales > 0 ? (netProfit / grossSales) * 100 : 0.0;
+    final double avgTicket = transactionCount > 0 ? grossSales / transactionCount : 0.0;
+
     return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const SizedBox(height: 12),
+
           // ═══════════════════════════════════════
-          //  BLUE SUMMARY CARD (Hero section)
+          //  1. PERIOD SELECTOR (Modern Pill Segment)
           // ═══════════════════════════════════════
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFF1A56DB), Color(0xFF3B82F6)],
-              ),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF1A56DB).withValues(alpha: 0.35),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Top labels row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Total Penjualan',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white.withValues(alpha: 0.8),
-                      ),
-                    ),
-                    Text(
-                      'Profit Bersih',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.white.withValues(alpha: 0.8),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                // Big values row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        CurrencyFormatter.format(grossSales),
-                        style: GoogleFonts.poppins(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          (netProfit >= 0 ? '+' : '') + CurrencyFormatter.format(netProfit),
-                          style: GoogleFonts.poppins(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: netProfit >= 0 ? const Color(0xFF86EFAC) : const Color(0xFFFCA5A5),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          netProfit >= 0 ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
-                          size: 16,
-                          color: netProfit >= 0 ? const Color(0xFF86EFAC) : const Color(0xFFFCA5A5),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                // Divider
-                Container(
-                  height: 1,
-                  color: Colors.white.withValues(alpha: 0.15),
-                ),
-                const SizedBox(height: 12),
-                // Bottom row: Transaction Count & HPP
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.receipt_long_rounded, size: 14, color: Colors.white.withValues(alpha: 0.7)),
-                        const SizedBox(width: 6),
-                        Text(
-                          '$transactionCount Transaksi',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: Colors.white.withValues(alpha: 0.8),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      children: [
-                        Text(
-                          'HPP: ',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: Colors.white.withValues(alpha: 0.6),
-                          ),
-                        ),
-                        Text(
-                          CurrencyFormatter.format(hpp),
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: Colors.white.withValues(alpha: 0.9),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        GestureDetector(
-                          onTap: () => _showHppInfoDialog(context),
-                          child: Icon(
-                            Icons.info_outline_rounded,
-                            size: 14,
-                            color: Colors.white.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
+          _buildPeriodSection(),
+
+          const SizedBox(height: 16),
+
+          // ═══════════════════════════════════════
+          //  2. EXECUTIVE FINANCIAL HERO CARD
+          // ═══════════════════════════════════════
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _buildExecutiveHeroCard(
+              netProfit: netProfit,
+              grossSales: grossSales,
+              profitMargin: profitMargin,
+              transactionCount: transactionCount,
+              avgTicket: avgTicket,
             ),
           ),
 
           const SizedBox(height: 16),
 
           // ═══════════════════════════════════════
-          //  DATE RANGE PICKER CARD
+          //  3. KEY METRICS BENTO GRID (2x2)
           // ═══════════════════════════════════════
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: Colors.grey.shade200),
-              ),
-              child: InkWell(
-                onTap: () => _selectDateRange(context),
-                borderRadius: BorderRadius.circular(16),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppConstants.primaryColor.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.date_range_rounded,
-                          color: AppConstants.primaryColor,
-                          size: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Periode Laporan',
-                              style: GoogleFonts.poppins(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: AppConstants.textLightColor,
-                              ),
-                            ),
-                            Text(
-                              _dateRangeLabel,
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: AppConstants.textDarkColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Icon(
-                        Icons.arrow_drop_down_rounded,
-                        color: AppConstants.textLightColor,
-                        size: 28,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+            child: _buildMetricsGrid(
+              grossSales: grossSales,
+              hpp: hpp,
+              grossProfit: grossProfit,
+              expenses: expenses,
             ),
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 20),
 
-          // ── Quick Select Chips ──
+          // ═══════════════════════════════════════
+          //  4. SALES VELOCITY / TREND CHART
+          // ═══════════════════════════════════════
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _buildTrendChartCard(trend),
+          ),
+
+          const SizedBox(height: 20),
+
+          // ═══════════════════════════════════════
+          //  5. FINANCIAL BREAKDOWN VISUALIZER (Arus Kas)
+          // ═══════════════════════════════════════
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _buildFinancialFlowCard(
+              grossSales: grossSales,
+              hpp: hpp,
+              grossProfit: grossProfit,
+              expenses: expenses,
+              netProfit: netProfit,
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // ═══════════════════════════════════════
+          //  6. TOP SELLING PRODUCTS
+          // ═══════════════════════════════════════
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _buildTopPerformersCard(bestSellers),
+          ),
+
+          const SizedBox(height: 16),
+
+          // ═══════════════════════════════════════
+          //  7. INVENTORY SENTINEL (Stok Menipis)
+          // ═══════════════════════════════════════
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _buildInventoryAlertCard(lowStock),
+          ),
+
+          const SizedBox(height: 20),
+
+          // ═══════════════════════════════════════
+          //  8. QUICK ACCESS BAR
+          // ═══════════════════════════════════════
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _buildQuickShortcuts(),
+          ),
+
+          const SizedBox(height: 36),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────
+  //  PERIOD SELECTOR SECTION
+  // ─────────────────────────────────────────
+  Widget _buildPeriodSection() {
+    final periods = ['Hari Ini', '7 Hari Terakhir', 'Bulan Ini'];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Segmented Bar
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE2E8F0),
+              borderRadius: BorderRadius.circular(14),
+            ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: ['Hari Ini', '7 Hari Terakhir', 'Bulan Ini'].map((range) {
+              children: periods.map((range) {
                 final isSelected = _selectedRange == range;
                 return Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: InkWell(
-                      onTap: () {
-                        setState(() => _selectedRange = range);
-                        _updateDateRange();
-                        _loadData();
-                      },
-                      borderRadius: BorderRadius.circular(20),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          color: isSelected ? AppConstants.primaryColor : Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: isSelected ? AppConstants.primaryColor : Colors.grey.shade200,
-                          ),
-                          boxShadow: isSelected
-                              ? [
-                                  BoxShadow(
-                                    color: AppConstants.primaryColor.withValues(alpha: 0.15),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 2),
-                                  )
-                                ]
-                              : null,
-                        ),
-                        child: Center(
-                          child: Text(
-                            range,
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                              color: isSelected ? Colors.white : AppConstants.textLightColor,
-                            ),
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() => _selectedRange = range);
+                      _updateDateRange();
+                      _loadData();
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isSelected ? Colors.white : Colors.transparent,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.06),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Center(
+                        child: Text(
+                          range,
+                          style: GoogleFonts.poppins(
+                            fontSize: 11.5,
+                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                            color: isSelected ? const Color(0xFF0F172A) : const Color(0xFF64748B),
                           ),
                         ),
                       ),
@@ -477,110 +479,528 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
               }).toList(),
             ),
           ),
-
-          const SizedBox(height: 20),
-
-          // ═══════════════════════════════════════
-          //  TREND CHART
-          // ═══════════════════════════════════════
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _buildChartCard(trend),
-          ),
-
-          const SizedBox(height: 24),
-
-          // ═══════════════════════════════════════
-          //  CASH FLOW SECTION
-          // ═══════════════════════════════════════
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _buildCashFlowSection(grossSales, hpp, grossProfit, expenses, netProfit),
-          ),
-
-          const SizedBox(height: 24),
-
-          // ═══════════════════════════════════════
-          //  BEST SELLERS
-          // ═══════════════════════════════════════
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _buildListSection(
-              title: 'Produk Terlaris',
-              icon: Icons.star_rounded,
-              child: _buildBestSellersContent(bestSellers),
+          const SizedBox(height: 8),
+          // Custom Date Range Chip / Bar
+          InkWell(
+            onTap: () => _selectDateRange(context),
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.calendar_today_rounded, size: 14, color: Color(0xFF64748B)),
+                  const SizedBox(width: 8),
+                  Text(
+                    _dateRangeLabel,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF334155),
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    _selectedRange == 'Pilih Tanggal' ? 'Kustom' : 'Ubah Rentang',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppConstants.primaryColor,
+                    ),
+                  ),
+                  const SizedBox(width: 2),
+                  const Icon(Icons.chevron_right_rounded, size: 16, color: AppConstants.primaryColor),
+                ],
+              ),
             ),
           ),
-
-          const SizedBox(height: 16),
-
-          // ═══════════════════════════════════════
-          //  LOW STOCK
-          // ═══════════════════════════════════════
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _buildListSection(
-              title: 'Stok Menipis',
-              icon: Icons.warning_amber_rounded,
-              child: _buildLowStockContent(lowStock),
-            ),
-          ),
-
-          const SizedBox(height: 32),
         ],
       ),
     );
   }
 
   // ─────────────────────────────────────────
-  //  CHART CARD
+  //  EXECUTIVE HERO CARD (Deep Slate & Glassmorphism)
   // ─────────────────────────────────────────
-  Widget _buildChartCard(List<Map<String, dynamic>> trend) {
-    if (trend.isEmpty) {
-      return Container(
-        height: 180,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4)),
+  Widget _buildExecutiveHeroCard({
+    required double netProfit,
+    required double grossSales,
+    required double profitMargin,
+    required int transactionCount,
+    required double avgTicket,
+  }) {
+    final bool isPositive = netProfit >= 0;
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF0F172A), // Slate 900
+            Color(0xFF1E293B), // Slate 800
           ],
         ),
-        child: Center(
-          child: Text('Belum ada data tren.', style: GoogleFonts.poppins(fontSize: 12, color: AppConstants.textLightColor)),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF334155).withValues(alpha: 0.6)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.35),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          // Background ambient light pattern
+          Positioned(
+            right: -20,
+            top: -20,
+            child: Container(
+              width: 140,
+              height: 140,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: (isPositive ? const Color(0xFF10B981) : const Color(0xFFEF4444)).withValues(alpha: 0.08),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Header Row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 6,
+                                height: 6,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isPositive ? const Color(0xFF34D399) : const Color(0xFFF87171),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'PROFIT BERSIH',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 10,
+                                  letterSpacing: 0.8,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white.withValues(alpha: 0.9),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Margin badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: (isPositive ? const Color(0xFF059669) : const Color(0xFFDC2626)).withValues(alpha: 0.25),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: (isPositive ? const Color(0xFF34D399) : const Color(0xFFF87171)).withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isPositive ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                            size: 13,
+                            color: isPositive ? const Color(0xFF34D399) : const Color(0xFFFCA5A5),
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Margin ${profitMargin.toStringAsFixed(1)}%',
+                            style: GoogleFonts.poppins(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w600,
+                              color: isPositive ? const Color(0xFF34D399) : const Color(0xFFFCA5A5),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Big Net Profit Value
+                Text(
+                  (isPositive ? '' : '-') + CurrencyFormatter.format(netProfit.abs()),
+                  style: GoogleFonts.poppins(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+                Container(height: 1, color: Colors.white.withValues(alpha: 0.08)),
+                const SizedBox(height: 14),
+
+                // Bottom KPIs (Gross Sales, Orders, Avg Basket)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: _buildHeroSubMetric(
+                        label: 'Omzet Penjualan',
+                        value: CurrencyFormatter.format(grossSales),
+                        icon: Icons.payments_outlined,
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 28,
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      color: Colors.white.withValues(alpha: 0.1),
+                    ),
+                    Expanded(
+                      child: _buildHeroSubMetric(
+                        label: 'Transaksi',
+                        value: '$transactionCount Struk',
+                        icon: Icons.receipt_long_outlined,
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 28,
+                      margin: const EdgeInsets.symmetric(horizontal: 8),
+                      color: Colors.white.withValues(alpha: 0.1),
+                    ),
+                    Expanded(
+                      child: _buildHeroSubMetric(
+                        label: 'Rata-rata/Struk',
+                        value: CurrencyFormatter.format(avgTicket),
+                        icon: Icons.shopping_basket_outlined,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeroSubMetric({
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 11, color: Colors.white.withValues(alpha: 0.5)),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 9.5,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white.withValues(alpha: 0.55),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
-      );
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w600,
+            color: Colors.white.withValues(alpha: 0.95),
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+
+  // ─────────────────────────────────────────
+  //  METRICS BENTO GRID (2x2)
+  // ─────────────────────────────────────────
+  Widget _buildMetricsGrid({
+    required double grossSales,
+    required double hpp,
+    required double grossProfit,
+    required double expenses,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final double cardWidth = (constraints.maxWidth - 12) / 2;
+
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            _buildBentoMetricCard(
+              width: cardWidth,
+              title: 'Omzet Kotor',
+              value: grossSales,
+              icon: Icons.account_balance_wallet_outlined,
+              iconColor: const Color(0xFF2563EB), // Royal Blue
+              bgColor: const Color(0xFFEFF6FF),
+              subtitle: 'Penjualan riil belum potong HPP',
+            ),
+            _buildBentoMetricCard(
+              width: cardWidth,
+              title: 'Beban Pokok (HPP)',
+              value: hpp,
+              icon: Icons.inventory_2_outlined,
+              iconColor: const Color(0xFFD97706), // Amber
+              bgColor: const Color(0xFFFFFBEB),
+              subtitle: 'Modal pokok barang keluar',
+              trailing: GestureDetector(
+                onTap: () => _showHppInfoDialog(context),
+                child: const Icon(Icons.info_outline_rounded, size: 15, color: Color(0xFFB45309)),
+              ),
+            ),
+            _buildBentoMetricCard(
+              width: cardWidth,
+              title: 'Laba Kotor',
+              value: grossProfit,
+              icon: Icons.show_chart_rounded,
+              iconColor: const Color(0xFF7C3AED), // Purple
+              bgColor: const Color(0xFFF5F3FF),
+              subtitle: 'Omzet dikurangi modal HPP',
+            ),
+            _buildBentoMetricCard(
+              width: cardWidth,
+              title: 'Biaya Operasional',
+              value: expenses,
+              icon: Icons.outbox_rounded,
+              iconColor: const Color(0xFFDC2626), // Rose Red
+              bgColor: const Color(0xFFFEF2F2),
+              subtitle: 'Beban operasional & lain-lain',
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildBentoMetricCard({
+    required double width,
+    required String title,
+    required double value,
+    required IconData icon,
+    required Color iconColor,
+    required Color bgColor,
+    required String subtitle,
+    Widget? trailing,
+  }) {
+    return Container(
+      width: width,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  color: bgColor,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 16, color: iconColor),
+              ),
+              if (trailing != null) trailing,
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: GoogleFonts.poppins(
+              fontSize: 11.5,
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF64748B),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            CurrencyFormatter.format(value),
+            style: GoogleFonts.poppins(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w700,
+              color: const Color(0xFF0F172A),
+              letterSpacing: -0.2,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: GoogleFonts.poppins(
+              fontSize: 9.5,
+              color: const Color(0xFF94A3B8),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────
+  //  TREND CHART CARD
+  // ─────────────────────────────────────────
+  Widget _buildTrendChartCard(List<Map<String, dynamic>> trend) {
+    double totalWeekSales = 0.0;
+    for (var t in trend) {
+      totalWeekSales += (t['amount'] as num?)?.toDouble() ?? 0.0;
     }
 
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Tren Penjualan',
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Performa 7 Hari Terakhir',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      color: const Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Total: ${CurrencyFormatter.format(totalWeekSales)}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF334155),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          if (trend.isEmpty)
+            SizedBox(
+              height: 160,
+              child: Center(
+                child: Text('Belum ada histori penjualan 7 hari terakhir.',
+                    style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF94A3B8))),
+              ),
+            )
+          else
+            _buildFlChart(trend),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFlChart(List<Map<String, dynamic>> trend) {
     final List<FlSpot> spots = [];
     double maxAmount = 0.0;
     for (int i = 0; i < trend.length; i++) {
-      final double amt = trend[i]['amount'];
+      final double amt = (trend[i]['amount'] as num?)?.toDouble() ?? 0.0;
       spots.add(FlSpot(i.toDouble(), amt));
       if (amt > maxAmount) maxAmount = amt;
     }
     if (maxAmount == 0.0) maxAmount = 100000.0;
 
-    return Container(
-      height: 220,
-      padding: const EdgeInsets.fromLTRB(8, 24, 16, 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4)),
-        ],
-      ),
+    return SizedBox(
+      height: 190,
       child: LineChart(
         LineChartData(
           gridData: FlGridData(
             show: true,
             drawVerticalLine: false,
             horizontalInterval: maxAmount / 4,
-            getDrawingHorizontalLine: (value) => FlLine(
-              color: Colors.grey.shade100,
+            getDrawingHorizontalLine: (value) => const FlLine(
+              color: Color(0xFFF1F5F9),
               strokeWidth: 1,
-              dashArray: [5, 5],
+              dashArray: [4, 4],
             ),
           ),
           titlesData: FlTitlesData(
@@ -590,14 +1010,17 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
             bottomTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 22,
+                reservedSize: 24,
                 interval: 1,
                 getTitlesWidget: (value, meta) {
                   final idx = value.toInt();
                   if (idx >= 0 && idx < trend.length) {
-                    return Text(
-                      trend[idx]['day'],
-                      style: GoogleFonts.poppins(fontSize: 9, color: AppConstants.textLightColor),
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Text(
+                        trend[idx]['day'],
+                        style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w500, color: const Color(0xFF94A3B8)),
+                      ),
                     );
                   }
                   return const SizedBox();
@@ -607,20 +1030,17 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
             leftTitles: AxisTitles(
               sideTitles: SideTitles(
                 showTitles: true,
-                reservedSize: 48,
+                reservedSize: 42,
                 interval: maxAmount / 4,
                 getTitlesWidget: (value, meta) {
                   if (value == 0) return const SizedBox();
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: Text(
-                      value >= 1000000
-                          ? '${(value / 1000000).toStringAsFixed(1)}jt'
-                          : value >= 1000
-                              ? '${(value / 1000).toStringAsFixed(0)}k'
-                              : value.toStringAsFixed(0),
-                      style: GoogleFonts.poppins(fontSize: 9, color: AppConstants.textLightColor),
-                    ),
+                  return Text(
+                    value >= 1000000
+                        ? '${(value / 1000000).toStringAsFixed(1)}jt'
+                        : value >= 1000
+                            ? '${(value / 1000).toStringAsFixed(0)}rb'
+                            : value.toStringAsFixed(0),
+                    style: GoogleFonts.poppins(fontSize: 9.5, fontWeight: FontWeight.w500, color: const Color(0xFF94A3B8)),
                   );
                 },
               ),
@@ -630,20 +1050,23 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
           minX: 0,
           maxX: (trend.length - 1).toDouble(),
           minY: 0,
-          maxY: maxAmount * 1.2,
+          maxY: maxAmount * 1.15,
           lineTouchData: LineTouchData(
             touchTooltipData: LineTouchTooltipData(
+              tooltipRoundedRadius: 10,
               getTooltipItems: (touchedSpots) {
                 return touchedSpots.map((spot) {
                   final idx = spot.x.toInt();
                   final day = idx >= 0 && idx < trend.length ? trend[idx]['day'] : '';
                   return LineTooltipItem(
-                    '$day\n${CurrencyFormatter.format(spot.y)}',
-                    GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
+                    '$day\n',
+                    GoogleFonts.poppins(fontSize: 10, color: const Color(0xFF94A3B8)),
+                    children: [
+                      TextSpan(
+                        text: CurrencyFormatter.format(spot.y),
+                        style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                    ],
                   );
                 }).toList();
               },
@@ -654,7 +1077,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
               spots: spots,
               isCurved: true,
               curveSmoothness: 0.35,
-              color: AppConstants.primaryColor,
+              color: const Color(0xFF2563EB),
               barWidth: 3,
               isStrokeCapRound: true,
               dotData: FlDotData(
@@ -663,7 +1086,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                   radius: 3.5,
                   color: Colors.white,
                   strokeWidth: 2.5,
-                  strokeColor: AppConstants.primaryColor,
+                  strokeColor: const Color(0xFF2563EB),
                 ),
               ),
               belowBarData: BarAreaData(
@@ -672,8 +1095,8 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    AppConstants.primaryColor.withValues(alpha: 0.25),
-                    AppConstants.primaryColor.withValues(alpha: 0.02),
+                    const Color(0xFF2563EB).withValues(alpha: 0.18),
+                    const Color(0xFF2563EB).withValues(alpha: 0.0),
                   ],
                 ),
               ),
@@ -685,107 +1108,171 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   }
 
   // ─────────────────────────────────────────
-  //  CASH FLOW SECTION
+  //  FINANCIAL FLOW BREAKDOWN (Arus Kas)
   // ─────────────────────────────────────────
-  Widget _buildCashFlowSection(
-    double grossSales,
-    double hpp,
-    double grossProfit,
-    double expenses,
-    double netProfit,
-  ) {
+  Widget _buildFinancialFlowCard({
+    required double grossSales,
+    required double hpp,
+    required double grossProfit,
+    required double expenses,
+    required double netProfit,
+  }) {
+    final double hppPercent = grossSales > 0 ? (hpp / grossSales).clamp(0.0, 1.0) : 0.0;
+    final double expPercent = grossSales > 0 ? (expenses / grossSales).clamp(0.0, 1.0) : 0.0;
+    final double profitPercent = grossSales > 0 ? (netProfit / grossSales).clamp(0.0, 1.0) : 0.0;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Arus Kas',
+                'Struktur Arus Kas',
                 style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppConstants.textDarkColor,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF0F172A),
                 ),
               ),
-              Text(
-                _dateRangeLabel,
-                style: GoogleFonts.poppins(
-                  fontSize: 11,
-                  color: AppConstants.textLightColor,
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const PnlReportPage()),
+                  );
+                },
+                child: Row(
+                  children: [
+                    Text(
+                      'Laporan P&L',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppConstants.primaryColor,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    const Icon(Icons.arrow_forward_ios_rounded, size: 11, color: AppConstants.primaryColor),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
-          // Penjualan Kotor
-          _buildCashFlowRow(
-            dotColor: const Color(0xFF3B82F6),
-            label: 'Penjualan Kotor',
+          // Visual Proportion Segment Bar
+          if (grossSales > 0) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: SizedBox(
+                height: 12,
+                child: Row(
+                  children: [
+                    if (hppPercent > 0)
+                      Expanded(
+                        flex: (hppPercent * 100).toInt(),
+                        child: Container(color: const Color(0xFFF59E0B)), // HPP Amber
+                      ),
+                    if (expPercent > 0)
+                      Expanded(
+                        flex: (expPercent * 100).toInt(),
+                        child: Container(color: const Color(0xFFEF4444)), // Expenses Red
+                      ),
+                    if (profitPercent > 0)
+                      Expanded(
+                        flex: (profitPercent * 100).toInt(),
+                        child: Container(color: const Color(0xFF10B981)), // Profit Green
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 10),
+            // Legend
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildFlowLegend(label: 'HPP (${(hppPercent * 100).toStringAsFixed(0)}%)', color: const Color(0xFFF59E0B)),
+                _buildFlowLegend(label: 'Biaya (${(expPercent * 100).toStringAsFixed(0)}%)', color: const Color(0xFFEF4444)),
+                _buildFlowLegend(label: 'Net Margin (${(profitPercent * 100).toStringAsFixed(0)}%)', color: const Color(0xFF10B981)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(height: 1, color: const Color(0xFFF1F5F9)),
+            const SizedBox(height: 14),
+          ],
+
+          // Breakdown List Rows
+          _buildFlowRow(
+            label: 'Total Omzet Kotor',
             amount: grossSales,
-            isPositive: true,
+            color: const Color(0xFF0F172A),
+            isBold: true,
           ),
-          const SizedBox(height: 14),
-
-          // HPP
-          _buildCashFlowRow(
-            dotColor: const Color(0xFFF59E0B),
-            label: 'Harga Pokok (HPP)',
-            amount: hpp,
-            isPositive: false,
+          const SizedBox(height: 10),
+          _buildFlowRow(
+            label: 'Harga Pokok Penjualan (HPP)',
+            amount: -hpp,
+            color: const Color(0xFFD97706),
           ),
-          const SizedBox(height: 14),
-
-          // Gross Profit
-          _buildCashFlowRow(
-            dotColor: const Color(0xFF8B5CF6),
-            label: 'Profit Kotor',
+          const SizedBox(height: 10),
+          _buildFlowRow(
+            label: 'Laba Kotor (Gross Profit)',
             amount: grossProfit,
-            isPositive: true,
+            color: const Color(0xFF475569),
+          ),
+          const SizedBox(height: 10),
+          _buildFlowRow(
+            label: 'Biaya Operasional Toko',
+            amount: -expenses,
+            color: const Color(0xFFDC2626),
           ),
           const SizedBox(height: 14),
+          Container(height: 1, color: const Color(0xFFE2E8F0)),
+          const SizedBox(height: 14),
 
-          // Expenses
-          _buildCashFlowRow(
-            dotColor: const Color(0xFFEF4444),
-            label: 'Biaya Operasional',
-            amount: expenses,
-            isPositive: false,
-          ),
-
-          const SizedBox(height: 16),
-          Container(height: 1, color: Colors.grey.shade200),
-          const SizedBox(height: 16),
-
-          // Total (Net Profit)
+          // Total Row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Total Profit Bersih',
-                style: GoogleFonts.poppins(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: AppConstants.textDarkColor,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Laba Bersih Akhir',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0F172A),
+                    ),
+                  ),
+                  Text(
+                    'Setelah HPP & seluruh biaya',
+                    style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFF94A3B8)),
+                  ),
+                ],
               ),
               Text(
                 (netProfit >= 0 ? '+' : '') + CurrencyFormatter.format(netProfit),
                 style: GoogleFonts.poppins(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: netProfit >= 0 ? const Color(0xFF059669) : AppConstants.errorColor,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: netProfit >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626),
                 ),
               ),
             ],
@@ -795,40 +1282,44 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
     );
   }
 
-  Widget _buildCashFlowRow({
-    required Color dotColor,
+  Widget _buildFlowLegend({required String label, required Color color}) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w500, color: const Color(0xFF64748B)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFlowRow({
     required String label,
     required double amount,
-    required bool isPositive,
+    required Color color,
+    bool isBold = false,
   }) {
+    final bool isNegative = amount < 0;
     return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Colored dot
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(
-            color: dotColor,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            label,
-            style: GoogleFonts.poppins(
-              fontSize: 13,
-              color: AppConstants.textDarkColor,
-              fontWeight: FontWeight.w500,
-            ),
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 12.5,
+            fontWeight: isBold ? FontWeight.w600 : FontWeight.w400,
+            color: const Color(0xFF475569),
           ),
         ),
         Text(
-          CurrencyFormatter.format(amount),
+          (isNegative ? '- ' : '') + CurrencyFormatter.format(amount.abs()),
           style: GoogleFonts.poppins(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: isPositive ? const Color(0xFF059669) : AppConstants.errorColor,
+            fontSize: 12.5,
+            fontWeight: isBold ? FontWeight.w700 : FontWeight.w600,
+            color: color,
           ),
         ),
       ],
@@ -836,213 +1327,410 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   }
 
   // ─────────────────────────────────────────
-  //  GENERIC LIST SECTION CARD
+  //  TOP PERFORMERS (Best Sellers)
   // ─────────────────────────────────────────
-  Widget _buildListSection({
-    required String title,
-    required IconData icon,
-    required Widget child,
-  }) {
+  Widget _buildTopPerformersCard(List<Map<String, dynamic>> bestSellers) {
+    final double maxQty = bestSellers.isNotEmpty ? (bestSellers.first['qty'] as num?)?.toDouble() ?? 1.0 : 1.0;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(icon, size: 18, color: AppConstants.primaryColor),
-              const SizedBox(width: 8),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.emoji_events_rounded, size: 16, color: Color(0xFFD97706)),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Produk Terlaris',
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0F172A),
+                    ),
+                  ),
+                ],
+              ),
               Text(
-                title,
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: AppConstants.textDarkColor,
-                ),
+                'Top 5 Barang',
+                style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          child,
+
+          if (bestSellers.isEmpty)
+            SizedBox(
+              height: 80,
+              child: Center(
+                child: Text('Belum ada transaksi produk pada periode ini.',
+                    style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF94A3B8))),
+              ),
+            )
+          else
+            Column(
+              children: bestSellers.asMap().entries.map((entry) {
+                final int index = entry.key;
+                final item = entry.value;
+                final double qty = (item['qty'] as num?)?.toDouble() ?? 0.0;
+                final double ratio = maxQty > 0 ? (qty / maxQty).clamp(0.05, 1.0) : 0.0;
+
+                // Color rank
+                Color badgeBg;
+                Color badgeText;
+                if (index == 0) {
+                  badgeBg = const Color(0xFFFEF3C7);
+                  badgeText = const Color(0xFFB45309);
+                } else if (index == 1) {
+                  badgeBg = const Color(0xFFF1F5F9);
+                  badgeText = const Color(0xFF475569);
+                } else if (index == 2) {
+                  badgeBg = const Color(0xFFFFEDD5);
+                  badgeText = const Color(0xFFC2410C);
+                } else {
+                  badgeBg = const Color(0xFFF8FAFC);
+                  badgeText = const Color(0xFF94A3B8);
+                }
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Stack(
+                    children: [
+                      // Background progress fill
+                      Positioned.fill(
+                        child: FractionallySizedBox(
+                          alignment: Alignment.centerLeft,
+                          widthFactor: ratio,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                color: badgeBg,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  '#${index + 1}',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.bold,
+                                    color: badgeText,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                item['name'] ?? '-',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF1E293B),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFF6FF),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '${CurrencyFormatter.formatQty(qty)} Terjual',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF2563EB),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
         ],
       ),
     );
   }
 
   // ─────────────────────────────────────────
-  //  BEST SELLERS CONTENT
+  //  INVENTORY SENTINEL (Low Stock)
   // ─────────────────────────────────────────
-  Widget _buildBestSellersContent(List<Map<String, dynamic>> bestSellers) {
-    if (bestSellers.isEmpty) {
-      return SizedBox(
-        height: 80,
-        child: Center(
-          child: Text(
-            'Belum ada data penjualan.',
-            style: GoogleFonts.poppins(fontSize: 12, color: AppConstants.textLightColor),
+  Widget _buildInventoryAlertCard(List<Map<String, dynamic>> lowStock) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-        ),
-      );
-    }
-
-    return Column(
-      children: bestSellers.asMap().entries.map((entry) {
-        final int index = entry.key;
-        final item = entry.value;
-
-        // Medal colors for top 3
-        Color rankColor;
-        if (index == 0) {
-          rankColor = const Color(0xFFFFD700);
-        } else if (index == 1) {
-          rankColor = const Color(0xFFC0C0C0);
-        } else if (index == 2) {
-          rankColor = const Color(0xFFCD7F32);
-        } else {
-          rankColor = Colors.grey.shade400;
-        }
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Row(
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Rank badge
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: rankColor.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Center(
-                  child: index < 3
-                      ? Icon(Icons.emoji_events_rounded, size: 16, color: rankColor)
-                      : Text(
-                          '${index + 1}',
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: AppConstants.textLightColor,
-                          ),
-                        ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  item['name'],
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: AppConstants.textDarkColor,
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEE2E2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.warning_amber_rounded, size: 16, color: Color(0xFFDC2626)),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Peringatan Stok Menipis',
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0F172A),
+                    ),
+                  ),
+                ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppConstants.primaryColor.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const StockReportPage()),
+                  );
+                },
                 child: Text(
-                  '${CurrencyFormatter.formatQty(item['qty'])}x',
+                  'Cek Semua',
                   style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
                     color: AppConstants.primaryColor,
                   ),
                 ),
               ),
             ],
           ),
-        );
-      }).toList(),
+          const SizedBox(height: 16),
+
+          if (lowStock.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.check_circle_outline_rounded, size: 18, color: Color(0xFF059669)),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Seluruh stok barang dalam kondisi aman',
+                    style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: const Color(0xFF059669)),
+                  ),
+                ],
+              ),
+            )
+          else
+            Column(
+              children: lowStock.take(5).map((item) {
+                final Product p = item['product'];
+                final ProductUnit u = item['unit'];
+                final double currentStock = (item['currentStock'] as num?)?.toDouble() ?? 0.0;
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF1F2),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFFFE4E6)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.priority_high_rounded, size: 12, color: Color(0xFFE11D48)),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          p.name,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF0F172A),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE11D48),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Sisa ${CurrencyFormatter.formatQty(currentStock)} ${u.name}',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+        ],
+      ),
     );
   }
 
   // ─────────────────────────────────────────
-  //  LOW STOCK CONTENT
+  //  QUICK ACCESS SHORTCUTS
   // ─────────────────────────────────────────
-  Widget _buildLowStockContent(List<Map<String, dynamic>> lowStock) {
-    if (lowStock.isEmpty) {
-      return SizedBox(
-        height: 80,
-        child: Center(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildQuickShortcuts() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(Icons.check_circle_outline_rounded, size: 20, color: AppConstants.successColor.withValues(alpha: 0.6)),
-              const SizedBox(width: 8),
               Text(
-                'Semua stok barang aman!',
-                style: GoogleFonts.poppins(fontSize: 12, color: AppConstants.successColor),
+                'Laporan Lengkap Toko',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white,
+                ),
+              ),
+              const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white70),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              _buildShortcutButton(
+                title: 'Laba Rugi',
+                icon: Icons.analytics_outlined,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const PnlReportPage())),
+              ),
+              const SizedBox(width: 8),
+              _buildShortcutButton(
+                title: 'Penjualan',
+                icon: Icons.receipt_long_outlined,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const SalesReportPage())),
+              ),
+              const SizedBox(width: 8),
+              _buildShortcutButton(
+                title: 'Stok Barang',
+                icon: Icons.inventory_2_outlined,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const StockReportPage())),
+              ),
+              const SizedBox(width: 8),
+              _buildShortcutButton(
+                title: 'Shift Kasir',
+                icon: Icons.access_time_rounded,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const ShiftReportPage())),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShortcutButton({
+    required String title,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, size: 18, color: Colors.white.withValues(alpha: 0.9)),
+              const SizedBox(height: 4),
+              Text(
+                title,
+                style: GoogleFonts.poppins(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.white.withValues(alpha: 0.85),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
         ),
-      );
-    }
-
-    return Column(
-      children: lowStock.take(5).map((item) {
-        final Product p = item['product'];
-        final ProductUnit u = item['unit'];
-        final double currentStock = item['currentStock'];
-
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Row(
-            children: [
-              Container(
-                width: 28,
-                height: 28,
-                decoration: BoxDecoration(
-                  color: AppConstants.errorColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(Icons.warning_amber_rounded, size: 16, color: AppConstants.errorColor),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  p.name,
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: AppConstants.textDarkColor,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                decoration: BoxDecoration(
-                  color: AppConstants.errorColor.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'Sisa ${CurrencyFormatter.formatQty(currentStock)} ${u.name}',
-                  style: GoogleFonts.poppins(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: AppConstants.errorColor,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
+      ),
     );
   }
 }

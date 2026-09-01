@@ -6,7 +6,6 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../../core/constants/constants.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/di/injection.dart';
-import '../../../../core/widgets/curved_header.dart';
 import '../bloc/inventory_cubit.dart';
 import '../../../../core/utils/scan_sound_helper.dart';
 import 'stock_card_page.dart';
@@ -61,7 +60,7 @@ class _StockOpnamePageState extends State<StockOpnamePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppConstants.backgroundColor,
+      backgroundColor: const Color(0xFFF8FAFC),
       body: BlocConsumer<InventoryCubit, InventoryState>(
         listener: (context, state) {
           if (state is InventorySuccess) {
@@ -71,7 +70,7 @@ class _StockOpnamePageState extends State<StockOpnamePage> {
           }
           if (state is InventoryError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: AppConstants.errorColor),
+              SnackBar(content: Text(state.message), backgroundColor: const Color(0xFFDC2626)),
             );
           }
         },
@@ -81,346 +80,319 @@ class _StockOpnamePageState extends State<StockOpnamePage> {
             rawItemsList = state.items;
           }
 
-          return Stack(
-            children: [
-              const CurvedHeader(height: 155),
-              SafeArea(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Top AppBar
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                                color: Colors.white),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                          Text(
-                            'Stok Inventori & Opname',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+          return SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Clean Executive Header
+                Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.fromLTRB(6, 6, 12, 10),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                            color: Color(0xFF0F172A), size: 18),
+                        onPressed: () => Navigator.pop(context),
                       ),
-                    ),
-
-                    // Search Card
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Card(
-                        elevation: 4,
-                        shadowColor: AppConstants.primaryColor.withValues(alpha: 0.1),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                      const SizedBox(width: 2),
+                      Text(
+                        'Stok Inventori & Opname',
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFF0F172A),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(height: 1, color: const Color(0xFFE2E8F0)),
+
+                // Search Bar Clean
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
                           child: TextField(
                             controller: _searchController,
+                            style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A)),
                             onChanged: (val) {
                               setState(() {
                                 _searchQuery = val.trim().toLowerCase();
                               });
                             },
-                            onSubmitted: (val) {
-                              final query = val.trim().toLowerCase();
-                              if (query.isNotEmpty) {
-                                try {
-                                  final match = rawItemsList.firstWhere(
-                                    (item) {
-                                      final Product p = item['product'];
-                                      return p.barcode?.toLowerCase() == query || p.sku?.toLowerCase() == query;
-                                    },
-                                    orElse: () => <String, dynamic>{},
-                                  );
-
-                                  if (match.isNotEmpty) {
-                                    final Product product = match['product'];
-                                    final productUnits = rawItemsList.where((item) {
-                                      return (item['product'] as Product).id == product.id;
-                                    }).toList();
-
-                                    _searchController.clear();
-                                    setState(() {
-                                      _searchQuery = '';
-                                    });
-
-                                    _showProductAdjustmentDialog(
-                                      context,
-                                      product: product,
-                                      productUnits: productUnits,
-                                    );
-                                  }
-                                } catch (e) {
-                                  // ignore
-                                }
-                              }
-                            },
                             decoration: InputDecoration(
-                              hintText: 'Cari nama produk atau SKU...',
-                              prefixIcon: const Icon(Icons.search_rounded),
-                              suffixIcon: rawItemsList.isNotEmpty
+                              hintText: 'Cari nama produk / scan barcode...',
+                              hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                              prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B), size: 20),
+                              suffixIcon: _searchController.text.isNotEmpty
                                   ? IconButton(
-                                      icon: const Icon(Icons.qr_code_scanner_rounded, color: AppConstants.primaryColor),
-                                      tooltip: 'Scan Barcode',
-                                      onPressed: () => _showBarcodeScanner(rawItemsList),
+                                      icon: const Icon(Icons.clear_rounded, size: 16),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() => _searchQuery = '');
+                                      },
                                     )
                                   : null,
                               border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
+                      const SizedBox(width: 8),
+                      Material(
+                        color: const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(12),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => _showBarcodeScanner(rawItemsList),
+                          child: const Padding(
+                            padding: EdgeInsets.all(11),
+                            child: Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 20),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
-                    // Inventory list
-                    Expanded(
-                      child: Builder(
-                        builder: (context) {
-                          if (state is InventoryLoading) {
-                            return const Center(child: CircularProgressIndicator());
+                // Main Content List
+                Expanded(
+                  child: BlocBuilder<InventoryCubit, InventoryState>(
+                    builder: (context, state) {
+                      if (state is InventoryLoading) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (state is InventoryLoaded) {
+                        var itemsList = state.items;
+
+                        if (_searchQuery.isNotEmpty) {
+                          itemsList = itemsList.where((item) {
+                            final Product p = item['product'];
+                            return p.name.toLowerCase().contains(_searchQuery) ||
+                                (p.sku?.toLowerCase().contains(_searchQuery) ?? false);
+                          }).toList();
+                        }
+
+                        final Map<int, Map<String, dynamic>> grouped = {};
+                        for (var item in itemsList) {
+                          final Product p = item['product'];
+                          final ProductUnit u = item['unit'];
+                          final InventoryData? inv = item['inventory'];
+
+                          if (!grouped.containsKey(p.id)) {
+                            grouped[p.id] = {
+                              'product': p,
+                              'units': <Map<String, dynamic>>[],
+                            };
                           }
-                          if (state is InventoryLoaded) {
-                            var itemsList = state.items;
+                          (grouped[p.id]!['units'] as List<Map<String, dynamic>>).add({
+                            'unit': u,
+                            'inventory': inv,
+                          });
+                        }
 
-                            // Terapkan filter pencarian
-                            if (_searchQuery.isNotEmpty) {
-                              itemsList = itemsList.where((item) {
-                                final Product p = item['product'];
-                                return p.name.toLowerCase().contains(_searchQuery) ||
-                                    (p.sku?.toLowerCase().contains(_searchQuery) ?? false);
-                              }).toList();
-                            }
+                        final groupedList = grouped.values.toList();
 
-                            // Mengelompokkan item berdasarkan ID Produk
-                            final Map<int, Map<String, dynamic>> grouped = {};
-                            for (var item in itemsList) {
-                              final Product p = item['product'];
-                              final ProductUnit u = item['unit'];
-                              final InventoryData? inv = item['inventory'];
-
-                              if (!grouped.containsKey(p.id)) {
-                                grouped[p.id] = {
-                                  'product': p,
-                                  'units': <Map<String, dynamic>>[],
-                                };
-                              }
-                              (grouped[p.id]!['units'] as List<Map<String, dynamic>>).add({
-                                'unit': u,
-                                'inventory': inv,
-                              });
-                            }
-
-                            final groupedList = grouped.values.toList();
-
-                            if (groupedList.isEmpty) {
-                              return RefreshIndicator(
-                                onRefresh: () async {
-                                  context.read<InventoryCubit>().loadInventory();
-                                },
-                                child: ListView(
-                                  physics: const AlwaysScrollableScrollPhysics(),
-                                  children: [
-                                    SizedBox(
-                                      height: MediaQuery.of(context).size.height * 0.5,
-                                      child: Center(
-                                        child: Text(
-                                          'Belum ada data stok.',
-                                          style: GoogleFonts.poppins(color: AppConstants.textLightColor),
-                                        ),
-                                      ),
+                        if (groupedList.isEmpty) {
+                          return RefreshIndicator(
+                            onRefresh: () async {
+                              context.read<InventoryCubit>().loadInventory();
+                            },
+                            child: ListView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              children: [
+                                SizedBox(
+                                  height: MediaQuery.of(context).size.height * 0.5,
+                                  child: Center(
+                                    child: Text(
+                                      'Belum ada data stok.',
+                                      style: GoogleFonts.poppins(color: const Color(0xFF94A3B8)),
                                     ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        return RefreshIndicator(
+                          onRefresh: () async {
+                            context.read<InventoryCubit>().loadInventory();
+                          },
+                          child: ListView.builder(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
+                            itemCount: groupedList.length,
+                            itemBuilder: (context, index) {
+                              final item = groupedList[index];
+                              final Product product = item['product'];
+                              final List<Map<String, dynamic>> productUnits = 
+                                  List<Map<String, dynamic>>.from(item['units']);
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                product.name,
+                                                style: GoogleFonts.poppins(
+                                                  fontWeight: FontWeight.w700,
+                                                  color: const Color(0xFF0F172A),
+                                                  fontSize: 14.5,
+                                                ),
+                                              ),
+                                              if (product.sku != null) ...[
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  'SKU: ${product.sku}',
+                                                  style: GoogleFonts.poppins(
+                                                    fontSize: 11,
+                                                    color: const Color(0xFF64748B),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        FilledButton.icon(
+                                          onPressed: () => _showProductAdjustmentDialog(
+                                            context,
+                                            product: product,
+                                            productUnits: productUnits,
+                                          ),
+                                          icon: const Icon(Icons.edit_note_rounded, size: 16),
+                                          label: const Text('Opname'),
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor: const Color(0xFF0F172A),
+                                            foregroundColor: Colors.white,
+                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                            minimumSize: Size.zero,
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(10),
+                                            ),
+                                            textStyle: GoogleFonts.poppins(
+                                                fontSize: 11.5, fontWeight: FontWeight.w700),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                                    const SizedBox(height: 12),
+                                    
+                                    ...productUnits.map((uMap) {
+                                      final ProductUnit unit = uMap['unit'];
+                                      final InventoryData? inv = uMap['inventory'];
+                                      final double currentStock = inv?.quantity ?? 0.0;
+                                      final isLowStock = currentStock <= product.minStockAlert;
+
+                                      return Padding(
+                                        padding: const EdgeInsets.only(bottom: 10),
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(
+                                                      horizontal: 8, vertical: 3),
+                                                  decoration: BoxDecoration(
+                                                    color: isLowStock
+                                                        ? const Color(0xFFFEF2F2)
+                                                        : const Color(0xFFF1F5F9),
+                                                    borderRadius: BorderRadius.circular(6),
+                                                    border: Border.all(
+                                                      color: isLowStock
+                                                          ? const Color(0xFFFECACA)
+                                                          : const Color(0xFFE2E8F0),
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    unit.name,
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.w700,
+                                                      color: isLowStock
+                                                          ? const Color(0xFFDC2626)
+                                                          : const Color(0xFF0F172A),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  '${currentStock % 1 == 0 ? currentStock.toInt() : currentStock.toStringAsFixed(2)} ${unit.name}',
+                                                  style: GoogleFonts.poppins(
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 13,
+                                                    color: isLowStock ? const Color(0xFFDC2626) : const Color(0xFF0F172A),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 10),
+                                                GestureDetector(
+                                                  onTap: () {
+                                                    Navigator.push(
+                                                      context,
+                                                      MaterialPageRoute(
+                                                        builder: (context) => BlocProvider<InventoryCubit>(
+                                                          create: (context) => getIt<InventoryCubit>(),
+                                                          child: StockCardPage(product: product),
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                  child: const Icon(Icons.history_rounded,
+                                                      size: 16, color: Color(0xFF64748B)),
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    }),
                                   ],
                                 ),
                               );
-                            }
-
-                            return RefreshIndicator(
-                              onRefresh: () async {
-                                context.read<InventoryCubit>().loadInventory();
-                              },
-                              child: ListView.builder(
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                itemCount: groupedList.length,
-                                itemBuilder: (context, index) {
-                                  final item = groupedList[index];
-                                  final Product product = item['product'];
-                                  final List<Map<String, dynamic>> productUnits = 
-                                      List<Map<String, dynamic>>.from(item['units']);
-
-                                  return Card(
-                                    margin: const EdgeInsets.only(bottom: 14),
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-                                      side: const BorderSide(color: AppConstants.borderLightColor),
-                                    ),
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(16),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          // Info Utama Produk & Tombol Opname Produk
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                                  children: [
-                                                    Text(
-                                                      product.name,
-                                                      style: GoogleFonts.poppins(
-                                                        fontWeight: FontWeight.bold,
-                                                        color: AppConstants.textDarkColor,
-                                                        fontSize: 15,
-                                                      ),
-                                                    ),
-                                                    if (product.sku != null) ...[
-                                                      const SizedBox(height: 2),
-                                                      Text(
-                                                        'SKU: ${product.sku}',
-                                                        style: const TextStyle(
-                                                          fontSize: 11,
-                                                          color: AppConstants.textLightColor,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ],
-                                                ),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              ElevatedButton.icon(
-                                                onPressed: () => _showProductAdjustmentDialog(
-                                                  context,
-                                                  product: product,
-                                                  productUnits: productUnits,
-                                                ),
-                                                icon: const Icon(Icons.edit_note_rounded, size: 16),
-                                                label: const Text('OPNAME'),
-                                                style: ElevatedButton.styleFrom(
-                                                  padding: const EdgeInsets.symmetric(
-                                                      horizontal: 12, vertical: 8),
-                                                  minimumSize: Size.zero,
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                                                  ),
-                                                  textStyle: const TextStyle(
-                                                      fontSize: 11, fontWeight: FontWeight.bold),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 12),
-                                          const Divider(height: 1, color: AppConstants.borderLightColor),
-                                          const SizedBox(height: 12),
-                                          
-                                          // Daftar Satuan Unit untuk Produk ini
-                                          ...productUnits.map((uMap) {
-                                            final ProductUnit unit = uMap['unit'];
-                                            final InventoryData? inv = uMap['inventory'];
-                                            final double currentStock = inv?.quantity ?? 0.0;
-                                            final isLowStock = currentStock <= product.minStockAlert;
-
-                                            return Padding(
-                                              padding: const EdgeInsets.only(bottom: 12),
-                                              child: Row(
-                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                children: [
-                                                  // Nama Unit & Status Stok
-                                                  Row(
-                                                    children: [
-                                                      Container(
-                                                        padding: const EdgeInsets.symmetric(
-                                                            horizontal: 8, vertical: 4),
-                                                        decoration: BoxDecoration(
-                                                          color: isLowStock
-                                                              ? AppConstants.errorColor.withValues(alpha: 0.1)
-                                                              : AppConstants.primaryColor.withValues(alpha: 0.1),
-                                                          borderRadius: BorderRadius.circular(4),
-                                                        ),
-                                                        child: Text(
-                                                          '$currentStock ${unit.name}',
-                                                          style: TextStyle(
-                                                            fontSize: 12,
-                                                            fontWeight: FontWeight.bold,
-                                                            color: isLowStock
-                                                                ? AppConstants.errorColor
-                                                                : AppConstants.primaryColor,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                      const SizedBox(width: 8),
-                                                      Text(
-                                                        unit.name,
-                                                        style: GoogleFonts.poppins(
-                                                          fontWeight: FontWeight.w500,
-                                                          fontSize: 13,
-                                                          color: AppConstants.textDarkColor,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  GestureDetector(
-                                                    onTap: () {
-                                                      Navigator.push(
-                                                        context,
-                                                        MaterialPageRoute(
-                                                          builder: (context) => BlocProvider<InventoryCubit>(
-                                                            create: (context) => getIt<InventoryCubit>(),
-                                                            child: StockCardPage(product: product),
-                                                          ),
-                                                        ),
-                                                      );
-                                                    },
-                                                    child: const Row(
-                                                      children: [
-                                                        Icon(Icons.history_rounded,
-                                                            size: 13, color: AppConstants.primaryColor),
-                                                        SizedBox(width: 4),
-                                                        Text(
-                                                          'Kartu Stok',
-                                                          style: TextStyle(
-                                                            fontSize: 11,
-                                                            color: AppConstants.primaryColor,
-                                                            fontWeight: FontWeight.w600,
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          }),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            );
-                          }
-                          return const SizedBox();
-                        },
-                      ),
-                    ),
-                  ],
+                            },
+                          ),
+                        );
+                      }
+                      return const SizedBox();
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),

@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/constants.dart';
 import '../../../../core/database/app_database.dart';
-import '../../../../core/widgets/curved_header.dart';
 import '../bloc/inventory_cubit.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../../core/utils/scan_sound_helper.dart';
@@ -59,7 +58,7 @@ class _StockAdjustmentPageState extends State<StockAdjustmentPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppConstants.backgroundColor,
+      backgroundColor: const Color(0xFFF8FAFC),
       body: BlocConsumer<InventoryCubit, InventoryState>(
         listener: (context, state) {
           if (state is InventorySuccess) {
@@ -69,7 +68,7 @@ class _StockAdjustmentPageState extends State<StockAdjustmentPage> {
           }
           if (state is InventoryError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: AppConstants.errorColor),
+              SnackBar(content: Text(state.message), backgroundColor: const Color(0xFFDC2626)),
             );
           }
         },
@@ -79,115 +78,122 @@ class _StockAdjustmentPageState extends State<StockAdjustmentPage> {
             rawItemsList = state.items;
           }
 
-          return Stack(
-            children: [
-              const CurvedHeader(height: 155),
-              SafeArea(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                      child: Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                                color: Colors.white),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                          Text(
-                            'Stok Masuk / Keluar',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+          return SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Clean Executive Header
+                Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.fromLTRB(6, 6, 12, 10),
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                            color: Color(0xFF0F172A), size: 18),
+                        onPressed: () => Navigator.pop(context),
                       ),
-                    ),
-
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      child: Card(
-                        elevation: 4,
-                        shadowColor: AppConstants.primaryColor.withValues(alpha: 0.1),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                      const SizedBox(width: 2),
+                      Text(
+                        'Stok Masuk / Keluar',
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFF0F172A),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(height: 1, color: const Color(0xFFE2E8F0)),
+
+                // Search Bar Clean
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          height: 44,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
                           child: TextField(
                             controller: _searchController,
+                            style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A)),
                             onChanged: (val) {
                               setState(() {
                                 _searchQuery = val.trim().toLowerCase();
                               });
                             },
-                            onSubmitted: (val) {
-                              final query = val.trim().toLowerCase();
-                              if (query.isNotEmpty) {
-                                try {
-                                  final match = rawItemsList.firstWhere(
-                                    (item) {
-                                      final Product p = item['product'];
-                                      return p.barcode?.toLowerCase() == query || p.sku?.toLowerCase() == query;
-                                    },
-                                    orElse: () => <String, dynamic>{},
-                                  );
-
-                                  if (match.isNotEmpty) {
-                                    final Product product = match['product'];
-                                    final productUnits = rawItemsList.where((item) {
-                                      return (item['product'] as Product).id == product.id;
-                                    }).toList();
-
-                                    _searchController.clear();
-                                    setState(() {
-                                      _searchQuery = '';
-                                    });
-
-                                    _showAdjustmentDialog(
-                                      context,
-                                      product: product,
-                                      productUnits: productUnits,
-                                    );
-                                  }
-                                } catch (e) {
-                                  // ignore
-                                }
-                              }
-                            },
                             decoration: InputDecoration(
-                              hintText: 'Cari nama produk atau SKU...',
-                              prefixIcon: const Icon(Icons.search_rounded),
-                              suffixIcon: rawItemsList.isNotEmpty
+                              hintText: 'Cari nama produk / scan barcode...',
+                              hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                              prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B), size: 20),
+                              suffixIcon: _searchController.text.isNotEmpty
                                   ? IconButton(
-                                      icon: const Icon(Icons.qr_code_scanner_rounded, color: AppConstants.primaryColor),
-                                      tooltip: 'Scan Barcode',
-                                      onPressed: () => _showBarcodeScanner(rawItemsList),
+                                      icon: const Icon(Icons.clear_rounded, size: 16),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() => _searchQuery = '');
+                                      },
                                     )
                                   : null,
                               border: InputBorder.none,
-                              enabledBorder: InputBorder.none,
-                              focusedBorder: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    Expanded(
-                      child: rawItemsList.isEmpty
-                          ? const Center(child: CircularProgressIndicator())
-                          : _buildProductList(rawItemsList),
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      Material(
+                        color: const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(12),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () => _showBarcodeScanner(rawItemsList),
+                          child: const Padding(
+                            padding: EdgeInsets.all(11),
+                            child: Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 20),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+
+                // Main Content List
+                Expanded(
+                  child: Builder(
+                    builder: (context) {
+                      if (state is InventoryLoading) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (state is InventoryLoaded) {
+                        if (state.items.isEmpty) {
+                          return Center(
+                            child: Text(
+                              'Belum ada data stok.',
+                              style: GoogleFonts.poppins(color: const Color(0xFF94A3B8)),
+                            ),
+                          );
+                        }
+                        return RefreshIndicator(
+                          onRefresh: () async {
+                            context.read<InventoryCubit>().loadInventory();
+                          },
+                          child: _buildProductList(state.items),
+                        );
+                      }
+                      return const SizedBox();
+                    },
+                  ),
+                ),
+              ],
+            ),
           );
         },
       ),
@@ -360,7 +366,7 @@ class _StockAdjustmentPageState extends State<StockAdjustmentPage> {
     });
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
       itemCount: grouped.length,
       itemBuilder: (context, index) {
         final group = grouped[index];
@@ -372,29 +378,29 @@ class _StockAdjustmentPageState extends State<StockAdjustmentPage> {
   }
 
   Widget _buildProductCard(Product product, List<Map<String, dynamic>> units) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-        side: const BorderSide(color: AppConstants.borderLightColor),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
       ),
       child: InkWell(
         onTap: () => _showAdjustmentDialog(context, product: product, productUnits: units),
-        borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: AppConstants.primaryColor.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.inventory_2_rounded,
-                    color: AppConstants.primaryColor, size: 22),
+                    color: Color(0xFF0F172A), size: 22),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -404,39 +410,40 @@ class _StockAdjustmentPageState extends State<StockAdjustmentPage> {
                     Text(
                       product.name,
                       style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
                         fontSize: 14,
-                        color: AppConstants.textDarkColor,
+                        color: const Color(0xFF0F172A),
                       ),
                     ),
                     if (product.sku != null) ...[
                       const SizedBox(height: 2),
                       Text(
                         'SKU: ${product.sku}',
-                        style: const TextStyle(
-                            fontSize: 11, color: AppConstants.textLightColor),
+                        style: GoogleFonts.poppins(
+                            fontSize: 11, color: const Color(0xFF64748B)),
                       ),
                     ],
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Wrap(
-                      spacing: 8,
+                      spacing: 6,
                       runSpacing: 4,
                       children: units.map((u) {
                         final ProductUnit unit = u['unit'];
                         final InventoryData? inv = u['inventory'];
                         final qty = inv?.quantity ?? 0;
                         return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(4),
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
                           ),
                           child: Text(
-                            '$qty ${unit.name}',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: AppConstants.warningColor,
+                            '${qty % 1 == 0 ? qty.toInt() : qty.toStringAsFixed(2)} ${unit.name}',
+                            style: GoogleFonts.poppins(
+                              fontSize: 10.5,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF0F172A),
                             ),
                           ),
                         );
@@ -445,8 +452,8 @@ class _StockAdjustmentPageState extends State<StockAdjustmentPage> {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right_rounded,
-                  color: AppConstants.textLightColor),
+              const Icon(Icons.arrow_forward_ios_rounded,
+                  color: Color(0xFF94A3B8), size: 14),
             ],
           ),
         ),

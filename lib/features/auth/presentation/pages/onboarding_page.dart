@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/constants.dart';
-import '../../../../core/widgets/curved_header.dart';
 import '../bloc/auth_cubit.dart';
 
 class OnboardingPage extends StatefulWidget {
@@ -15,6 +14,7 @@ class OnboardingPage extends StatefulWidget {
 class _OnboardingPageState extends State<OnboardingPage> {
   final _formKey = GlobalKey<FormState>();
   bool _isSubmitting = false;
+  bool _obscurePin = true;
 
   final _shopNameController = TextEditingController();
   final _shopAddressController = TextEditingController();
@@ -52,7 +52,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
     if (mounted) setState(() => _isSubmitting = false);
   }
 
-
   Widget _buildFormField({
     required TextEditingController controller,
     required String label,
@@ -60,339 +59,346 @@ class _OnboardingPageState extends State<OnboardingPage> {
     String? hint,
     TextInputType? keyboardType,
     bool obscure = false,
+    Widget? suffixIcon,
     int maxLines = 1,
     String? Function(String?)? validator,
   }) {
-    return TextFormField(
-      controller: controller,
-      obscureText: obscure,
-      keyboardType: keyboardType,
-      maxLines: maxLines,
-      style: GoogleFonts.poppins(
-        fontSize: 14,
-        color: AppConstants.textDarkColor,
-      ),
-      decoration: InputDecoration(
-        labelText: label,
-        hintText: hint,
-        prefixIcon: Icon(icon, size: 20),
-        filled: true,
-        fillColor: AppConstants.backgroundColor,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 12.5,
+            fontWeight: FontWeight.w600,
+            color: const Color(0xFF334155),
+          ),
         ),
-        labelStyle: GoogleFonts.poppins(
-          fontSize: 13,
-          color: AppConstants.textLightColor,
+        const SizedBox(height: 6),
+        TextFormField(
+          controller: controller,
+          obscureText: obscure,
+          keyboardType: keyboardType,
+          maxLines: maxLines,
+          style: GoogleFonts.poppins(
+            fontSize: 13.5,
+            color: const Color(0xFF0F172A),
+          ),
+          decoration: InputDecoration(
+            hintText: hint,
+            prefixIcon: Icon(icon, size: 19, color: const Color(0xFF64748B)),
+            suffixIcon: suffixIcon,
+            filled: true,
+            fillColor: const Color(0xFFF8FAFC),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            hintStyle: GoogleFonts.poppins(
+              fontSize: 13,
+              color: const Color(0xFF94A3B8),
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: AppConstants.primaryColor, width: 1.5),
+            ),
+            errorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFEF4444)),
+            ),
+            focusedErrorBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
+            ),
+          ),
+          validator: validator,
         ),
-        hintStyle: GoogleFonts.poppins(
-          fontSize: 13,
-          color: AppConstants.textLightColor.withValues(alpha: 0.5),
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-          borderSide: const BorderSide(color: AppConstants.borderLightColor),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-          borderSide: const BorderSide(color: AppConstants.borderLightColor),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-          borderSide: const BorderSide(color: AppConstants.primaryColor, width: 1.5),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-          borderSide: const BorderSide(color: AppConstants.errorColor),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-          borderSide: const BorderSide(color: AppConstants.errorColor, width: 1.5),
-        ),
-      ),
-      validator: validator,
+      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppConstants.backgroundColor,
-      body: Column(
-        children: [
-          CurvedHeader(
-            height: 220,
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: false,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Pengaturan Awal',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                fontSize: 18,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            Text(
+              'Lengkapi profil toko & akun admin',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w400,
+                fontSize: 11,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          child: Center(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: Form(
+                key: _formKey,
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Spacer(),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: Image.asset(
-                        'assets/images/logo.png',
-                        width: 80,
-                        height: 80,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'GawePOS',
-                      style: GoogleFonts.poppins(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+                    // Card 1: Data Toko
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
                         color: Colors.white,
-                        letterSpacing: 0.2,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppConstants.primaryColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.store_rounded,
+                                  color: AppConstants.primaryColor,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Informasi Toko / Outlet',
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      color: const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  Text(
+                                    'Nama dan alamat yang tertera di struk',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      color: const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 18),
+                          _buildFormField(
+                            controller: _shopNameController,
+                            label: 'Nama Toko *',
+                            icon: Icons.storefront_outlined,
+                            hint: 'Contoh: Toko Berkah Jaya',
+                            validator: (v) =>
+                                v == null || v.trim().isEmpty ? 'Nama toko wajib diisi' : null,
+                          ),
+                          const SizedBox(height: 14),
+                          _buildFormField(
+                            controller: _shopAddressController,
+                            label: 'Alamat Toko',
+                            icon: Icons.place_outlined,
+                            hint: 'Jl. Sudirman No. 12, Jakarta',
+                            maxLines: 2,
+                          ),
+                          const SizedBox(height: 14),
+                          _buildFormField(
+                            controller: _shopPhoneController,
+                            label: 'Nomor WhatsApp / Telepon',
+                            icon: Icons.phone_outlined,
+                            hint: '08123456789',
+                            keyboardType: TextInputType.phone,
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Lengkapi data toko & akun admin',
-                      style: GoogleFonts.poppins(
-                        fontSize: 13,
-                        color: Colors.white.withValues(alpha: 0.75),
+
+                    const SizedBox(height: 16),
+
+                    // Card 2: Akun Admin Utama
+                    Container(
+                      padding: const EdgeInsets.all(18),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF059669).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(
+                                  Icons.shield_outlined,
+                                  color: Color(0xFF059669),
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Akun Administrator',
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      color: const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                  Text(
+                                    'Akses penuh untuk kasir dan pengaturan',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      color: const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 18),
+                          _buildFormField(
+                            controller: _adminNameController,
+                            label: 'Nama Lengkap Admin *',
+                            icon: Icons.person_outline_rounded,
+                            hint: 'Contoh: Bambang S.',
+                            validator: (v) =>
+                                v == null || v.trim().isEmpty ? 'Nama admin wajib diisi' : null,
+                          ),
+                          const SizedBox(height: 14),
+                          _buildFormField(
+                            controller: _adminUsernameController,
+                            label: 'Username Login *',
+                            icon: Icons.alternate_email_rounded,
+                            hint: 'admin',
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return 'Username wajib diisi';
+                              if (v.trim().length < 3) return 'Minimal 3 karakter';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 14),
+                          _buildFormField(
+                            controller: _adminPinController,
+                            label: 'PIN Keamanan (4-6 Digit) *',
+                            icon: Icons.lock_outline_rounded,
+                            hint: '123456',
+                            keyboardType: TextInputType.number,
+                            obscure: _obscurePin,
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePin ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                size: 18,
+                                color: const Color(0xFF64748B),
+                              ),
+                              onPressed: () => setState(() => _obscurePin = !_obscurePin),
+                            ),
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) return 'PIN wajib diisi';
+                              if (int.tryParse(v.trim()) == null) return 'PIN harus berupa angka';
+                              if (v.trim().length < 4 || v.trim().length > 6) return 'PIN harus 4 sampai 6 digit';
+                              return null;
+                            },
+                          ),
+                        ],
                       ),
                     ),
-                    const Spacer(),
+
+                    const SizedBox(height: 24),
+
+                    // Submit Button
+                    SizedBox(
+                      height: 48,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppConstants.primaryColor,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: _isSubmitting ? null : _submit,
+                        child: _isSubmitting
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2.2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.check_rounded, size: 20),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Simpan & Buka Aplikasi',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                      ),
+                    ),
                   ],
                 ),
               ),
             ),
           ),
-
-          Expanded(
-            child: SafeArea(
-              top: false,
-              child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(
-                AppConstants.paddingMd,
-                0,
-                AppConstants.paddingMd,
-                AppConstants.paddingLg,
-              ),
-              child: Center(
-                child: Container(
-                  constraints: const BoxConstraints(maxWidth: 540),
-                  margin: const EdgeInsets.only(top: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-                          border: Border.all(color: AppConstants.borderLightColor),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.06),
-                              blurRadius: 20,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              _buildSection(
-                                icon: Icons.store_rounded,
-                                title: 'Profil Toko / Outlet',
-                                subtitle: 'Informasi dasar toko Anda',
-                                color: AppConstants.primaryColor,
-                                children: [
-                                  _buildFormField(
-                                    controller: _shopNameController,
-                                    label: 'Nama Toko',
-                                    icon: Icons.store_rounded,
-                                    hint: 'Contoh: Cafe Kenangan',
-                                    validator: (v) =>
-                                        v == null || v.isEmpty ? 'Nama toko wajib diisi' : null,
-                                  ),
-                                  const SizedBox(height: 14),
-                                  _buildFormField(
-                                    controller: _shopAddressController,
-                                    label: 'Alamat Toko',
-                                    icon: Icons.location_on_rounded,
-                                    hint: 'Alamat lengkap toko Anda',
-                                    maxLines: 2,
-                                  ),
-                                  const SizedBox(height: 14),
-                                  _buildFormField(
-                                    controller: _shopPhoneController,
-                                    label: 'Nomor Telepon',
-                                    icon: Icons.phone_rounded,
-                                    hint: 'Contoh: 08123456789',
-                                    keyboardType: TextInputType.phone,
-                                  ),
-                                ],
-                              ),
-
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 24),
-                                child: Divider(
-                                  color: AppConstants.borderLightColor,
-                                  height: 1,
-                                ),
-                              ),
-
-                              _buildSection(
-                                icon: Icons.admin_panel_settings_rounded,
-                                title: 'Akun Administrator Utama',
-                                subtitle: 'Login pertama untuk kelola toko',
-                                color: AppConstants.successColor,
-                                children: [
-                                  _buildFormField(
-                                    controller: _adminNameController,
-                                    label: 'Nama Lengkap Admin',
-                                    icon: Icons.person_rounded,
-                                    hint: 'Contoh: Bambang',
-                                    validator: (v) =>
-                                        v == null || v.isEmpty ? 'Nama admin wajib diisi' : null,
-                                  ),
-                                  const SizedBox(height: 14),
-                                  _buildFormField(
-                                    controller: _adminUsernameController,
-                                    label: 'Username Login',
-                                    icon: Icons.alternate_email_rounded,
-                                    hint: 'Contoh: admin',
-                                    validator: (v) {
-                                      if (v == null || v.isEmpty) return 'Username wajib diisi';
-                                      if (v.length < 3) return 'Minimal 3 karakter';
-                                      return null;
-                                    },
-                                  ),
-                                  const SizedBox(height: 14),
-                                  _buildFormField(
-                                    controller: _adminPinController,
-                                    label: 'PIN Login (4-6 Digit Angka)',
-                                    icon: Icons.lock_rounded,
-                                    hint: 'Contoh: 123456',
-                                    keyboardType: TextInputType.number,
-                                    obscure: true,
-                                    validator: (v) {
-                                      if (v == null || v.isEmpty) return 'PIN wajib diisi';
-                                      if (int.tryParse(v) == null) return 'PIN harus berupa angka';
-                                      if (v.length < 4 || v.length > 6) return 'PIN harus 4 sampai 6 digit';
-                                      return null;
-                                    },
-                                  ),
-                                ],
-                              ),
-
-                              Padding(
-                                padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-                                child: SizedBox(
-                                  height: 50,
-                                  child: ElevatedButton(
-                                    onPressed: _isSubmitting ? null : _submit,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppConstants.primaryColor,
-                                      foregroundColor: Colors.white,
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-                                      ),
-                                      shadowColor: AppConstants.primaryColor.withValues(alpha: 0.3),
-                                    ),
-                                    child: _isSubmitting
-                                        ? const SizedBox(
-                                            width: 22,
-                                            height: 22,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2.5,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : Row(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            children: [
-                                              const Icon(Icons.check_circle_outline_rounded, size: 20),
-                                              const SizedBox(width: 8),
-                                              Text(
-                                                'Simpan & Mulai Aplikasi',
-                                                style: GoogleFonts.poppins(
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.w600,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSection({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required List<Widget> children,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: color, size: 19),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: GoogleFonts.poppins(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppConstants.textDarkColor,
-                    ),
-                  ),
-                  const SizedBox(height: 1),
-                  Text(
-                    subtitle,
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      color: AppConstants.textLightColor,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ...children,
-        ],
+        ),
       ),
     );
   }

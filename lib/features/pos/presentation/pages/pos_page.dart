@@ -824,84 +824,85 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
   }
 
   // ═════════════════════════════════════════════════
-  // TOP BAR — Flat Indigo header
+  // TOP BAR — Clean Executive Header
   // ═════════════════════════════════════════════════
   Widget _buildTopBar(User? user) {
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppConstants.primaryDarkColor, AppConstants.primaryColor],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
+      color: Colors.white,
       child: SafeArea(
         bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(4, 6, 8, 10),
-          child: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                    color: Colors.white, size: 20),
-                onPressed: () => Navigator.pop(context),
-              ),
-              const SizedBox(width: 2),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(6, 6, 12, 10),
+              child: Row(
                 children: [
-                  Text(
-                    'Kasir POS',
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                        color: Color(0xFF0F172A), size: 18),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                  if (user != null)
-                    Text(
-                      user.name,
-                      style: GoogleFonts.poppins(
-                        color: Colors.white70,
-                        fontSize: 11,
+                  const SizedBox(width: 2),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Kasir POS',
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFF0F172A),
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.2,
+                        ),
+                      ),
+                      if (user != null)
+                        Text(
+                          'Kasir: ${user.name}',
+                          style: GoogleFonts.poppins(
+                            color: const Color(0xFF64748B),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                    ],
+                  ),
+                  const Spacer(),
+                  // Held orders badge
+                  BlocBuilder<CartCubit, CartState>(
+                    builder: (context, cart) {
+                      return _buildTopBarAction(
+                        icon: Icons.pause_circle_outline_rounded,
+                        tooltip: 'Transaksi Ditahan',
+                        onTap: () => _openHeldOrders(user),
+                      );
+                    },
+                  ),
+                  _buildTopBarAction(
+                    icon: Icons.qr_code_scanner_rounded,
+                    tooltip: 'Scan Barcode',
+                    onTap: _showBarcodeScanner,
+                  ),
+                  _buildTopBarAction(
+                    icon: Icons.history_rounded,
+                    tooltip: 'Riwayat Transaksi',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SalesHistoryPage(),
                       ),
                     ),
+                  ),
+                  _buildTopBarAction(
+                    icon: Icons.discount_outlined,
+                    tooltip: 'Diskon Global',
+                    onTap: _showGlobalDiscountDialog,
+                  ),
                 ],
               ),
-              const Spacer(),
-              // Held orders badge
-              BlocBuilder<CartCubit, CartState>(
-                builder: (context, cart) {
-                  return _buildTopBarAction(
-                    icon: Icons.pause_circle_outline_rounded,
-                    tooltip: 'Transaksi Ditahan',
-                    onTap: () => _openHeldOrders(user),
-                  );
-                },
-              ),
-              _buildTopBarAction(
-                icon: Icons.qr_code_scanner_rounded,
-                tooltip: 'Scan Barcode',
-                onTap: _showBarcodeScanner,
-              ),
-              _buildTopBarAction(
-                icon: Icons.history_rounded,
-                tooltip: 'Riwayat Transaksi',
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SalesHistoryPage(),
-                  ),
-                ),
-              ),
-              _buildTopBarAction(
-                icon: Icons.discount_outlined,
-                tooltip: 'Diskon Global',
-                onTap: _showGlobalDiscountDialog,
-              ),
-            ],
-          ),
+            ),
+            Container(height: 1, color: const Color(0xFFE2E8F0)),
+          ],
         ),
       ),
     );
@@ -913,16 +914,16 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
     required VoidCallback onTap,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(left: 2),
+      padding: const EdgeInsets.only(left: 6),
       child: Material(
-        color: Colors.white.withValues(alpha: 0.12),
+        color: const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(10),
         child: InkWell(
           borderRadius: BorderRadius.circular(10),
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.all(8),
-            child: Icon(icon, color: Colors.white, size: 20),
+            child: Icon(icon, color: const Color(0xFF334155), size: 19),
           ),
         ),
       ),
@@ -955,11 +956,11 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
       children: [
         // Custom TabBar
         Container(
-          margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-          padding: const EdgeInsets.all(3),
+          margin: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+          padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
-            color: const Color(0xFFEEF2FF),
-            borderRadius: BorderRadius.circular(12),
+            color: const Color(0xFFE2E8F0),
+            borderRadius: BorderRadius.circular(14),
           ),
           child: TabBar(
             controller: _mobileTabController,
@@ -969,25 +970,27 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 6,
+                  blurRadius: 4,
                   offset: const Offset(0, 2),
                 ),
               ],
             ),
             indicatorSize: TabBarIndicatorSize.tab,
             dividerColor: Colors.transparent,
-            labelColor: AppConstants.primaryColor,
-            unselectedLabelColor: AppConstants.textLightColor,
+            labelColor: const Color(0xFF0F172A),
+            unselectedLabelColor: const Color(0xFF64748B),
             labelStyle: GoogleFonts.poppins(
-                fontWeight: FontWeight.w600, fontSize: 13),
+                fontWeight: FontWeight.w700, fontSize: 12.5),
+            unselectedLabelStyle: GoogleFonts.poppins(
+                fontWeight: FontWeight.w500, fontSize: 12.5),
             tabs: [
               Tab(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: const [
-                    Icon(Icons.grid_view_rounded, size: 18),
+                    Icon(Icons.grid_view_rounded, size: 17),
                     SizedBox(width: 6),
-                    Text('Produk'),
+                    Text('Katalog Produk'),
                   ],
                 ),
               ),
@@ -997,7 +1000,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                     return Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.shopping_bag_rounded, size: 18),
+                        const Icon(Icons.shopping_bag_outlined, size: 17),
                         const SizedBox(width: 6),
                         const Text('Keranjang'),
                         if (cart.items.isNotEmpty) ...[
@@ -1006,7 +1009,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 7, vertical: 2),
                             decoration: BoxDecoration(
-                              color: AppConstants.primaryColor,
+                              color: const Color(0xFF0F172A),
                               borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
@@ -1194,13 +1197,16 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
         if (cartState.items.isNotEmpty && MediaQuery.of(context).size.width <= 720)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: Colors.white,
+              border: Border(
+                top: BorderSide(color: Color(0xFFE2E8F0), width: 1),
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  offset: const Offset(0, -2),
-                  blurRadius: 10,
+                  color: Colors.black12,
+                  offset: Offset(0, -2),
+                  blurRadius: 8,
                 ),
               ],
             ),
@@ -1211,37 +1217,41 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Total (${cartState.items.length} Item)',
+                      'TOTAL (${cartState.items.length} ITEM)',
                       style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: AppConstants.textLightColor,
+                        fontSize: 11,
+                        letterSpacing: 0.5,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF64748B),
                       ),
                     ),
                     Text(
                       CurrencyFormatter.format(cartState.grandTotal),
                       style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppConstants.primaryColor,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFF0F172A),
+                        letterSpacing: -0.5,
                       ),
                     ),
                   ],
                 ),
-                ElevatedButton(
+                FilledButton.icon(
                   onPressed: () {
                     _mobileTabController.animateTo(1);
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppConstants.primaryColor,
+                  icon: const Icon(Icons.shopping_bag_outlined, size: 16),
+                  label: Text(
+                    'Lihat Keranjang',
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 12.5),
+                  ),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF0F172A),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  ),
-                  child: Text(
-                    'Lihat Keranjang',
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
                 ),
               ],
@@ -1260,33 +1270,29 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
         onTap: () => setState(() => _selectedCategoryId = categoryId),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
-            color: isSelected
-                ? AppConstants.primaryColor
-                : Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            color: isSelected ? const Color(0xFF0F172A) : Colors.white,
+            borderRadius: BorderRadius.circular(10),
             border: Border.all(
-              color: isSelected
-                  ? AppConstants.primaryColor
-                  : AppConstants.borderLightColor,
+              color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
             ),
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: AppConstants.primaryColor.withValues(alpha: 0.25),
-                      blurRadius: 8,
+                      color: const Color(0xFF0F172A).withValues(alpha: 0.15),
+                      blurRadius: 4,
                       offset: const Offset(0, 2),
                     ),
                   ]
-                : [],
+                : null,
           ),
           child: Text(
             label,
             style: GoogleFonts.poppins(
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              color: isSelected ? Colors.white : AppConstants.textDarkColor,
+              fontSize: 11.5,
+              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              color: isSelected ? Colors.white : const Color(0xFF475569),
             ),
           ),
         ),
@@ -1301,15 +1307,6 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
         List<ProductPrice>.from(item['prices'] ?? []);
     final String? brandName = item['brandName'] as String?;
     final String? categoryName = item['categoryName'] as String?;
-
-    // Get base price
-    ProductUnit? baseUnit;
-    if (units.isNotEmpty) {
-      baseUnit = units.cast<ProductUnit?>().firstWhere(
-            (u) => u!.isBase,
-            orElse: () => units.first,
-          );
-    }
 
     double minPrice = 0.0;
     double maxPrice = 0.0;
@@ -1328,7 +1325,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
         prod.imagePath!.isNotEmpty &&
         File(prod.imagePath!).existsSync()) {
       imageWidget = ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
         child: Image.file(
           File(prod.imagePath!),
           width: double.infinity,
@@ -1337,24 +1334,16 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
         ),
       );
     } else {
-      // Fallback icon based on category
       imageWidget = Container(
         decoration: BoxDecoration(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-          gradient: LinearGradient(
-            colors: [
-              AppConstants.primaryColor.withValues(alpha: 0.06),
-              AppConstants.primaryColor.withValues(alpha: 0.12),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+          color: const Color(0xFFF1F5F9),
         ),
         child: Center(
           child: Icon(
-            Icons.inventory_2_rounded,
-            size: 36,
-            color: AppConstants.primaryColor.withValues(alpha: 0.4),
+            Icons.inventory_2_outlined,
+            size: 32,
+            color: const Color(0xFF94A3B8),
           ),
         ),
       );
@@ -1381,11 +1370,15 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.5 : 1,
+          ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 10,
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 8,
               offset: const Offset(0, 2),
             ),
           ],
@@ -1403,20 +1396,20 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                     Positioned.fill(
                       child: Container(
                         decoration: BoxDecoration(
-                          color: AppConstants.primaryColor.withValues(alpha: 0.2),
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                          color: const Color(0xFF0F172A).withValues(alpha: 0.25),
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
                         ),
                         child: Center(
                           child: Container(
-                            padding: const EdgeInsets.all(4),
+                            padding: const EdgeInsets.all(5),
                             decoration: const BoxDecoration(
-                              color: AppConstants.primaryColor,
+                              color: Color(0xFF0F172A),
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
                               Icons.check_rounded,
                               color: Colors.white,
-                              size: 20,
+                              size: 18,
                             ),
                           ),
                         ),
@@ -1428,18 +1421,10 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                     right: 6,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
+                          horizontal: 7, vertical: 3),
                       decoration: BoxDecoration(
-                        color: AppConstants.primaryColor,
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppConstants.primaryColor
-                                .withValues(alpha: 0.3),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                        color: const Color(0xFF0F172A),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         minPrice == maxPrice
@@ -1447,7 +1432,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                             : '${CurrencyFormatter.format(minPrice)} - ${CurrencyFormatter.format(maxPrice)}',
                         style: GoogleFonts.poppins(
                           color: Colors.white,
-                          fontSize: 10,
+                          fontSize: 9.5,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -1458,12 +1443,12 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
             ),
             // Product info
             Expanded(
-              flex: 1,
+              flex: 2,
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       prod.name,
@@ -1472,11 +1457,11 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                       style: GoogleFonts.poppins(
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
-                        color: AppConstants.textDarkColor,
-                        height: 1.3,
+                        color: const Color(0xFF0F172A),
+                        height: 1.25,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 3),
                     if (brandName != null || categoryName != null)
                       Text(
                         [
@@ -1486,8 +1471,8 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.poppins(
-                          fontSize: 9,
-                          color: AppConstants.textLightColor,
+                          fontSize: 9.5,
+                          color: const Color(0xFF94A3B8),
                         ),
                       ),
                   ],
@@ -1827,14 +1812,14 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                     // Save / Remove Button
                     SizedBox(
                       width: double.infinity,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           backgroundColor: totalQty <= 0 && !isProductNew
-                              ? AppConstants.errorColor
-                              : AppConstants.primaryColor,
+                              ? const Color(0xFFDC2626)
+                              : const Color(0xFF0F172A),
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         onPressed: () {
                           // Process each unit state
@@ -1866,8 +1851,8 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                         child: Text(
                           totalQty <= 0 && !isProductNew 
                               ? 'Hapus dari Keranjang' 
-                              : 'Simpan',
-                          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14),
+                              : 'Simpan ke Keranjang',
+                          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13.5),
                         ),
                       ),
                     ),
@@ -2466,19 +2451,21 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'TOTAL',
+                'TOTAL PEMBAYARAN',
                 style: GoogleFonts.poppins(
                   fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                  color: AppConstants.textDarkColor,
+                  fontSize: 12.5,
+                  letterSpacing: 0.5,
+                  color: const Color(0xFF64748B),
                 ),
               ),
               Text(
                 CurrencyFormatter.format(cart.grandTotal),
                 style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 20,
-                  color: AppConstants.primaryColor,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 22,
+                  color: const Color(0xFF0F172A),
+                  letterSpacing: -0.5,
                 ),
               ),
             ],
@@ -2487,7 +2474,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
           // Checkout button
           SizedBox(
             height: 50,
-            child: ElevatedButton(
+            child: FilledButton(
               onPressed: () {
                 if (user == null || session == null) return;
                 Navigator.push(
@@ -2501,23 +2488,23 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                   ),
                 );
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppConstants.primaryColor,
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0F172A), // Executive Dark
                 foregroundColor: Colors.white,
-                elevation: 0,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14)),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.payment_rounded, size: 20),
+                  const Icon(Icons.payment_rounded, size: 18),
                   const SizedBox(width: 8),
                   Text(
-                    'BAYAR ${CurrencyFormatter.format(cart.grandTotal)}',
+                    'PROSES BAYAR (${CurrencyFormatter.format(cart.grandTotal)})',
                     style: GoogleFonts.poppins(
                       fontWeight: FontWeight.w700,
-                      fontSize: 14,
+                      fontSize: 13,
+                      letterSpacing: 0.3,
                     ),
                   ),
                 ],
@@ -2559,12 +2546,14 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+          borderRadius: BorderRadius.circular(16),
         ),
         title: Text(
           'Input Jumlah (Qty)',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16),
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16, color: const Color(0xFF0F172A)),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -2572,20 +2561,23 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
           children: [
             Text(
               item.product.name,
-              style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14, color: AppConstants.textDarkColor),
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 14, color: const Color(0xFF0F172A)),
             ),
             Text(
               'Satuan: ${item.unit.name}',
-              style: const TextStyle(fontSize: 12, color: AppConstants.textLightColor),
+              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: controller,
               autofocus: true,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Jumlah *',
-                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
             ),
           ],
@@ -2593,9 +2585,13 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('BATAL'),
+            child: Text('Batal', style: GoogleFonts.poppins(color: const Color(0xFF64748B), fontWeight: FontWeight.w600)),
           ),
-          ElevatedButton(
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF0F172A),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             onPressed: () {
               final newQty = double.tryParse(controller.text.trim());
               if (newQty != null && newQty > 0) {
@@ -2607,7 +2603,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
               }
               Navigator.pop(ctx);
             },
-            child: const Text('SIMPAN'),
+            child: Text('Simpan', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -2621,12 +2617,14 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+          borderRadius: BorderRadius.circular(16),
         ),
         title: Text(
           'Input Jumlah (Qty)',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16),
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16, color: const Color(0xFF0F172A)),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -2634,20 +2632,23 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
           children: [
             Text(
               productName,
-              style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14, color: AppConstants.textDarkColor),
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 14, color: const Color(0xFF0F172A)),
             ),
             Text(
               'Satuan: ${uState.unit.name}',
-              style: const TextStyle(fontSize: 12, color: AppConstants.textLightColor),
+              style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: controller,
               autofocus: true,
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Jumlah *',
-                contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
             ),
           ],
@@ -2655,9 +2656,13 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('BATAL'),
+            child: Text('Batal', style: GoogleFonts.poppins(color: const Color(0xFF64748B), fontWeight: FontWeight.w600)),
           ),
-          ElevatedButton(
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF0F172A),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             onPressed: () {
               final newQty = double.tryParse(controller.text.trim());
               if (newQty != null && newQty >= 0) {
@@ -2669,7 +2674,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
               }
               Navigator.pop(ctx);
             },
-            child: const Text('SIMPAN'),
+            child: Text('Simpan', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
           ),
         ],
       ),

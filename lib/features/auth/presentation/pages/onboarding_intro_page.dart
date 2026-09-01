@@ -18,21 +18,27 @@ class _OnboardingIntroPageState extends State<OnboardingIntroPage> {
   static const _slides = [
     _IntroSlide(
       icon: Icons.point_of_sale_rounded,
-      title: 'Kasir Digital',
+      badge: 'Kasir Mandiri',
+      title: 'Transaksi Kasir Cepat & Praktis',
       description:
-          'Catat transaksi penjualan dengan cepat. Dukung multi-pembayaran: Tunai, QRIS, Kartu, dan Hutang.',
+          'Catat transaksi penjualan kasir dalam hitungan detik. Mendukung multi-pembayaran: Tunai, QRIS, Kartu, dan Hutang.',
+      color: AppConstants.primaryColor,
     ),
     _IntroSlide(
-      icon: Icons.inventory_2_rounded,
-      title: 'Manajemen Stok',
+      icon: Icons.inventory_2_outlined,
+      badge: 'Manajemen Stok',
+      title: 'Pantau Stok Real-Time & Mutasi',
       description:
-          'Pantau stok barang secara real-time. Lakukan opname dan lacak mutasi stok otomatis.',
+          'Lacak histori kartu stok produk, peringatan batas minimum stok, opname berkala, dan retur barang secara akurat.',
+      color: Color(0xFF0D9488), // Teal
     ),
     _IntroSlide(
-      icon: Icons.bar_chart_rounded,
-      title: 'Laporan Keuangan',
+      icon: Icons.auto_graph_rounded,
+      badge: 'Laporan Keuangan',
+      title: 'Analitik Laba Rugi & Performa Bisnis',
       description:
-          'Lihat laba rugi, analisis penjualan, dan laporan shift kasir. Ekspor ke PDF kapan saja.',
+          'Pantau omzet bersih, margin laba kotor hingga laba bersih usaha, rekap shift kasir, dan ekspor laporan PDF instan.',
+      color: Color(0xFF7C3AED), // Violet
     ),
   ];
 
@@ -44,7 +50,7 @@ class _OnboardingIntroPageState extends State<OnboardingIntroPage> {
 
   void _nextPage() {
     _pageController.nextPage(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 350),
       curve: Curves.easeInOut,
     );
   }
@@ -56,131 +62,198 @@ class _OnboardingIntroPageState extends State<OnboardingIntroPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppConstants.primaryColor, AppConstants.primaryDarkColor],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppConstants.primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(
+                Icons.storefront_rounded,
+                color: AppConstants.primaryColor,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'GawePOS',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+          ],
         ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Skip
-              Align(
-                alignment: Alignment.topRight,
-                child: TextButton(
-                  onPressed: _complete,
-                  child: Text(
-                      'Skip',
-                      style: GoogleFonts.poppins(
-                        color: Colors.white.withValues(alpha: 0.7),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                  ),
-                ),
+        actions: [
+          TextButton(
+            onPressed: _complete,
+            style: TextButton.styleFrom(
+              foregroundColor: const Color(0xFF64748B),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+            ),
+            child: Text(
+              'Lewati',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF64748B),
               ),
-              // Carousel
-              Expanded(
-                child: PageView.builder(
-                  controller: _pageController,
-                  onPageChanged: (i) => setState(() => _currentPage = i),
-                  itemCount: _slides.length,
-                  itemBuilder: (_, index) {
-                    final s = _slides[index];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 40),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 120,
-                            height: 120,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(30),
+            ),
+          ),
+        ],
+      ),
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Carousel
+            Expanded(
+              child: PageView.builder(
+                controller: _pageController,
+                onPageChanged: (i) => setState(() => _currentPage = i),
+                itemCount: _slides.length,
+                itemBuilder: (_, index) {
+                  final s = _slides[index];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Clean Rounded Icon Box
+                        Container(
+                          width: 110,
+                          height: 110,
+                          decoration: BoxDecoration(
+                            color: s.color.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(28),
+                            border: Border.all(
+                              color: s.color.withValues(alpha: 0.2),
+                              width: 1.5,
                             ),
-                            child:
-                                Icon(s.icon, color: Colors.white, size: 56),
                           ),
-                          const SizedBox(height: 40),
-                          Text(
-                            s.title,
+                          child: Center(
+                            child: Icon(
+                              s.icon,
+                              color: s.color,
+                              size: 52,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+
+                        // Badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: s.color.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            s.badge,
                             style: GoogleFonts.poppins(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: s.color,
                             ),
-                            textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            s.description,
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: Colors.white.withValues(alpha: 0.85),
-                              height: 1.5,
-                            ),
-                            textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Title
+                        Text(
+                          s.title,
+                          style: GoogleFonts.poppins(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFF0F172A),
+                            height: 1.3,
                           ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-              // Indicators
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(_slides.length, (i) {
-                  final active = i == _currentPage;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: active ? 24 : 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: active
-                          ? Colors.white
-                          : Colors.white.withValues(alpha: 0.35),
-                      borderRadius: BorderRadius.circular(4),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
+
+                        // Description
+                        Text(
+                          s.description,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13,
+                            color: const Color(0xFF64748B),
+                            height: 1.5,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
                   );
-                }),
+                },
               ),
-              const SizedBox(height: 40),
-              // Button
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 40),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed:
-                        _currentPage < _slides.length - 1 ? _nextPage : _complete,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: AppConstants.primaryColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+            ),
+
+            // Bottom controls
+            Padding(
+              padding: const EdgeInsets.fromLTRB(28, 0, 28, 28),
+              child: Column(
+                children: [
+                  // Indicators
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(_slides.length, (i) {
+                      final active = i == _currentPage;
+                      return AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.symmetric(horizontal: 3),
+                        width: active ? 22 : 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: active
+                              ? AppConstants.primaryColor
+                              : const Color(0xFFCBD5E1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(height: 28),
+
+                  // Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 48,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppConstants.primaryColor,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      _currentPage < _slides.length - 1 ? 'Lanjut' : 'Mulai',
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                      onPressed: _currentPage == _slides.length - 1
+                          ? _complete
+                          : _nextPage,
+                      child: Text(
+                        _currentPage == _slides.length - 1
+                            ? 'MULAI SEKARANG'
+                            : 'LANJUT',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ),
-              const SizedBox(height: 48),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -189,12 +262,16 @@ class _OnboardingIntroPageState extends State<OnboardingIntroPage> {
 
 class _IntroSlide {
   final IconData icon;
+  final String badge;
   final String title;
   final String description;
+  final Color color;
 
   const _IntroSlide({
     required this.icon,
+    required this.badge,
     required this.title,
     required this.description,
+    required this.color,
   });
 }

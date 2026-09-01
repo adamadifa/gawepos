@@ -295,28 +295,14 @@ class _PaymentPageState extends State<PaymentPage>
         backgroundColor: AppConstants.backgroundColor,
         body: Column(
           children: [
-            // ── Header Ringkas & Formal ──────────────────────────────────
+            // ── Header Executive Deep Slate ──────────────────────────────
             Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppConstants.primaryColor,
-                    AppConstants.primaryDarkColor,
-                  ],
+              decoration: const BoxDecoration(
+                color: Color(0xFF0F172A),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(24),
+                  bottomRight: Radius.circular(24),
                 ),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(20),
-                  bottomRight: Radius.circular(20),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppConstants.primaryColor.withValues(alpha: 0.15),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
               ),
               child: SafeArea(
                 bottom: false,
@@ -329,37 +315,37 @@ class _PaymentPageState extends State<PaymentPage>
                         children: [
                           IconButton(
                             icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                                color: Colors.white, size: 20),
+                                color: Colors.white, size: 18),
                             onPressed: () => Navigator.pop(context),
                           ),
                           Text(
-                            'Pembayaran',
+                            'Pembayaran Transaksi',
                             style: GoogleFonts.poppins(
                               color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                           const Spacer(),
                           // Badge Detail
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 6),
+                                horizontal: 10, vertical: 5),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
+                              color: Colors.white.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 const Icon(Icons.shopping_bag_outlined,
-                                    size: 13, color: Colors.white),
+                                    size: 13, color: Colors.white70),
                                 const SizedBox(width: 4),
                                 Text(
                                   '${widget.cart.items.length} Item',
                                   style: GoogleFonts.poppins(
                                     color: Colors.white,
-                                    fontSize: 12,
+                                    fontSize: 11.5,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -375,11 +361,12 @@ class _PaymentPageState extends State<PaymentPage>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Total Tagihan',
+                              'TOTAL TAGIHAN PEMBAYARAN',
                               style: GoogleFonts.poppins(
-                                color: Colors.white.withValues(alpha: 0.75),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
+                                color: Colors.white.withValues(alpha: 0.6),
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.8,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -390,8 +377,9 @@ class _PaymentPageState extends State<PaymentPage>
                                     widget.cart.grandTotal),
                                 style: GoogleFonts.poppins(
                                   color: Colors.white,
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -0.5,
                                   height: 1.1,
                                 ),
                               ),
@@ -402,8 +390,9 @@ class _PaymentPageState extends State<PaymentPage>
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 12, vertical: 8),
                               decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(8),
+                                color: Colors.white.withValues(alpha: 0.06),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -568,26 +557,28 @@ class _PaymentPageState extends State<PaymentPage>
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: isSel ? AppConstants.primaryColor.withValues(alpha: 0.05) : Colors.white,
-                  borderRadius: BorderRadius.circular(8),
+                  color: isSel ? const Color(0xFF0F172A) : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: isSel ? AppConstants.primaryColor : AppConstants.borderLightColor,
+                    color: isSel ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
                     width: isSel ? 1.5 : 1.0,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.01),
-                      blurRadius: 2,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
+                  boxShadow: isSel
+                      ? [
+                          BoxShadow(
+                            color: const Color(0xFF0F172A).withValues(alpha: 0.15),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
                 ),
                 child: Row(
                   children: [
                     Icon(
                       m['icon'] as IconData,
                       size: 18,
-                      color: isSel ? AppConstants.primaryColor : AppConstants.textLightColor,
+                      color: isSel ? Colors.white : const Color(0xFF64748B),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -600,14 +591,14 @@ class _PaymentPageState extends State<PaymentPage>
                             style: GoogleFonts.poppins(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: isSel ? AppConstants.primaryColor : AppConstants.textDarkColor,
+                              color: isSel ? Colors.white : const Color(0xFF0F172A),
                             ),
                           ),
                           Text(
                             m['sublabel'] as String,
                             style: GoogleFonts.poppins(
                               fontSize: 9,
-                              color: AppConstants.textLightColor,
+                              color: isSel ? Colors.white70 : const Color(0xFF94A3B8),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -772,35 +763,41 @@ class _PaymentPageState extends State<PaymentPage>
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? AppConstants.primaryColor
+                                  ? const Color(0xFF0F172A)
                                   : isPas
-                                      ? AppConstants.successColor.withValues(alpha: 0.08)
+                                      ? const Color(0xFF0F172A).withValues(alpha: 0.05)
                                       : Colors.white,
-                              borderRadius: BorderRadius.circular(6),
+                              borderRadius: BorderRadius.circular(8),
                               border: Border.all(
                                 color: isSelected
-                                    ? AppConstants.primaryColor
+                                    ? const Color(0xFF0F172A)
                                     : isPas
-                                        ? AppConstants.successColor
-                                        : AppConstants.borderLightColor,
-                                width: 1.0,
+                                        ? const Color(0xFF0F172A)
+                                        : const Color(0xFFE2E8F0),
+                                width: isSelected || isPas ? 1.5 : 1.0,
                               ),
                             ),
                             child: Column(
-                              mainAxisSize: MainAxisSize.min,
                               children: [
+                                if (isPas)
+                                  Text(
+                                    'UANG PAS',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 8.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: isSelected ? Colors.white70 : const Color(0xFF0F172A),
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
                                 Text(
-                                  isPas ? 'Uang Pas' : _shortFormat(s),
+                                  _shortFormat(s),
                                   style: GoogleFonts.poppins(
-                                    fontSize: 11.5,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                     color: isSelected
                                         ? Colors.white
-                                        : isPas
-                                            ? AppConstants.successColor
-                                            : AppConstants.textDarkColor,
+                                        : const Color(0xFF0F172A),
                                   ),
-                                  textAlign: TextAlign.center,
                                 ),
                               ],
                             ),
@@ -1101,75 +1098,58 @@ class _PaymentPageState extends State<PaymentPage>
         top: false,
         child: Container(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: Colors.white,
             border: Border(
-              top: BorderSide(color: AppConstants.borderLightColor, width: 1),
+              top: BorderSide(color: Color(0xFFE2E8F0), width: 1),
             ),
           ),
           child: BlocBuilder<SalesCubit, SalesState>(
             builder: (context, state) {
               final isLoading = state is SalesLoading;
-              return GestureDetector(
-                onTap: isLoading ? null : _checkout,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 150),
-                  height: 50,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: isLoading
-                          ? [
-                              AppConstants.primaryColor.withValues(alpha: 0.7),
-                              AppConstants.primaryDarkColor.withValues(alpha: 0.7),
-                            ]
-                          : [
-                              AppConstants.primaryColor,
-                              AppConstants.primaryDarkColor,
-                            ],
+              return SizedBox(
+                height: 50,
+                child: FilledButton(
+                  onPressed: isLoading ? null : _checkout,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF0F172A),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
                     ),
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: isLoading
-                        ? []
-                        : [
-                            BoxShadow(
-                              color: AppConstants.primaryColor.withValues(alpha: 0.2),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
                   ),
                   child: Center(
                     child: isLoading
-                      ? const SizedBox(
-                          width: 22,
-                          height: 22,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2.0,
-                      ),
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.check_circle_outline_rounded,
-                            color: Colors.white, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Proses Pembayaran',
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: Colors.white,
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2.0,
+                            ),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.check_circle_rounded, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'KONFIRMASI PEMBAYARAN',
+                                style: GoogleFonts.poppins(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13.5,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
-              ),
-            ),
-          );
-        },
-      ),
-    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
       ),
     );
   }

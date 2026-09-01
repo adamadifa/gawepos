@@ -8,7 +8,6 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../../core/constants/constants.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/di/injection.dart';
-import '../../../../core/widgets/curved_header.dart';
 import '../../data/master_repository.dart';
 import '../bloc/product_cubit.dart';
 import '../bloc/category_cubit.dart';
@@ -403,78 +402,84 @@ class _ProductFormPageState extends State<ProductFormPage> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppConstants.backgroundColor,
-        body: Stack(
-          children: [
-            const CurvedHeader(height: 155),
-            SafeArea(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Top AppBar
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                              color: Colors.white),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                        Text(
-                          widget.existingProduct == null ? 'Tambah Produk Baru' : 'Ubah Produk',
-                          style: GoogleFonts.poppins(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
+        backgroundColor: const Color(0xFFF8FAFC),
+        body: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Top Clean Header
+              Container(
+                color: Colors.white,
+                padding: const EdgeInsets.fromLTRB(6, 6, 12, 10),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                          color: Color(0xFF0F172A), size: 18),
+                      onPressed: () => Navigator.pop(context),
                     ),
-                  ),
-
-                  // Form Container
-                  Expanded(
-                    child: Form(
-                      key: _formKey,
-                      child: ListView(
-                        padding: const EdgeInsets.all(16),
-                        children: [
-                          _buildBasicInfoCard(),
-                          const SizedBox(height: 16),
-                          _buildImageCard(),
-                          const SizedBox(height: 16),
-                          _buildUnitRepeaterCard(),
-                          const SizedBox(height: 16),
-                          _buildPricingMatrixCard(),
-                          const SizedBox(height: 32),
-                        ],
+                    const SizedBox(width: 2),
+                    Text(
+                      widget.existingProduct == null ? 'Tambah Produk Baru' : 'Ubah Detail Produk',
+                      style: GoogleFonts.poppins(
+                        color: const Color(0xFF0F172A),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.2,
                       ),
                     ),
-                  ),
-
-                  // Bottom Save Action
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      border: Border(top: BorderSide(color: AppConstants.borderLightColor)),
-                    ),
-                    child: ElevatedButton(
-                      onPressed: _save,
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size.fromHeight(48),
-                      ),
-                      child: Text(
-                        widget.existingProduct == null ? 'SIMPAN PRODUK' : 'UPDATE PRODUK',
-                        style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+              Container(height: 1, color: const Color(0xFFE2E8F0)),
+
+              // Form Container
+              Expanded(
+                child: Form(
+                  key: _formKey,
+                  child: ListView(
+                    padding: const EdgeInsets.all(16),
+                    children: [
+                      _buildBasicInfoCard(),
+                      const SizedBox(height: 16),
+                      _buildImageCard(),
+                      const SizedBox(height: 16),
+                      _buildUnitRepeaterCard(),
+                      const SizedBox(height: 16),
+                      _buildPricingMatrixCard(),
+                      const SizedBox(height: 32),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Bottom Save Action
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  border: Border(top: BorderSide(color: Color(0xFFE2E8F0), width: 1)),
+                ),
+                child: SizedBox(
+                  height: 50,
+                  child: FilledButton(
+                    onPressed: _save,
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F172A),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                    child: Text(
+                      widget.existingProduct == null ? 'SIMPAN PRODUK' : 'PERBARUI PRODUK',
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13.5),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
