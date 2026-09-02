@@ -105,7 +105,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: AppConstants.primaryColor, width: 1.5),
+              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
@@ -187,12 +187,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: AppConstants.primaryColor.withValues(alpha: 0.1),
+                                  color: const Color(0xFF0F172A),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: const Icon(
                                   Icons.store_rounded,
-                                  color: AppConstants.primaryColor,
+                                  color: Colors.white,
                                   size: 20,
                                 ),
                               ),
@@ -273,12 +273,12 @@ class _OnboardingPageState extends State<OnboardingPage> {
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF059669).withValues(alpha: 0.1),
+                                  color: const Color(0xFF0F172A),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: const Icon(
                                   Icons.shield_outlined,
-                                  color: Color(0xFF059669),
+                                  color: Colors.white,
                                   size: 20,
                                 ),
                               ),
@@ -360,7 +360,7 @@ class _OnboardingPageState extends State<OnboardingPage> {
                       height: 48,
                       child: ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppConstants.primaryColor,
+                          backgroundColor: const Color(0xFF0F172A),
                           foregroundColor: Colors.white,
                           elevation: 0,
                           shape: RoundedRectangleBorder(

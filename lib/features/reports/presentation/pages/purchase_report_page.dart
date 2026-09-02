@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/constants/constants.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/database/app_database.dart';
 import '../bloc/reports_cubit.dart';
@@ -55,8 +54,11 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> with SingleTick
   Widget _buildPeriodFilter() {
     return Container(
       width: double.infinity,
-      color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -66,28 +68,28 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> with SingleTick
               Text(
                 'Periode Laporan',
                 style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                   fontSize: 11,
-                  color: AppConstants.textLightColor,
+                  color: const Color(0xFF64748B),
                 ),
               ),
               Text(
                 '${DateFormat('dd MMM yyyy').format(_startDate)} - ${DateFormat('dd MMM yyyy').format(_endDate)}',
                 style: GoogleFonts.poppins(
                   fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppConstants.primaryColor,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF0F172A),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
             children: ['Hari Ini', '7 Hari Terakhir', 'Bulan Ini', 'Kustom'].map((range) {
               final isSelected = _selectedRange == range;
               return Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 3.0),
                   child: InkWell(
                     onTap: () async {
                       if (range == 'Kustom') {
@@ -102,14 +104,14 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> with SingleTick
                           builder: (context, child) {
                             return Theme(
                               data: Theme.of(context).copyWith(
-                                colorScheme: ColorScheme.light(
-                                  primary: AppConstants.primaryColor,
+                                colorScheme: const ColorScheme.light(
+                                  primary: Color(0xFF0F172A),
                                   onPrimary: Colors.white,
-                                  onSurface: AppConstants.textDarkColor,
+                                  onSurface: Color(0xFF0F172A),
                                 ),
                                 textButtonTheme: TextButtonThemeData(
                                   style: TextButton.styleFrom(
-                                    foregroundColor: AppConstants.primaryColor,
+                                    foregroundColor: const Color(0xFF0F172A),
                                   ),
                                 ),
                               ),
@@ -133,34 +135,25 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> with SingleTick
                         _loadData();
                       }
                     },
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(10),
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(vertical: 7),
                       decoration: BoxDecoration(
-                        color: isSelected ? AppConstants.primaryColor : Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(20),
+                        color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: isSelected ? AppConstants.primaryColor : Colors.grey.shade300,
+                          color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
                           width: 1,
                         ),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: AppConstants.primaryColor.withValues(alpha: 0.2),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 3),
-                                )
-                              ]
-                            : null,
                       ),
                       child: Center(
                         child: Text(
                           range,
                           style: GoogleFonts.poppins(
                             fontSize: 10,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                            color: isSelected ? Colors.white : AppConstants.textDarkColor,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                            color: isSelected ? Colors.white : const Color(0xFF64748B),
                           ),
                         ),
                       ),
@@ -178,28 +171,41 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> with SingleTick
   Widget _buildSummaryCards(double totalReceived, double totalPending, int txCount) {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Row(
         children: [
           Expanded(
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppConstants.successColor.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppConstants.successColor.withValues(alpha: 0.2)),
+                color: const Color(0xFF059669).withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF059669).withValues(alpha: 0.2)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Diterima (Received)',
-                    style: GoogleFonts.poppins(fontSize: 10, color: AppConstants.successColor, fontWeight: FontWeight.bold),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF059669).withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.check_circle_outline_rounded, size: 14, color: Color(0xFF059669)),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Diterima',
+                        style: GoogleFonts.poppins(fontSize: 10.5, color: const Color(0xFF059669), fontWeight: FontWeight.w700),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
                     CurrencyFormatter.format(totalReceived),
-                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.bold, color: AppConstants.successColor),
+                    style: GoogleFonts.poppins(fontSize: 13.5, fontWeight: FontWeight.w700, color: const Color(0xFF059669)),
                   ),
                 ],
               ),
@@ -208,23 +214,36 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> with SingleTick
           const SizedBox(width: 10),
           Expanded(
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.orange.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
+                color: const Color(0xFFD97706).withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFD97706).withValues(alpha: 0.2)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Tertunda (Pending)',
-                    style: GoogleFonts.poppins(fontSize: 10, color: Colors.orange.shade800, fontWeight: FontWeight.bold),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD97706).withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.pending_actions_rounded, size: 14, color: Color(0xFFD97706)),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Tertunda / PO',
+                        style: GoogleFonts.poppins(fontSize: 10.5, color: const Color(0xFFD97706), fontWeight: FontWeight.w700),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
                     CurrencyFormatter.format(totalPending),
-                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.orange.shade800),
+                    style: GoogleFonts.poppins(fontSize: 13.5, fontWeight: FontWeight.w700, color: const Color(0xFFD97706)),
                   ),
                 ],
               ),
@@ -242,11 +261,18 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> with SingleTick
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey.shade400),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.shopping_bag_outlined, size: 36, color: Color(0xFF64748B)),
+            ),
             const SizedBox(height: 12),
             Text(
               message,
-              style: GoogleFonts.poppins(fontSize: 12, color: AppConstants.textLightColor),
+              style: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
               textAlign: TextAlign.center,
             ),
           ],
@@ -260,7 +286,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> with SingleTick
       return _buildEmptyState('Belum ada transaksi pembelian di periode ini.');
     }
     return ListView.builder(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       itemCount: txList.length,
       itemBuilder: (context, index) {
         final item = txList[index];
@@ -268,22 +294,34 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> with SingleTick
         final String supplierName = item['supplierName'];
         final isReceived = purchase.status == 'received';
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 10),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: const BorderSide(color: AppConstants.borderLightColor),
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             child: Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: (isReceived ? AppConstants.successColor : Colors.orange).withValues(alpha: 0.08),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: (isReceived ? const Color(0xFF059669) : const Color(0xFFD97706)).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   child: Icon(
                     isReceived ? Icons.assignment_turned_in_rounded : Icons.pending_actions_rounded,
-                    color: isReceived ? AppConstants.successColor : Colors.orange,
+                    color: isReceived ? const Color(0xFF059669) : const Color(0xFFD97706),
+                    size: 20,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -295,19 +333,19 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> with SingleTick
                         purchase.referenceNo,
                         style: GoogleFonts.poppins(
                           fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: AppConstants.textDarkColor,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0F172A),
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 3),
                       Text(
                         'Supplier: $supplierName',
-                        style: GoogleFonts.poppins(fontSize: 11, color: AppConstants.textLightColor),
+                        style: GoogleFonts.poppins(fontSize: 11.5, color: const Color(0xFF64748B)),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 3),
                       Text(
                         DateFormat('dd MMM yyyy, HH:mm').format(purchase.createdAt),
-                        style: GoogleFonts.poppins(fontSize: 10, color: Colors.grey.shade400),
+                        style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFF94A3B8)),
                       ),
                     ],
                   ),
@@ -319,23 +357,23 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> with SingleTick
                       CurrencyFormatter.format(purchase.grandTotal),
                       style: GoogleFonts.poppins(
                         fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: AppConstants.textDarkColor,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF0F172A),
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: (isReceived ? AppConstants.successColor : Colors.orange).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
+                        color: (isReceived ? const Color(0xFF059669) : const Color(0xFFD97706)).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
                         isReceived ? 'DITERIMA' : 'PENDING',
                         style: GoogleFonts.poppins(
-                          fontSize: 9,
-                          fontWeight: FontWeight.bold,
-                          color: isReceived ? AppConstants.successColor : Colors.orange.shade800,
+                          fontSize: 9.5,
+                          fontWeight: FontWeight.w700,
+                          color: isReceived ? const Color(0xFF059669) : const Color(0xFFD97706),
                         ),
                       ),
                     ),
@@ -354,7 +392,7 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> with SingleTick
       return _buildEmptyState('Belum ada data barang dibeli pada periode ini.');
     }
     return ListView.builder(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       itemCount: prodList.length,
       itemBuilder: (context, index) {
         final stats = prodList[index];
@@ -365,20 +403,31 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> with SingleTick
 
         final qtyStr = quantity.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '');
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 10),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: const BorderSide(color: AppConstants.borderLightColor),
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(14),
             child: Row(
               children: [
-                CircleAvatar(
-                  backgroundColor: AppConstants.primaryColor.withValues(alpha: 0.08),
-                  child: const Icon(Icons.shopping_bag_outlined, color: AppConstants.primaryColor),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.shopping_bag_outlined, color: Color(0xFF0F172A), size: 20),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -389,14 +438,14 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> with SingleTick
                         productName,
                         style: GoogleFonts.poppins(
                           fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: AppConstants.textDarkColor,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0F172A),
                         ),
                       ),
-                      const SizedBox(height: 2),
+                      const SizedBox(height: 3),
                       Text(
                         'Total Kuantitas: $qtyStr $unitName',
-                        style: GoogleFonts.poppins(fontSize: 11, color: AppConstants.textLightColor),
+                        style: GoogleFonts.poppins(fontSize: 11.5, color: const Color(0xFF64748B)),
                       ),
                     ],
                   ),
@@ -405,8 +454,8 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> with SingleTick
                   CurrencyFormatter.format(totalCost),
                   style: GoogleFonts.poppins(
                     fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                    color: AppConstants.primaryColor,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
                   ),
                 ),
               ],
@@ -420,17 +469,34 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> with SingleTick
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppConstants.backgroundColor,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(
-          'Laporan Pembelian',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 18, color: Colors.white),
-        ),
-        centerTitle: true,
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.white,
         elevation: 0,
-        backgroundColor: AppConstants.primaryColor,
-        foregroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.white),
+        foregroundColor: const Color(0xFF0F172A),
+        iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Laporan Pembelian',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                fontSize: 17,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            Text(
+              'Histori belanja stok & tagihan PO supplier',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w400,
+                fontSize: 11,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
       ),
       body: BlocBuilder<ReportsCubit, ReportsState>(
         builder: (context, state) {
@@ -453,26 +519,45 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> with SingleTick
             children: [
               _buildPeriodFilter(),
               _buildSummaryCards(totalReceived, totalPending, txList.length),
-              const SizedBox(height: 6),
               Container(
                 color: Colors.white,
-                child: TabBar(
-                  controller: _tabController,
-                  labelColor: AppConstants.primaryColor,
-                  unselectedLabelColor: AppConstants.textLightColor,
-                  indicatorColor: AppConstants.primaryColor,
-                  labelStyle: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.bold),
-                  unselectedLabelStyle: GoogleFonts.poppins(fontSize: 12),
-                  tabs: const [
-                    Tab(text: 'Daftar Transaksi'),
-                    Tab(text: 'Per Produk'),
-                  ],
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    dividerColor: Colors.transparent,
+                    indicator: BoxDecoration(
+                      color: const Color(0xFF0F172A),
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0F172A).withValues(alpha: 0.15),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    labelColor: Colors.white,
+                    unselectedLabelColor: const Color(0xFF64748B),
+                    labelStyle: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
+                    unselectedLabelStyle: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500),
+                    tabs: const [
+                      Tab(text: 'Daftar Transaksi'),
+                      Tab(text: 'Per Produk'),
+                    ],
+                  ),
                 ),
               ),
-              const Divider(height: 1, color: AppConstants.borderLightColor),
+              const Divider(height: 1, color: Color(0xFFE2E8F0)),
               Expanded(
                 child: state.isPurchasesLoading && state.purchaseTransactionsData == null
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const Center(child: CircularProgressIndicator(color: Color(0xFF0F172A)))
                     : TabBarView(
                         controller: _tabController,
                         children: [
@@ -488,3 +573,4 @@ class _PurchaseReportPageState extends State<PurchaseReportPage> with SingleTick
     );
   }
 }
+

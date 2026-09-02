@@ -1013,11 +1013,11 @@ class ReportsRepository {
         .get();
     final customerMap = {for (var c in customers) c.id: c.name};
 
-    final details = transactions.map((txn) {
+    final List<Map<String, dynamic>> details = transactions.map((txn) {
       if (txn.type == 'earn') totalEarned += txn.points;
       if (txn.type == 'redeem') totalRedeemed += txn.points.abs();
 
-      return {
+      return <String, dynamic>{
         'transaction': txn,
         'customerName': customerMap[txn.customerId] ?? 'Pelanggan Tidak Dikenal',
       };

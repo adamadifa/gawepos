@@ -137,80 +137,125 @@ class _DebtsReceivablesReportPageState extends State<DebtsReceivablesReportPage>
   double get _totalSupplierRemaining => _totalSupplierDebt - _totalSupplierPaid;
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppConstants.backgroundColor,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(
-          'Laporan Hutang & Piutang',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 18, color: Colors.white),
-        ),
-        centerTitle: true,
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.white,
         elevation: 0,
-        backgroundColor: AppConstants.primaryColor,
-        foregroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.white),
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white.withValues(alpha: 0.6),
-          indicatorColor: Colors.white,
-          labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13),
-          tabs: const [
-            Tab(text: 'Piutang Pelanggan'),
-            Tab(text: 'Hutang Supplier'),
+        foregroundColor: const Color(0xFF0F172A),
+        iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Hutang & Piutang',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                fontSize: 17,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            Text(
+              'Monitoring tagihan customer & kewajiban supplier',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w400,
+                fontSize: 11,
+                color: const Color(0xFF64748B),
+              ),
+            ),
           ],
         ),
       ),
       body: Column(
         children: [
           _buildPeriodFilter(),
-          // Search Bar
+          // Modern Segmented Tab Bar & Search
           Container(
             color: Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            child: TextField(
-              controller: _searchController,
-              onChanged: (val) {
-                setState(() {
-                  _searchQuery = val;
-                });
-                _applySearchFilter();
-              },
-              decoration: InputDecoration(
-                hintText: _tabController.index == 0 ? 'Cari nama pelanggan / no. ref...' : 'Cari nama supplier / no. ref...',
-                prefixIcon: const Icon(Icons.search, color: AppConstants.textLightColor),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() {
-                            _searchQuery = '';
-                          });
-                          _applySearchFilter();
-                        },
-                      )
-                    : null,
-                contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
-                filled: true,
-                fillColor: Colors.grey.shade50,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade200),
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    dividerColor: Colors.transparent,
+                    indicator: BoxDecoration(
+                      color: const Color(0xFF0F172A),
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0F172A).withValues(alpha: 0.15),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    labelColor: Colors.white,
+                    unselectedLabelColor: const Color(0xFF64748B),
+                    labelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 12.5),
+                    unselectedLabelStyle: GoogleFonts.poppins(fontWeight: FontWeight.w500, fontSize: 12.5),
+                    tabs: const [
+                      Tab(text: 'Piutang Pelanggan'),
+                      Tab(text: 'Hutang Supplier'),
+                    ],
+                  ),
                 ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.shade200),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: _searchController,
+                  onChanged: (val) {
+                    setState(() {
+                      _searchQuery = val;
+                    });
+                    _applySearchFilter();
+                  },
+                  style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A)),
+                  decoration: InputDecoration(
+                    hintText: _tabController.index == 0 ? 'Cari nama pelanggan / no. ref...' : 'Cari nama supplier / no. ref...',
+                    prefixIcon: const Icon(Icons.search, size: 18, color: Color(0xFF64748B)),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18, color: Color(0xFF64748B)),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {
+                                _searchQuery = '';
+                              });
+                              _applySearchFilter();
+                            },
+                          )
+                        : null,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 14),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                    ),
+                  ),
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppConstants.primaryColor),
-                ),
-              ),
+              ],
             ),
           ),
-          const Divider(height: 1),
+          const Divider(height: 1, color: Color(0xFFE2E8F0)),
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -227,7 +272,7 @@ class _DebtsReceivablesReportPageState extends State<DebtsReceivablesReportPage>
 
   Widget _buildCustomerDebtsTab() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator(color: Color(0xFF0F172A)));
     }
 
     return Column(
@@ -240,9 +285,9 @@ class _DebtsReceivablesReportPageState extends State<DebtsReceivablesReportPage>
         ),
         Expanded(
           child: _filteredCustomerDebts.isEmpty
-              ? _buildEmptyState('Belum ada piutang pelanggan.')
+              ? _buildEmptyState('Belum ada data piutang pelanggan.')
               : ListView.builder(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                   itemCount: _filteredCustomerDebts.length,
                   itemBuilder: (context, idx) {
                     final item = _filteredCustomerDebts[idx];
@@ -270,7 +315,7 @@ class _DebtsReceivablesReportPageState extends State<DebtsReceivablesReportPage>
 
   Widget _buildSupplierDebtsTab() {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator(color: Color(0xFF0F172A)));
     }
 
     return Column(
@@ -283,9 +328,9 @@ class _DebtsReceivablesReportPageState extends State<DebtsReceivablesReportPage>
         ),
         Expanded(
           child: _filteredSupplierDebts.isEmpty
-              ? _buildEmptyState('Belum ada hutang supplier.')
+              ? _buildEmptyState('Belum ada data hutang supplier.')
               : ListView.builder(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                   itemCount: _filteredSupplierDebts.length,
                   itemBuilder: (context, idx) {
                     final item = _filteredSupplierDebts[idx];
@@ -318,36 +363,35 @@ class _DebtsReceivablesReportPageState extends State<DebtsReceivablesReportPage>
     required bool isReceivable,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
-      color: Colors.white,
-      child: Column(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+      ),
+      child: Row(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: _buildSummaryItem(
-                  'Total ${isReceivable ? "Piutang" : "Hutang"}',
-                  total,
-                  AppConstants.primaryColor,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildSummaryItem(
-                  'Terbayar',
-                  paid,
-                  AppConstants.successColor,
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: _buildSummaryItem(
-                  'Sisa Saldo',
-                  remaining,
-                  remaining > 0 ? AppConstants.warningColor : AppConstants.textLightColor,
-                ),
-              ),
-            ],
+          Expanded(
+            child: _buildSummaryItem(
+              'Total ${isReceivable ? "Piutang" : "Hutang"}',
+              total,
+              const Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _buildSummaryItem(
+              'Terbayar',
+              paid,
+              const Color(0xFF059669),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _buildSummaryItem(
+              'Sisa Saldo',
+              remaining,
+              remaining > 0 ? const Color(0xFFDC2626) : const Color(0xFF64748B),
+            ),
           ),
         ],
       ),
@@ -356,10 +400,10 @@ class _DebtsReceivablesReportPageState extends State<DebtsReceivablesReportPage>
 
   Widget _buildSummaryItem(String title, double amount, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(8),
+        color: color.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: color.withValues(alpha: 0.12)),
       ),
       child: Column(
@@ -367,14 +411,14 @@ class _DebtsReceivablesReportPageState extends State<DebtsReceivablesReportPage>
         children: [
           Text(
             title,
-            style: GoogleFonts.poppins(fontSize: 10, color: AppConstants.textLightColor, fontWeight: FontWeight.w500),
+            style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
           Text(
             CurrencyFormatter.format(amount),
-            style: GoogleFonts.poppins(fontSize: 12, color: color, fontWeight: FontWeight.bold),
+            style: GoogleFonts.poppins(fontSize: 12, color: color, fontWeight: FontWeight.w700),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -395,99 +439,107 @@ class _DebtsReceivablesReportPageState extends State<DebtsReceivablesReportPage>
     final remaining = total - paid;
 
     String statusLabel = 'LUNAS';
-    Color statusColor = AppConstants.successColor;
+    Color statusColor = const Color(0xFF059669);
     if (status == 'unpaid') {
       statusLabel = 'BELUM LUNAS';
-      statusColor = AppConstants.errorColor;
+      statusColor = const Color(0xFFDC2626);
     } else if (status == 'partial') {
       statusLabel = 'BAYAR SEBAGIAN';
-      statusColor = AppConstants.warningColor;
+      statusColor = const Color(0xFFD97706);
     }
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: const BorderSide(color: AppConstants.borderLightColor),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    title,
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13, color: AppConstants.textDarkColor),
-                  ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13.5, color: const Color(0xFF0F172A)),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    statusLabel,
-                    style: GoogleFonts.poppins(color: statusColor, fontSize: 9, fontWeight: FontWeight.bold),
-                  ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(6),
                 ),
-              ],
-            ),
-            const SizedBox(height: 6),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'No. Ref: $referenceNo',
-                  style: GoogleFonts.poppins(fontSize: 11, color: AppConstants.textLightColor),
+                child: Text(
+                  statusLabel,
+                  style: GoogleFonts.poppins(color: statusColor, fontSize: 9.5, fontWeight: FontWeight.w700),
                 ),
-                Text(
-                  'Tgl Tempo: $dueStr',
-                  style: GoogleFonts.poppins(fontSize: 11, color: AppConstants.textLightColor),
-                ),
-              ],
-            ),
-            const Divider(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Total Tagihan', style: GoogleFonts.poppins(fontSize: 10, color: AppConstants.textLightColor)),
-                    Text(CurrencyFormatter.format(total), style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600)),
-                  ],
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Terbayar', style: GoogleFonts.poppins(fontSize: 10, color: AppConstants.textLightColor)),
-                    Text(CurrencyFormatter.format(paid), style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: AppConstants.successColor)),
-                  ],
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text('Sisa Saldo', style: GoogleFonts.poppins(fontSize: 10, color: AppConstants.textLightColor)),
-                    Text(
-                      CurrencyFormatter.format(remaining),
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: remaining > 0 ? AppConstants.errorColor : AppConstants.textDarkColor,
-                      ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'No. Ref: $referenceNo',
+                style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
+              ),
+              Text(
+                'Jatuh Tempo: $dueStr',
+                style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w500, color: const Color(0xFF64748B)),
+              ),
+            ],
+          ),
+          const Divider(height: 20, color: Color(0xFFF1F5F9)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Total Tagihan', style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFF64748B))),
+                  const SizedBox(height: 2),
+                  Text(CurrencyFormatter.format(total), style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Terbayar', style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFF64748B))),
+                  const SizedBox(height: 2),
+                  Text(CurrencyFormatter.format(paid), style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF059669))),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text('Sisa Saldo', style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFF64748B))),
+                  const SizedBox(height: 2),
+                  Text(
+                    CurrencyFormatter.format(remaining),
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: remaining > 0 ? const Color(0xFFDC2626) : const Color(0xFF0F172A),
                     ),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -497,11 +549,18 @@ class _DebtsReceivablesReportPageState extends State<DebtsReceivablesReportPage>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.payment_outlined, size: 48, color: Colors.grey.shade400),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.account_balance_wallet_outlined, size: 36, color: Color(0xFF64748B)),
+          ),
           const SizedBox(height: 12),
           Text(
             message,
-            style: GoogleFonts.poppins(fontSize: 12, color: AppConstants.textLightColor),
+            style: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
           ),
         ],
       ),
@@ -511,8 +570,11 @@ class _DebtsReceivablesReportPageState extends State<DebtsReceivablesReportPage>
   Widget _buildPeriodFilter() {
     return Container(
       width: double.infinity,
-      color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -522,28 +584,28 @@ class _DebtsReceivablesReportPageState extends State<DebtsReceivablesReportPage>
               Text(
                 'Periode Laporan',
                 style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                   fontSize: 11,
-                  color: AppConstants.textLightColor,
+                  color: const Color(0xFF64748B),
                 ),
               ),
               Text(
                 '${DateFormat('dd MMM yyyy').format(_startDate)} - ${DateFormat('dd MMM yyyy').format(_endDate)}',
                 style: GoogleFonts.poppins(
                   fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppConstants.primaryColor,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF0F172A),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
             children: ['Hari Ini', '7 Hari Terakhir', 'Bulan Ini', 'Kustom'].map((range) {
               final isSelected = _selectedRange == range;
               return Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 3.0),
                   child: InkWell(
                     onTap: () async {
                       if (range == 'Kustom') {
@@ -558,14 +620,14 @@ class _DebtsReceivablesReportPageState extends State<DebtsReceivablesReportPage>
                           builder: (context, child) {
                             return Theme(
                               data: Theme.of(context).copyWith(
-                                colorScheme: ColorScheme.light(
-                                  primary: AppConstants.primaryColor,
+                                colorScheme: const ColorScheme.light(
+                                  primary: Color(0xFF0F172A),
                                   onPrimary: Colors.white,
-                                  onSurface: AppConstants.textDarkColor,
+                                  onSurface: Color(0xFF0F172A),
                                 ),
                                 textButtonTheme: TextButtonThemeData(
                                   style: TextButton.styleFrom(
-                                    foregroundColor: AppConstants.primaryColor,
+                                    foregroundColor: const Color(0xFF0F172A),
                                   ),
                                 ),
                               ),
@@ -589,34 +651,25 @@ class _DebtsReceivablesReportPageState extends State<DebtsReceivablesReportPage>
                         _loadData();
                       }
                     },
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(10),
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(vertical: 7),
                       decoration: BoxDecoration(
-                        color: isSelected ? AppConstants.primaryColor : Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(20),
+                        color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: isSelected ? AppConstants.primaryColor : Colors.grey.shade300,
+                          color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
                           width: 1,
                         ),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: AppConstants.primaryColor.withValues(alpha: 0.2),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 3),
-                                )
-                              ]
-                            : null,
                       ),
                       child: Center(
                         child: Text(
                           range,
                           style: GoogleFonts.poppins(
                             fontSize: 10,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                            color: isSelected ? Colors.white : AppConstants.textDarkColor,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                            color: isSelected ? Colors.white : const Color(0xFF64748B),
                           ),
                         ),
                       ),

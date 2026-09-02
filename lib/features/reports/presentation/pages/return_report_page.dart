@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/constants/constants.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/di/injection.dart';
@@ -69,8 +68,11 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
   Widget _buildPeriodFilter() {
     return Container(
       width: double.infinity,
-      color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -80,28 +82,28 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
               Text(
                 'Periode Laporan',
                 style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                   fontSize: 11,
-                  color: AppConstants.textLightColor,
+                  color: const Color(0xFF64748B),
                 ),
               ),
               Text(
                 '${DateFormat('dd MMM yyyy').format(_startDate)} - ${DateFormat('dd MMM yyyy').format(_endDate)}',
                 style: GoogleFonts.poppins(
                   fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppConstants.primaryColor,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF0F172A),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
             children: ['Hari Ini', '7 Hari Terakhir', 'Bulan Ini', 'Kustom'].map((range) {
               final isSelected = _selectedRange == range;
               return Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 3.0),
                   child: InkWell(
                     onTap: () async {
                       if (range == 'Kustom') {
@@ -116,14 +118,14 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
                           builder: (context, child) {
                             return Theme(
                               data: Theme.of(context).copyWith(
-                                colorScheme: ColorScheme.light(
-                                  primary: AppConstants.primaryColor,
+                                colorScheme: const ColorScheme.light(
+                                  primary: Color(0xFF0F172A),
                                   onPrimary: Colors.white,
-                                  onSurface: AppConstants.textDarkColor,
+                                  onSurface: Color(0xFF0F172A),
                                 ),
                                 textButtonTheme: TextButtonThemeData(
                                   style: TextButton.styleFrom(
-                                    foregroundColor: AppConstants.primaryColor,
+                                    foregroundColor: const Color(0xFF0F172A),
                                   ),
                                 ),
                               ),
@@ -142,39 +144,30 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
                       } else {
                         setState(() {
                           _selectedRange = range;
+                          _updateDateRange();
+                          _loadData();
                         });
-                        _updateDateRange();
-                        _loadData();
                       }
                     },
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(10),
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(vertical: 7),
                       decoration: BoxDecoration(
-                        color: isSelected ? AppConstants.primaryColor : Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(20),
+                        color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: isSelected ? AppConstants.primaryColor : Colors.grey.shade300,
+                          color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
                           width: 1,
                         ),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: AppConstants.primaryColor.withValues(alpha: 0.2),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 3),
-                                )
-                              ]
-                            : null,
                       ),
                       child: Center(
                         child: Text(
                           range,
                           style: GoogleFonts.poppins(
                             fontSize: 10,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                            color: isSelected ? Colors.white : AppConstants.textDarkColor,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                            color: isSelected ? Colors.white : const Color(0xFF64748B),
                           ),
                         ),
                       ),
@@ -192,28 +185,41 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
   Widget _buildSummaryCards(double totalSalesReturn, double totalPurchaseReturn) {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Row(
         children: [
           Expanded(
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppConstants.errorColor.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppConstants.errorColor.withValues(alpha: 0.2)),
+                color: const Color(0xFFDC2626).withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFDC2626).withValues(alpha: 0.2)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Retur Penjualan',
-                    style: GoogleFonts.poppins(fontSize: 10, color: AppConstants.errorColor, fontWeight: FontWeight.bold),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDC2626).withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.call_received_rounded, size: 14, color: Color(0xFFDC2626)),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Retur Penjualan',
+                        style: GoogleFonts.poppins(fontSize: 10.5, color: const Color(0xFFDC2626), fontWeight: FontWeight.w700),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
                     CurrencyFormatter.format(totalSalesReturn),
-                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.bold, color: AppConstants.errorColor),
+                    style: GoogleFonts.poppins(fontSize: 13.5, fontWeight: FontWeight.w700, color: const Color(0xFFDC2626)),
                   ),
                 ],
               ),
@@ -222,23 +228,36 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
           const SizedBox(width: 10),
           Expanded(
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: AppConstants.successColor.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: AppConstants.successColor.withValues(alpha: 0.2)),
+                color: const Color(0xFF059669).withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFF059669).withValues(alpha: 0.2)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Retur Pembelian',
-                    style: GoogleFonts.poppins(fontSize: 10, color: AppConstants.successColor, fontWeight: FontWeight.bold),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF059669).withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.call_made_rounded, size: 14, color: Color(0xFF059669)),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Retur Pembelian',
+                        style: GoogleFonts.poppins(fontSize: 10.5, color: const Color(0xFF059669), fontWeight: FontWeight.w700),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
                     CurrencyFormatter.format(totalPurchaseReturn),
-                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.bold, color: AppConstants.successColor),
+                    style: GoogleFonts.poppins(fontSize: 13.5, fontWeight: FontWeight.w700, color: const Color(0xFF059669)),
                   ),
                 ],
               ),
@@ -256,11 +275,18 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.assignment_return_outlined, size: 48, color: Colors.grey.shade400),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.swap_horizontal_circle_outlined, size: 36, color: Color(0xFF64748B)),
+            ),
             const SizedBox(height: 12),
             Text(
               message,
-              style: GoogleFonts.poppins(fontSize: 12, color: AppConstants.textLightColor),
+              style: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
               textAlign: TextAlign.center,
             ),
           ],
@@ -274,7 +300,7 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
       return _buildEmptyState('Belum ada transaksi retur penjualan di periode ini.');
     }
     return ListView.builder(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       itemCount: list.length,
       itemBuilder: (context, index) {
         final row = list[index];
@@ -284,97 +310,108 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
 
         final dateStr = DateFormat('dd MMM yyyy, HH:mm').format(ret.createdAt);
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 10),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: const BorderSide(color: AppConstants.borderLightColor),
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(10),
-            onTap: () => _showSalesReturnDetailsSheet(ret.id),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            ret.referenceNo,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () => _showSalesReturnDetailsSheet(ret.id),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              ret.referenceNo,
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              icon: const Icon(Icons.copy_rounded, size: 14, color: Color(0xFF94A3B8)),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () => _copyToClipboard(context, ret.referenceNo, 'No. Retur'),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          CurrencyFormatter.format(ret.refundAmount),
+                          style: GoogleFonts.poppins(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFFDC2626),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          customer?.name ?? 'Pelanggan Umum',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            ret.refundMethod == 'cash' ? 'Tunai' : 'Potong Piutang',
                             style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: AppConstants.primaryColor,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF0F172A),
                             ),
                           ),
-                          const SizedBox(width: 4),
-                          IconButton(
-                            icon: const Icon(Icons.copy_rounded, size: 14, color: AppConstants.textLightColor),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            onPressed: () => _copyToClipboard(context, ret.referenceNo, 'No. Retur'),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        CurrencyFormatter.format(ret.refundAmount),
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: AppConstants.errorColor,
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        customer?.name ?? 'Pelanggan Umum',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: AppConstants.textDarkColor,
+                      ],
+                    ),
+                    const Divider(height: 18, color: Color(0xFFF1F5F9)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Ref Penjualan: ${order?.referenceNo ?? "Retur Umum"}',
+                          style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
                         ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: (ret.refundMethod == 'cash' ? Colors.blue : Colors.purple).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(4),
+                        Text(
+                          dateStr,
+                          style: GoogleFonts.poppins(fontSize: 10.5, color: const Color(0xFF94A3B8)),
                         ),
-                        child: Text(
-                          ret.refundMethod == 'cash' ? 'Tunai' : 'Potong Piutang',
-                          style: GoogleFonts.poppins(
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                            color: ret.refundMethod == 'cash' ? Colors.blue.shade800 : Colors.purple.shade800,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 16, color: AppConstants.borderLightColor),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Ref Penjualan: ${order?.referenceNo ?? "Retur Umum"}',
-                        style: GoogleFonts.poppins(fontSize: 11, color: AppConstants.textLightColor),
-                      ),
-                      Text(
-                        dateStr,
-                        style: GoogleFonts.poppins(fontSize: 11, color: AppConstants.textLightColor),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -388,7 +425,7 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
       return _buildEmptyState('Belum ada transaksi retur pembelian di periode ini.');
     }
     return ListView.builder(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       itemCount: list.length,
       itemBuilder: (context, index) {
         final row = list[index];
@@ -398,97 +435,108 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
 
         final dateStr = DateFormat('dd MMM yyyy, HH:mm').format(ret.createdAt);
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 10),
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-            side: const BorderSide(color: AppConstants.borderLightColor),
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(10),
-            onTap: () => _showPurchaseReturnDetailsSheet(ret.id),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          Text(
-                            ret.referenceNo,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(14),
+              onTap: () => _showPurchaseReturnDetailsSheet(ret.id),
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              ret.referenceNo,
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            IconButton(
+                              icon: const Icon(Icons.copy_rounded, size: 14, color: Color(0xFF94A3B8)),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () => _copyToClipboard(context, ret.referenceNo, 'No. Retur'),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          CurrencyFormatter.format(ret.refundAmount),
+                          style: GoogleFonts.poppins(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF059669),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          supplier?.name ?? 'Supplier Pemasok',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            ret.refundMethod == 'cash' ? 'Tunai' : 'Potong Hutang',
                             style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: AppConstants.primaryColor,
+                              fontSize: 9.5,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF0F172A),
                             ),
                           ),
-                          const SizedBox(width: 4),
-                          IconButton(
-                            icon: const Icon(Icons.copy_rounded, size: 14, color: AppConstants.textLightColor),
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                            onPressed: () => _copyToClipboard(context, ret.referenceNo, 'No. Retur'),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        CurrencyFormatter.format(ret.refundAmount),
-                        style: GoogleFonts.poppins(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: AppConstants.successColor,
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        supplier?.name ?? 'Supplier Pemasok',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: AppConstants.textDarkColor,
+                      ],
+                    ),
+                    const Divider(height: 18, color: Color(0xFFF1F5F9)),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Ref Pembelian: ${purchase?.referenceNo ?? "Retur Umum"}',
+                          style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
                         ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: (ret.refundMethod == 'cash' ? Colors.blue : Colors.orange).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(4),
+                        Text(
+                          dateStr,
+                          style: GoogleFonts.poppins(fontSize: 10.5, color: const Color(0xFF94A3B8)),
                         ),
-                        child: Text(
-                          ret.refundMethod == 'cash' ? 'Tunai' : 'Potong Hutang',
-                          style: GoogleFonts.poppins(
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                            color: ret.refundMethod == 'cash' ? Colors.blue.shade800 : Colors.orange.shade800,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 16, color: AppConstants.borderLightColor),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Ref Pembelian: ${purchase?.referenceNo ?? "Retur Umum"}',
-                        style: GoogleFonts.poppins(fontSize: 11, color: AppConstants.textLightColor),
-                      ),
-                      Text(
-                        dateStr,
-                        style: GoogleFonts.poppins(fontSize: 11, color: AppConstants.textLightColor),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -501,15 +549,16 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radiusLg)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
         return FutureBuilder<Map<String, dynamic>?>(
           future: getIt<ReturnRepository>().getSalesReturnDetails(id),
           builder: (fbCtx, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const SizedBox(height: 250, child: Center(child: CircularProgressIndicator()));
+              return const SizedBox(height: 250, child: Center(child: CircularProgressIndicator(color: Color(0xFF0F172A))));
             }
 
             final data = snapshot.data;
@@ -535,13 +584,13 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
                       child: Container(
                         width: 40,
                         height: 5,
-                        decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+                        decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       'Rincian Retur Penjualan',
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16, color: AppConstants.textDarkColor),
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16, color: const Color(0xFF0F172A)),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 20),
@@ -551,10 +600,10 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
                     _buildMetaRowWithCopy(ctx, 'No. Invoice Asal', order?.referenceNo ?? 'Retur Umum'),
                     _buildMetaRow('Metode Pengembalian', ret.refundMethod == 'cash' ? 'Tunai (Cash)' : 'Potong Piutang (Bon)'),
                     if (ret.notes != null && ret.notes!.isNotEmpty) _buildMetaRow('Alasan / Catatan', ret.notes!),
-                    const Divider(height: 30, color: AppConstants.borderLightColor),
+                    const Divider(height: 30, color: Color(0xFFE2E8F0)),
                     Text(
                       'Barang yang Diretur:',
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13, color: AppConstants.textDarkColor),
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13, color: const Color(0xFF0F172A)),
                     ),
                     const SizedBox(height: 10),
                     ...items.map((itemRow) {
@@ -571,27 +620,27 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(product?.name ?? 'Produk', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: AppConstants.textDarkColor)),
+                                  Text(product?.name ?? 'Produk', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
                                   Text(
                                     '${item.quantity.toString().replaceAll(RegExp(r'\.0$'), '')} ${unit?.name ?? ""} x ${CurrencyFormatter.format(item.price)}',
-                                    style: GoogleFonts.poppins(fontSize: 11, color: AppConstants.textLightColor),
+                                    style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
                                   ),
                                 ],
                               ),
                             ),
-                            Text(CurrencyFormatter.format(item.subtotal), style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.bold, color: AppConstants.textDarkColor)),
+                            Text(CurrencyFormatter.format(item.subtotal), style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A))),
                           ],
                         ),
                       );
                     }),
-                    const Divider(height: 30, color: AppConstants.borderLightColor),
+                    const Divider(height: 30, color: Color(0xFFE2E8F0)),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Total Refund', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold, color: AppConstants.textDarkColor)),
+                        Text('Total Refund', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A))),
                         Text(
                           CurrencyFormatter.format(ret.refundAmount),
-                          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: AppConstants.errorColor),
+                          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFFDC2626)),
                         ),
                       ],
                     ),
@@ -610,15 +659,16 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radiusLg)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
         return FutureBuilder<Map<String, dynamic>?>(
           future: getIt<ReturnRepository>().getPurchaseReturnDetails(id),
           builder: (fbCtx, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const SizedBox(height: 250, child: Center(child: CircularProgressIndicator()));
+              return const SizedBox(height: 250, child: Center(child: CircularProgressIndicator(color: Color(0xFF0F172A))));
             }
 
             final data = snapshot.data;
@@ -644,26 +694,26 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
                       child: Container(
                         width: 40,
                         height: 5,
-                        decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(10)),
+                        decoration: BoxDecoration(color: const Color(0xFFE2E8F0), borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       'Rincian Retur Pembelian',
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16, color: AppConstants.textDarkColor),
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16, color: const Color(0xFF0F172A)),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 20),
                     _buildMetaRowWithCopy(ctx, 'No. Retur', ret.referenceNo),
                     _buildMetaRow('Tanggal', DateFormat('dd MMM yyyy, HH:mm').format(ret.createdAt)),
-                    _buildMetaRow('Supplier / Pemasok', supplier?.name ?? 'Pemasok'),
-                    _buildMetaRowWithCopy(ctx, 'No. Purchase Order', purchase?.referenceNo ?? 'Retur Umum'),
-                    _buildMetaRow('Metode Pengembalian', ret.refundMethod == 'cash' ? 'Tunai (Cash)' : 'Potong Hutang'),
+                    _buildMetaRow('Supplier', supplier?.name ?? 'Supplier Pemasok'),
+                    _buildMetaRowWithCopy(ctx, 'No. PO Asal', purchase?.referenceNo ?? 'Retur Umum'),
+                    _buildMetaRow('Metode Pengembalian', ret.refundMethod == 'cash' ? 'Tunai (Cash)' : 'Potong Hutang (Kredit)'),
                     if (ret.notes != null && ret.notes!.isNotEmpty) _buildMetaRow('Alasan / Catatan', ret.notes!),
-                    const Divider(height: 30, color: AppConstants.borderLightColor),
+                    const Divider(height: 30, color: Color(0xFFE2E8F0)),
                     Text(
                       'Barang yang Diretur:',
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13, color: AppConstants.textDarkColor),
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13, color: const Color(0xFF0F172A)),
                     ),
                     const SizedBox(height: 10),
                     ...items.map((itemRow) {
@@ -680,27 +730,27 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(product?.name ?? 'Produk', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500, color: AppConstants.textDarkColor)),
+                                  Text(product?.name ?? 'Produk', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
                                   Text(
                                     '${item.quantity.toString().replaceAll(RegExp(r'\.0$'), '')} ${unit?.name ?? ""} x ${CurrencyFormatter.format(item.costPrice)}',
-                                    style: GoogleFonts.poppins(fontSize: 11, color: AppConstants.textLightColor),
+                                    style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
                                   ),
                                 ],
                               ),
                             ),
-                            Text(CurrencyFormatter.format(item.subtotal), style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.bold, color: AppConstants.textDarkColor)),
+                            Text(CurrencyFormatter.format(item.subtotal), style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A))),
                           ],
                         ),
                       );
                     }),
-                    const Divider(height: 30, color: AppConstants.borderLightColor),
+                    const Divider(height: 30, color: Color(0xFFE2E8F0)),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Total Refund / Potongan', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold, color: AppConstants.textDarkColor)),
+                        Text('Total Refund / Potongan', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A))),
                         Text(
                           CurrencyFormatter.format(ret.refundAmount),
-                          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold, color: AppConstants.successColor),
+                          style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFF059669)),
                         ),
                       ],
                     ),
@@ -725,14 +775,14 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
             width: 130,
             child: Text(
               label,
-              style: GoogleFonts.poppins(fontSize: 12, color: AppConstants.textLightColor),
+              style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF64748B)),
             ),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               value,
-              style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: AppConstants.textDarkColor),
+              style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: const Color(0xFF0F172A)),
             ),
           ),
         ],
@@ -751,7 +801,7 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
             width: 130,
             child: Text(
               label,
-              style: GoogleFonts.poppins(fontSize: 12, color: AppConstants.textLightColor),
+              style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF64748B)),
             ),
           ),
           const SizedBox(width: 8),
@@ -761,12 +811,12 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
                 Expanded(
                   child: Text(
                     value,
-                    style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: AppConstants.textDarkColor),
+                    style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: const Color(0xFF0F172A)),
                   ),
                 ),
                 if (!isNone)
                   IconButton(
-                    icon: const Icon(Icons.copy_rounded, size: 14, color: AppConstants.textLightColor),
+                    icon: const Icon(Icons.copy_rounded, size: 14, color: Color(0xFF94A3B8)),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: () => _copyToClipboard(context, value, label),
@@ -782,17 +832,34 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppConstants.backgroundColor,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(
-          'Laporan Retur',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 18, color: Colors.white),
-        ),
-        centerTitle: true,
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.white,
         elevation: 0,
-        backgroundColor: AppConstants.primaryColor,
-        foregroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.white),
+        foregroundColor: const Color(0xFF0F172A),
+        iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Laporan Retur',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                fontSize: 17,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            Text(
+              'Pengembalian penjualan & retur pembelian',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w400,
+                fontSize: 11,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
       ),
       body: BlocBuilder<ReportsCubit, ReportsState>(
         builder: (context, state) {
@@ -815,26 +882,45 @@ class _ReturnReportPageState extends State<ReturnReportPage> with SingleTickerPr
             children: [
               _buildPeriodFilter(),
               _buildSummaryCards(totalSalesReturn, totalPurchaseReturn),
-              const SizedBox(height: 6),
               Container(
                 color: Colors.white,
-                child: TabBar(
-                  controller: _tabController,
-                  labelColor: AppConstants.primaryColor,
-                  unselectedLabelColor: AppConstants.textLightColor,
-                  indicatorColor: AppConstants.primaryColor,
-                  labelStyle: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.bold),
-                  unselectedLabelStyle: GoogleFonts.poppins(fontSize: 12),
-                  tabs: const [
-                    Tab(text: 'Retur Penjualan'),
-                    Tab(text: 'Retur Pembelian'),
-                  ],
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    dividerColor: Colors.transparent,
+                    indicator: BoxDecoration(
+                      color: const Color(0xFF0F172A),
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0F172A).withValues(alpha: 0.15),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    labelColor: Colors.white,
+                    unselectedLabelColor: const Color(0xFF64748B),
+                    labelStyle: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
+                    unselectedLabelStyle: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500),
+                    tabs: const [
+                      Tab(text: 'Retur Penjualan'),
+                      Tab(text: 'Retur Pembelian'),
+                    ],
+                  ),
                 ),
               ),
-              const Divider(height: 1, color: AppConstants.borderLightColor),
+              const Divider(height: 1, color: Color(0xFFE2E8F0)),
               Expanded(
                 child: state.isReturnsLoading && state.salesReturnsReportData == null
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const Center(child: CircularProgressIndicator(color: Color(0xFF0F172A)))
                     : TabBarView(
                         controller: _tabController,
                         children: [

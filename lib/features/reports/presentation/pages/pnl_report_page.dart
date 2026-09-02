@@ -165,17 +165,46 @@ class _PnlReportPageState extends State<PnlReportPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppConstants.backgroundColor,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(
-          'Laporan Laba Rugi',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 18, color: Colors.white),
-        ),
-        centerTitle: true,
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.white,
         elevation: 0,
-        backgroundColor: AppConstants.primaryColor,
-        foregroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.white),
+        foregroundColor: const Color(0xFF0F172A),
+        iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Laporan Laba Rugi',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                fontSize: 17,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            Text(
+              'Analisis pendapatan, HPP & margin bersih',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w400,
+                fontSize: 11,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          BlocBuilder<ReportsCubit, ReportsState>(
+            builder: (context, state) {
+              if (state.pnlData == null) return const SizedBox.shrink();
+              return IconButton(
+                icon: const Icon(Icons.share_outlined, color: Color(0xFF0F172A), size: 20),
+                tooltip: 'Bagikan PDF',
+                onPressed: () => _exportPnLToPdf(state.pnlData!),
+              );
+            },
+          ),
+        ],
       ),
       body: BlocBuilder<ReportsCubit, ReportsState>(
         builder: (context, state) {
@@ -185,63 +214,123 @@ class _PnlReportPageState extends State<PnlReportPage> {
                 context.read<ReportsCubit>().loadPnL(_startDate, _endDate);
               }),
               if (state.isPnLLoading && state.pnlData == null)
-                const Expanded(child: Center(child: CircularProgressIndicator()))
+                const Expanded(child: Center(child: CircularProgressIndicator(color: Color(0xFF0F172A))))
               else if (state.pnlData != null) ...[
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16.0),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                     child: Column(
                       children: [
-                        Card(
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-                            side: const BorderSide(color: AppConstants.borderLightColor),
+                        // Hero Net Profit Card
+                        _buildHeroProfitCard(state.pnlData!),
+                        const SizedBox(height: 16),
+
+                        // Card Rincian
+                        Container(
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Rincian Pendapatan & Beban',
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: AppConstants.textDarkColor,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF0F172A),
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
+                                    child: const Icon(
+                                      Icons.receipt_long_rounded,
+                                      color: Colors.white,
+                                      size: 18,
+                                    ),
                                   ),
+                                  const SizedBox(width: 12),
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Rincian Pendapatan & Beban',
+                                        style: GoogleFonts.poppins(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 14,
+                                          color: const Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                      Text(
+                                        'Kalkulasi omzet, modal dan pengeluaran',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 11,
+                                          color: const Color(0xFF64748B),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              const Divider(height: 28, color: Color(0xFFE2E8F0)),
+                              _buildPnLItemRow('Penjualan Kotor (Gross)', state.pnlData!['grossSales'] ?? 0.0),
+                              _buildPnLItemRow('Total Diskon (-)', -(state.pnlData!['discount'] ?? 0.0), isNegative: true),
+                              _buildPnLItemRow('Total Pajak (+)', state.pnlData!['tax'] ?? 0.0),
+                              const Divider(height: 20, color: Color(0xFFF1F5F9)),
+                              _buildPnLItemRow('Penjualan Bersih (Net Sales)', state.pnlData!['netSales'] ?? 0.0, isBold: true),
+                              _buildPnLItemRow('Harga Pokok Penjualan (HPP) (-)', -(state.pnlData!['hpp'] ?? 0.0), isNegative: true),
+                              const Divider(height: 20, color: Color(0xFFF1F5F9)),
+                              _buildPnLItemRow('Profit Kotor (Gross Margin)', state.pnlData!['grossProfit'] ?? 0.0, isBold: true, color: const Color(0xFF0F172A)),
+                              _buildPnLItemRow('Biaya Operasional Kasir (-)', -(state.pnlData!['expenses'] ?? 0.0), isNegative: true),
+                              const Divider(height: 24, color: Color(0xFFE2E8F0)),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                                const Divider(height: 24),
-                                _buildPnLItemRow('Penjualan Kotor', state.pnlData!['grossSales'] ?? 0.0),
-                                _buildPnLItemRow('Total Diskon (-)', -(state.pnlData!['discount'] ?? 0.0), isNegative: true),
-                                _buildPnLItemRow('Total Pajak (+)', state.pnlData!['tax'] ?? 0.0),
-                                _buildPnLItemRow('Penjualan Bersih (Net)', state.pnlData!['netSales'] ?? 0.0, isBold: true),
-                                _buildPnLItemRow('Harga Pokok Penjualan (HPP) (-)', -(state.pnlData!['hpp'] ?? 0.0), isNegative: true),
-                                _buildPnLItemRow('Profit Kotor (Gross Profit)', state.pnlData!['grossProfit'] ?? 0.0, isBold: true, color: AppConstants.primaryColor),
-                                _buildPnLItemRow('Biaya Operasional Kasir (-)', -(state.pnlData!['expenses'] ?? 0.0), isNegative: true),
-                                const Divider(height: 24),
-                                _buildPnLItemRow(
+                                child: _buildPnLItemRow(
                                   'Profit Bersih (Net Income)',
                                   state.pnlData!['netProfit'] ?? 0.0,
                                   isBold: true,
-                                  color: (state.pnlData!['netProfit'] ?? 0.0) >= 0 ? AppConstants.successColor : AppConstants.errorColor,
+                                  color: (state.pnlData!['netProfit'] ?? 0.0) >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626),
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 20),
+
+                        // Export Button
                         SizedBox(
                           width: double.infinity,
                           height: 48,
                           child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              foregroundColor: AppConstants.primaryColor,
-                              side: const BorderSide(color: AppConstants.primaryColor),
+                              backgroundColor: const Color(0xFF0F172A),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
-                            icon: const Icon(Icons.share_outlined),
-                            label: const Text('BAGIKAN LAPORAN (PDF)'),
+                            icon: const Icon(Icons.picture_as_pdf_outlined, size: 18),
+                            label: Text(
+                              'EKSPOR LAPORAN (PDF)',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
                             onPressed: () => _exportPnLToPdf(state.pnlData!),
                           ),
                         ),
@@ -255,6 +344,129 @@ class _PnlReportPageState extends State<PnlReportPage> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildHeroProfitCard(Map<String, dynamic> pnl) {
+    final double netProfit = pnl['netProfit'] ?? 0.0;
+    final double netSales = pnl['netSales'] ?? 0.0;
+    final double marginPct = netSales > 0 ? (netProfit / netSales) * 100 : 0.0;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A),
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.18),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'PROFIT BERSIH (NET PROFIT)',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.white.withValues(alpha: 0.7),
+                  letterSpacing: 0.8,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: (netProfit >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626)).withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: (netProfit >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626)).withValues(alpha: 0.5),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      netProfit >= 0 ? Icons.trending_up_rounded : Icons.trending_down_rounded,
+                      color: netProfit >= 0 ? const Color(0xFF34D399) : const Color(0xFFF87171),
+                      size: 14,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${marginPct.toStringAsFixed(1)}% Margin',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: netProfit >= 0 ? const Color(0xFF34D399) : const Color(0xFFF87171),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            CurrencyFormatter.format(netProfit),
+            style: GoogleFonts.poppins(
+              fontSize: 26,
+              fontWeight: FontWeight.w800,
+              color: Colors.white,
+              letterSpacing: -0.5,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildHeroSubItem('Omzet Bersih', CurrencyFormatter.format(netSales)),
+                Container(height: 24, width: 1, color: Colors.white.withValues(alpha: 0.15)),
+                _buildHeroSubItem('Profit Kotor', CurrencyFormatter.format(pnl['grossProfit'] ?? 0.0)),
+                Container(height: 24, width: 1, color: Colors.white.withValues(alpha: 0.15)),
+                _buildHeroSubItem('Beban Kasir', CurrencyFormatter.format(pnl['expenses'] ?? 0.0)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeroSubItem(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 9.5,
+            color: Colors.white.withValues(alpha: 0.6),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: GoogleFonts.poppins(
+            fontSize: 11.5,
+            fontWeight: FontWeight.w700,
+            color: Colors.white,
+          ),
+        ),
+      ],
     );
   }
 
@@ -288,8 +500,11 @@ class _PnlReportPageState extends State<PnlReportPage> {
   Widget _buildPeriodFilter(VoidCallback onDateRangeChanged) {
     return Container(
       width: double.infinity,
-      color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -299,28 +514,28 @@ class _PnlReportPageState extends State<PnlReportPage> {
               Text(
                 'Periode Laporan',
                 style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                   fontSize: 11,
-                  color: AppConstants.textLightColor,
+                  color: const Color(0xFF64748B),
                 ),
               ),
               Text(
                 '${DateFormat('dd MMM yyyy').format(_startDate)} - ${DateFormat('dd MMM yyyy').format(_endDate)}',
                 style: GoogleFonts.poppins(
                   fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppConstants.primaryColor,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF0F172A),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
             children: ['Hari Ini', '7 Hari Terakhir', 'Bulan Ini', 'Kustom'].map((range) {
               final isSelected = _selectedRange == range;
               return Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 3.0),
                   child: InkWell(
                     onTap: () async {
                       if (range == 'Kustom') {
@@ -335,14 +550,14 @@ class _PnlReportPageState extends State<PnlReportPage> {
                           builder: (context, child) {
                             return Theme(
                               data: Theme.of(context).copyWith(
-                                colorScheme: ColorScheme.light(
-                                  primary: AppConstants.primaryColor,
+                                colorScheme: const ColorScheme.light(
+                                  primary: Color(0xFF0F172A),
                                   onPrimary: Colors.white,
-                                  onSurface: AppConstants.textDarkColor,
+                                  onSurface: Color(0xFF0F172A),
                                 ),
                                 textButtonTheme: TextButtonThemeData(
                                   style: TextButton.styleFrom(
-                                    foregroundColor: AppConstants.primaryColor,
+                                    foregroundColor: const Color(0xFF0F172A),
                                   ),
                                 ),
                               ),
@@ -366,34 +581,25 @@ class _PnlReportPageState extends State<PnlReportPage> {
                         onDateRangeChanged();
                       }
                     },
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(10),
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(vertical: 7),
                       decoration: BoxDecoration(
-                        color: isSelected ? AppConstants.primaryColor : Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(20),
+                        color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: isSelected ? AppConstants.primaryColor : Colors.grey.shade300,
+                          color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
                           width: 1,
                         ),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: AppConstants.primaryColor.withValues(alpha: 0.2),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 3),
-                                )
-                              ]
-                            : null,
                       ),
                       child: Center(
                         child: Text(
                           range,
                           style: GoogleFonts.poppins(
                             fontSize: 10,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                            color: isSelected ? Colors.white : AppConstants.textDarkColor,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                            color: isSelected ? Colors.white : const Color(0xFF64748B),
                           ),
                         ),
                       ),

@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/constants/constants.dart';
 import '../../../../core/utils/currency_formatter.dart';
-import '../../../../core/database/app_database.dart';
 import '../bloc/reports_cubit.dart';
 
 class ExpensesReportPage extends StatefulWidget {
@@ -43,8 +41,11 @@ class _ExpensesReportPageState extends State<ExpensesReportPage> {
   Widget _buildPeriodFilter(VoidCallback onDateRangeChanged) {
     return Container(
       width: double.infinity,
-      color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -54,28 +55,28 @@ class _ExpensesReportPageState extends State<ExpensesReportPage> {
               Text(
                 'Periode Laporan',
                 style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                   fontSize: 11,
-                  color: AppConstants.textLightColor,
+                  color: const Color(0xFF64748B),
                 ),
               ),
               Text(
                 '${DateFormat('dd MMM yyyy').format(_startDate)} - ${DateFormat('dd MMM yyyy').format(_endDate)}',
                 style: GoogleFonts.poppins(
                   fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppConstants.primaryColor,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF0F172A),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
             children: ['Hari Ini', '7 Hari Terakhir', 'Bulan Ini', 'Kustom'].map((range) {
               final isSelected = _selectedRange == range;
               return Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 3.0),
                   child: InkWell(
                     onTap: () async {
                       if (range == 'Kustom') {
@@ -90,14 +91,14 @@ class _ExpensesReportPageState extends State<ExpensesReportPage> {
                           builder: (context, child) {
                             return Theme(
                               data: Theme.of(context).copyWith(
-                                colorScheme: ColorScheme.light(
-                                  primary: AppConstants.primaryColor,
+                                colorScheme: const ColorScheme.light(
+                                  primary: Color(0xFF0F172A),
                                   onPrimary: Colors.white,
-                                  onSurface: AppConstants.textDarkColor,
+                                  onSurface: Color(0xFF0F172A),
                                 ),
                                 textButtonTheme: TextButtonThemeData(
                                   style: TextButton.styleFrom(
-                                    foregroundColor: AppConstants.primaryColor,
+                                    foregroundColor: const Color(0xFF0F172A),
                                   ),
                                 ),
                               ),
@@ -121,34 +122,25 @@ class _ExpensesReportPageState extends State<ExpensesReportPage> {
                         onDateRangeChanged();
                       }
                     },
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(10),
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(vertical: 7),
                       decoration: BoxDecoration(
-                        color: isSelected ? AppConstants.primaryColor : Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(20),
+                        color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: isSelected ? AppConstants.primaryColor : Colors.grey.shade300,
+                          color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
                           width: 1,
                         ),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: AppConstants.primaryColor.withValues(alpha: 0.2),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 3),
-                                )
-                              ]
-                            : null,
                       ),
                       child: Center(
                         child: Text(
                           range,
                           style: GoogleFonts.poppins(
                             fontSize: 10,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                            color: isSelected ? Colors.white : AppConstants.textDarkColor,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                            color: isSelected ? Colors.white : const Color(0xFF64748B),
                           ),
                         ),
                       ),
@@ -165,17 +157,27 @@ class _ExpensesReportPageState extends State<ExpensesReportPage> {
 
   Widget _buildEmptyState(String message) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey.shade400),
-          const SizedBox(height: 12),
-          Text(
-            message,
-            style: GoogleFonts.poppins(fontSize: 12, color: AppConstants.textLightColor),
-            textAlign: TextAlign.center,
-          ),
-        ],
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.outbox_rounded, size: 36, color: Color(0xFF64748B)),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              style: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -183,17 +185,34 @@ class _ExpensesReportPageState extends State<ExpensesReportPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppConstants.backgroundColor,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(
-          'Laporan Biaya',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 18, color: Colors.white),
-        ),
-        centerTitle: true,
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.white,
         elevation: 0,
-        backgroundColor: AppConstants.primaryColor,
-        foregroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.white),
+        foregroundColor: const Color(0xFF0F172A),
+        iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Laporan Biaya',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                fontSize: 17,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            Text(
+              'Catatan beban operasional & pengeluaran kas',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w400,
+                fontSize: 11,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
       ),
       body: BlocBuilder<ReportsCubit, ReportsState>(
         builder: (context, state) {
@@ -206,78 +225,124 @@ class _ExpensesReportPageState extends State<ExpensesReportPage> {
                 context.read<ReportsCubit>().loadExpensesReport(_startDate, _endDate);
               }),
               if (state.isExpensesLoading && state.expensesData == null)
-                const Expanded(child: Center(child: CircularProgressIndicator()))
+                const Expanded(child: Center(child: CircularProgressIndicator(color: Color(0xFF0F172A))))
               else ...[
                 // Summary card for expenses
                 Container(
                   color: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                   child: Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [AppConstants.errorColor, AppConstants.errorColor.withValues(alpha: 0.85)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(12),
+                      color: const Color(0xFF0F172A),
+                      borderRadius: BorderRadius.circular(14),
                       boxShadow: [
                         BoxShadow(
-                          color: AppConstants.errorColor.withValues(alpha: 0.15),
-                          blurRadius: 8,
+                          color: const Color(0xFF0F172A).withValues(alpha: 0.15),
+                          blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
                       ],
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          'Total Pengeluaran / Biaya',
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white.withValues(alpha: 0.9),
-                          ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFDC2626).withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(Icons.outbox_rounded, size: 16, color: Color(0xFFF87171)),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Total Biaya & Pengeluaran',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 11.5,
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xFF94A3B8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              CurrencyFormatter.format(totalExpenses),
+                              style: GoogleFonts.poppins(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          CurrencyFormatter.format(totalExpenses),
-                          style: GoogleFonts.poppins(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            children: [
+                              Text(
+                                '${expenses.length}',
+                                style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white),
+                              ),
+                              Text(
+                                'Transaksi',
+                                style: GoogleFonts.poppins(fontSize: 9.5, color: const Color(0xFF94A3B8)),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
+                const Divider(height: 1, color: Color(0xFFE2E8F0)),
                 Expanded(
                   child: expenses.isEmpty
                       ? _buildEmptyState('Belum ada catatan biaya di periode ini.')
                       : ListView.builder(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(16),
                           itemCount: expenses.length,
                           itemBuilder: (context, index) {
                             final exp = expenses[index];
                             final dateStr = DateFormat('dd MMM yyyy, HH:mm').format(exp.date);
 
-                            return Card(
-                              margin: const EdgeInsets.only(bottom: 10),
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                                side: const BorderSide(color: AppConstants.borderLightColor),
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
                               child: Padding(
-                                padding: const EdgeInsets.all(12),
+                                padding: const EdgeInsets.all(14),
                                 child: Row(
                                   children: [
-                                    CircleAvatar(
-                                      backgroundColor: AppConstants.errorColor.withValues(alpha: 0.08),
-                                      child: const Icon(Icons.outbox_rounded, color: AppConstants.errorColor),
+                                    Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFDC2626).withValues(alpha: 0.08),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: const Icon(Icons.outbox_rounded, color: Color(0xFFDC2626), size: 18),
                                     ),
                                     const SizedBox(width: 12),
                                     Expanded(
@@ -288,8 +353,8 @@ class _ExpensesReportPageState extends State<ExpensesReportPage> {
                                             exp.categoryName,
                                             style: GoogleFonts.poppins(
                                               fontSize: 13,
-                                              fontWeight: FontWeight.bold,
-                                              color: AppConstants.textDarkColor,
+                                              fontWeight: FontWeight.w700,
+                                              color: const Color(0xFF0F172A),
                                             ),
                                           ),
                                           if (exp.description != null && exp.description!.isNotEmpty) ...[
@@ -298,16 +363,16 @@ class _ExpensesReportPageState extends State<ExpensesReportPage> {
                                               exp.description!,
                                               style: GoogleFonts.poppins(
                                                 fontSize: 11,
-                                                color: AppConstants.textLightColor,
+                                                color: const Color(0xFF64748B),
                                               ),
                                             ),
                                           ],
-                                          const SizedBox(height: 4),
+                                          const SizedBox(height: 3),
                                           Text(
                                             dateStr,
                                             style: GoogleFonts.poppins(
                                               fontSize: 10,
-                                              color: Colors.grey.shade400,
+                                              color: const Color(0xFF94A3B8),
                                             ),
                                           ),
                                         ],
@@ -316,9 +381,9 @@ class _ExpensesReportPageState extends State<ExpensesReportPage> {
                                     Text(
                                       CurrencyFormatter.format(exp.amount),
                                       style: GoogleFonts.poppins(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppConstants.errorColor,
+                                        fontSize: 13.5,
+                                        fontWeight: FontWeight.w700,
+                                        color: const Color(0xFFDC2626),
                                       ),
                                     ),
                                   ],
@@ -336,3 +401,4 @@ class _ExpensesReportPageState extends State<ExpensesReportPage> {
     );
   }
 }
+

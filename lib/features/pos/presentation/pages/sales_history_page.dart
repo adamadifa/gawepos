@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/constants/constants.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/services/print_service.dart';
@@ -28,6 +27,7 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
 
   DateTime? _startDate;
   DateTime? _endDate;
+  String _selectedRange = 'Semua';
   String _customerSearchQuery = '';
   final TextEditingController _customerSearchController = TextEditingController();
   bool _isLoading = false;
@@ -63,6 +63,27 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
     });
   }
 
+  void _setPeriod(String range) {
+    final now = DateTime.now();
+    setState(() {
+      _selectedRange = range;
+      if (range == 'Hari Ini') {
+        _startDate = DateTime(now.year, now.month, now.day);
+        _endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+      } else if (range == '7 Hari') {
+        _startDate = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 6));
+        _endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+      } else if (range == 'Bulan Ini') {
+        _startDate = DateTime(now.year, now.month, 1);
+        _endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+      } else if (range == 'Semua') {
+        _startDate = null;
+        _endDate = null;
+      }
+    });
+    _applyFilters();
+  }
+
   void _applyFilters() {
     setState(() {
       _filteredOrders = _allOrders.where((order) {
@@ -76,8 +97,9 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
         }
         if (_customerSearchQuery.isNotEmpty) {
           final customer = _customerMap[order.customerId];
-          if (customer == null) return false;
-          if (!customer.name.toLowerCase().contains(_customerSearchQuery.toLowerCase())) {
+          final refMatch = order.referenceNo.toLowerCase().contains(_customerSearchQuery.toLowerCase());
+          final customerMatch = customer != null && customer.name.toLowerCase().contains(_customerSearchQuery.toLowerCase());
+          if (!refMatch && !customerMatch) {
             return false;
           }
         }
@@ -86,7 +108,7 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
     });
   }
 
-  Future<void> _selectDateRange() async {
+  Future<void> _selectCustomDateRange() async {
     final picked = await showDateRangePicker(
       context: context,
       initialDateRange: _startDate != null && _endDate != null
@@ -94,11 +116,29 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
           : null,
       firstDate: DateTime(2020),
       lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: Color(0xFF0F172A),
+              onPrimary: Colors.white,
+              onSurface: Color(0xFF0F172A),
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF0F172A),
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
     if (picked != null) {
       setState(() {
+        _selectedRange = 'Kustom';
         _startDate = picked.start;
-        _endDate = picked.end;
+        _endDate = DateTime(picked.end.year, picked.end.month, picked.end.day, 23, 59, 59);
       });
       _applyFilters();
     }
@@ -118,13 +158,18 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
     if (mounted) {
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Resi berhasil dicetak ulang!')),
+          const SnackBar(
+            content: Text('Resi berhasil dicetak ulang!'),
+            backgroundColor: Color(0xFF059669),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Gagal mencetak struk! Pastikan printer bluetooth Anda terhubung dan terkonfigurasi.'),
-            backgroundColor: AppConstants.errorColor,
+            content: Text('Gagal mencetak struk! Pastikan printer bluetooth Anda terhubung.'),
+            backgroundColor: Color(0xFFDC2626),
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -135,7 +180,7 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => const Center(child: CircularProgressIndicator()),
+      builder: (ctx) => const Center(child: CircularProgressIndicator(color: Color(0xFF0F172A))),
     );
 
     final details = await _salesRepository.getOrderDetails(order.id);
@@ -158,9 +203,19 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
           return Container(
             margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
             padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-            decoration: const BoxDecoration(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.88,
+            ),
+            decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.all(Radius.circular(16)),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, -2),
+                ),
+              ],
             ),
             child: SafeArea(
               top: false,
@@ -174,64 +229,85 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Text(
-                                  order.referenceNo,
-                                  style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(width: 8),
-                                InkWell(
-                                  onTap: () {
-                                    Clipboard.setData(ClipboardData(text: order.referenceNo));
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                        content: Text('Nomor transaksi berhasil disalin!'),
-                                        duration: Duration(seconds: 1),
-                                      ),
-                                    );
-                                  },
-                                  borderRadius: BorderRadius.circular(4),
-                                  child: const Padding(
-                                    padding: EdgeInsets.all(4.0),
-                                    child: Icon(
-                                      Icons.copy_rounded,
-                                      size: 16,
-                                      color: AppConstants.primaryColor,
+                          Row(
+                            children: [
+                              Text(
+                                order.referenceNo,
+                                style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)),
+                              ),
+                              const SizedBox(width: 6),
+                              InkWell(
+                                onTap: () {
+                                  Clipboard.setData(ClipboardData(text: order.referenceNo));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Nomor transaksi berhasil disalin!'),
+                                      duration: Duration(seconds: 1),
+                                      behavior: SnackBarBehavior.floating,
                                     ),
+                                  );
+                                },
+                                borderRadius: BorderRadius.circular(4),
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: const Icon(
+                                    Icons.copy_rounded,
+                                    size: 14,
+                                    color: Color(0xFF0F172A),
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                           IconButton(
-                            icon: const Icon(Icons.close_rounded),
+                            icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
                             onPressed: () => Navigator.pop(ctx),
                           ),
                         ],
                       ),
+                      const SizedBox(height: 4),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            DateFormat('dd MMMM yyyy HH:mm').format(order.createdAt),
-                            style: const TextStyle(fontSize: 12, color: AppConstants.textLightColor),
+                            DateFormat('dd MMM yyyy, HH:mm').format(order.createdAt),
+                            style: GoogleFonts.poppins(fontSize: 11.5, color: const Color(0xFF94A3B8)),
                           ),
                           _buildStatusBadge(order.paymentStatus, order.status),
                         ],
                       ),
-                      const Divider(height: 24),
+                      const Divider(height: 24, color: Color(0xFFE2E8F0)),
                       if (customer != null) ...[
-                        Text('Pelanggan: ${customer.name}', style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.person_rounded, size: 16, color: Color(0xFF64748B)),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Pelanggan: ${customer.name}',
+                              style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
                       ],
-                      if (order.notes != null) ...[
-                        Text('Catatan: ${order.notes}', style: const TextStyle(fontSize: 12, color: Colors.blueGrey)),
-                        const SizedBox(height: 8),
+                      if (order.notes != null && order.notes!.isNotEmpty) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Text('Catatan: ${order.notes}', style: GoogleFonts.poppins(fontSize: 11.5, color: const Color(0xFF64748B))),
+                        ),
+                        const SizedBox(height: 12),
                       ],
-                      const SizedBox(height: 8),
-                      const Text('Daftar Produk:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                      Text('Rincian Item Penjualan:', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A))),
                       const SizedBox(height: 8),
                       // List items
                       ListView.builder(
@@ -246,8 +322,14 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
 
                           final qtyStr = item.quantity.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '');
 
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 8.0),
+                          return Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -256,31 +338,34 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                                        product?.name ?? 'Produk Terhapus (ID: ${item.productId})',
-                                        style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
+                                        product?.name ?? 'Produk (ID: ${item.productId})',
+                                        style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                       ),
                                       Text(
-                                        '$qtyStr ${unit?.name ?? "Satuan"} x ${CurrencyFormatter.format(item.price)}',
-                                        style: const TextStyle(fontSize: 11, color: AppConstants.textLightColor),
+                                        '$qtyStr ${unit?.name ?? "Pcs"} x ${CurrencyFormatter.format(item.price)}',
+                                        style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
                                       ),
                                     ],
                                   ),
                                 ),
-                                Text(CurrencyFormatter.format(item.subtotal), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                Text(
+                                  CurrencyFormatter.format(item.subtotal),
+                                  style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)),
+                                ),
                               ],
                             ),
                           );
                         },
                       ),
-                      const Divider(height: 24),
+                      const Divider(height: 24, color: Color(0xFFE2E8F0)),
                       // Summary info
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text('Subtotal:', style: TextStyle(fontSize: 12, color: AppConstants.textLightColor)),
-                          Text(CurrencyFormatter.format(order.subtotal), style: const TextStyle(fontSize: 12)),
+                          Text('Subtotal', style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF64748B))),
+                          Text(CurrencyFormatter.format(order.subtotal), style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
                         ],
                       ),
                       if (order.discountAmount > 0) ...[
@@ -288,8 +373,8 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Diskon Global:', style: TextStyle(fontSize: 12, color: AppConstants.textLightColor)),
-                            Text('- ${CurrencyFormatter.format(order.discountAmount)}', style: const TextStyle(fontSize: 12, color: AppConstants.errorColor)),
+                            Text('Diskon Global', style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF64748B))),
+                            Text('- ${CurrencyFormatter.format(order.discountAmount)}', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFFDC2626))),
                           ],
                         ),
                       ],
@@ -298,38 +383,44 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Pajak:', style: TextStyle(fontSize: 12, color: AppConstants.textLightColor)),
-                            Text(CurrencyFormatter.format(order.taxAmount), style: const TextStyle(fontSize: 12)),
+                            Text('Pajak', style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF64748B))),
+                            Text(CurrencyFormatter.format(order.taxAmount), style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
                           ],
                         ),
                       ],
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Grand Total:', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold)),
-                          Text(CurrencyFormatter.format(order.grandTotal), style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.bold, color: AppConstants.primaryColor)),
+                          Text('Grand Total', style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A))),
+                          Text(
+                            CurrencyFormatter.format(order.grandTotal),
+                            style: GoogleFonts.poppins(fontSize: 17, fontWeight: FontWeight.w800, color: const Color(0xFF0F172A)),
+                          ),
                         ],
                       ),
-                      const Divider(height: 24),
+                      const Divider(height: 24, color: Color(0xFFE2E8F0)),
                       // Payments info
-                      const Text('Pembayaran:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 6),
+                      Text('Rincian Pembayaran:', style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A))),
+                      const SizedBox(height: 8),
                       Column(
                         children: payments.map((p) {
                           final method = p.paymentMethod == 'cash'
-                              ? 'Tunai'
+                              ? 'Tunai (Cash)'
                               : p.paymentMethod == 'qris'
                                   ? 'QRIS'
                                   : p.paymentMethod == 'card'
-                                      ? 'EDC/Kartu'
-                                      : 'Transfer';
-                          return Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(method, style: const TextStyle(fontSize: 12, color: AppConstants.textLightColor)),
-                              Text(CurrencyFormatter.format(p.amount), style: const TextStyle(fontSize: 12)),
-                            ],
+                                      ? 'EDC / Kartu'
+                                      : 'Transfer Bank';
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(method, style: GoogleFonts.poppins(fontSize: 11.5, color: const Color(0xFF64748B))),
+                                Text(CurrencyFormatter.format(p.amount), style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
+                              ],
+                            ),
                           );
                         }).toList(),
                       ),
@@ -338,44 +429,48 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Kembalian:', style: TextStyle(fontSize: 12, color: AppConstants.textLightColor)),
-                            Text(CurrencyFormatter.format(order.changeAmount), style: const TextStyle(fontSize: 12, color: AppConstants.successColor)),
+                            Text('Kembalian', style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF64748B))),
+                            Text(CurrencyFormatter.format(order.changeAmount), style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w700, color: const Color(0xFF059669))),
                           ],
                         ),
                       ],
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 20),
                       SizedBox(
                         width: double.infinity,
+                        height: 46,
                         child: ElevatedButton.icon(
                           onPressed: () {
                             Navigator.pop(ctx);
                             _reprint(order.id);
                           },
-                          icon: const Icon(Icons.print_rounded),
-                          label: const Text('CETAK ULANG STRUK'),
+                          icon: const Icon(Icons.print_rounded, size: 18),
+                          label: Text('CETAK ULANG STRUK', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13)),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppConstants.primaryColor,
+                            backgroundColor: const Color(0xFF0F172A),
                             foregroundColor: Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           ),
                         ),
                       ),
                       if (order.status != 'void' && session?.status == 'open') ...[
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         SizedBox(
                           width: double.infinity,
+                          height: 44,
                           child: OutlinedButton.icon(
                             onPressed: () {
                               Navigator.pop(ctx);
                               _confirmVoidOrder(order);
                             },
-                            icon: const Icon(Icons.cancel_outlined, color: AppConstants.errorColor),
+                            icon: const Icon(Icons.cancel_outlined, color: Color(0xFFDC2626), size: 18),
                             label: Text(
                               'BATALKAN TRANSAKSI (VOID)',
-                              style: GoogleFonts.poppins(color: AppConstants.errorColor, fontWeight: FontWeight.bold),
+                              style: GoogleFonts.poppins(color: const Color(0xFFDC2626), fontWeight: FontWeight.w700, fontSize: 12),
                             ),
                             style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: AppConstants.errorColor),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              side: const BorderSide(color: Color(0xFFDC2626)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                             ),
                           ),
                         ),
@@ -395,18 +490,20 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(
           'Batalkan Transaksi?',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16, color: const Color(0xFF0F172A)),
         ),
         content: Text(
           'Apakah Anda yakin ingin membatalkan transaksi ${order.referenceNo}? Tindakan ini akan mengembalikan stok produk dan membatalkan laporan omzet/piutang terkait.',
-          style: GoogleFonts.poppins(fontSize: 13),
+          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF64748B)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Batal'),
+            child: Text('Batal', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -420,7 +517,8 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Transaksi berhasil dibatalkan (void).'),
-                      backgroundColor: AppConstants.successColor,
+                      backgroundColor: Color(0xFF059669),
+                      behavior: SnackBarBehavior.floating,
                     ),
                   );
                 }
@@ -430,7 +528,8 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text('Gagal membatalkan transaksi: $e'),
-                      backgroundColor: AppConstants.errorColor,
+                      backgroundColor: const Color(0xFFDC2626),
+                      behavior: SnackBarBehavior.floating,
                     ),
                   );
                 }
@@ -439,8 +538,13 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                 });
               }
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppConstants.errorColor),
-            child: const Text('Ya, Batalkan', style: TextStyle(color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: Text('Ya, Batalkan', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 12)),
           ),
         ],
       ),
@@ -450,109 +554,139 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
   Widget _buildStatusBadge(String? paymentStatus, String orderStatus) {
     if (orderStatus == 'void') {
       return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
-          color: Colors.grey.withValues(alpha: 0.12),
-          borderRadius: BorderRadius.circular(4),
+          color: Colors.grey.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(6),
           border: Border.all(color: Colors.grey.withValues(alpha: 0.3)),
         ),
-        child: const Text(
+        child: Text(
           'BATAL / VOID',
-          style: TextStyle(color: Colors.grey, fontSize: 9, fontWeight: FontWeight.bold),
+          style: GoogleFonts.poppins(color: Colors.grey.shade700, fontSize: 9.5, fontWeight: FontWeight.w700),
         ),
       );
     }
 
     String label = 'LUNAS';
-    Color color = AppConstants.successColor;
-    
+    Color color = const Color(0xFF059669);
+
     if (paymentStatus == 'unpaid') {
       label = 'BELUM LUNAS';
-      color = AppConstants.errorColor;
+      color = const Color(0xFFDC2626);
     } else if (paymentStatus == 'partial') {
-      label = 'BAYAR SEBAGIAN';
-      color = AppConstants.warningColor;
+      label = 'SEBAGIAN';
+      color = const Color(0xFFD97706);
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(4),
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         label,
-        style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.bold),
+        style: GoogleFonts.poppins(color: color, fontSize: 9.5, fontWeight: FontWeight.w700),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final double totalSales = _filteredOrders
+        .where((o) => o.status != 'void')
+        .fold(0.0, (sum, o) => sum + o.grandTotal);
+
     return Scaffold(
-      backgroundColor: AppConstants.backgroundColor,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(
-          'Riwayat Transaksi',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: const Color(0xFF0F172A),
+        iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Riwayat Transaksi',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                fontSize: 17,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            Text(
+              'Histori struk penjualan & cetak ulang struk',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w400,
+                fontSize: 11,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+          ],
         ),
-        backgroundColor: AppConstants.primaryColor,
-        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Stack(
         children: [
-          Column(
-            children: [
-              Card(
-                margin: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                  side: const BorderSide(color: AppConstants.borderLightColor),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
+          RefreshIndicator(
+            color: const Color(0xFF0F172A),
+            onRefresh: _loadData,
+            child: Column(
+              children: [
+                // Filter & Search Header
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+                  ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: _selectDateRange,
-                              icon: const Icon(Icons.date_range_rounded, size: 16),
-                              label: Text(
-                                _startDate == null || _endDate == null
-                                    ? 'Pilih Periode'
-                                    : '${DateFormat('dd/MM/yyyy').format(_startDate!)} - ${DateFormat('dd/MM/yyyy').format(_endDate!)}',
-                                style: const TextStyle(fontSize: 12),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppConstants.textDarkColor,
-                                side: const BorderSide(color: AppConstants.borderLightColor),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                      // Period Chips
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: ['Semua', 'Hari Ini', '7 Hari', 'Bulan Ini', 'Kustom'].map((range) {
+                            final isSelected = _selectedRange == range;
+                            return Padding(
+                              padding: const EdgeInsets.only(right: 6.0),
+                              child: InkWell(
+                                onTap: () {
+                                  if (range == 'Kustom') {
+                                    _selectCustomDateRange();
+                                  } else {
+                                    _setPeriod(range);
+                                  }
+                                },
+                                borderRadius: BorderRadius.circular(8),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 180),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    range,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                                      color: isSelected ? Colors.white : const Color(0xFF64748B),
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                          if (_startDate != null || _endDate != null) ...[
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(Icons.clear_rounded, color: AppConstants.errorColor),
-                              onPressed: () {
-                                setState(() {
-                                  _startDate = null;
-                                  _endDate = null;
-                                });
-                                _applyFilters();
-                              },
-                            ),
-                          ],
-                        ],
+                            );
+                          }).toList(),
+                        ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
+                      // Search Input
                       TextField(
                         controller: _customerSearchController,
                         onChanged: (val) {
@@ -561,13 +695,14 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                           });
                           _applyFilters();
                         },
+                        style: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF0F172A)),
                         decoration: InputDecoration(
-                          hintText: 'Cari Nama Pelanggan...',
-                          hintStyle: const TextStyle(fontSize: 12, color: AppConstants.textLightColor),
-                          prefixIcon: const Icon(Icons.search_rounded, size: 18, color: AppConstants.textLightColor),
+                          hintText: 'Cari no. struk atau nama pelanggan...',
+                          hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF94A3B8)),
+                          prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Color(0xFF64748B)),
                           suffixIcon: _customerSearchQuery.isNotEmpty
                               ? IconButton(
-                                  icon: const Icon(Icons.clear_rounded, size: 16),
+                                  icon: const Icon(Icons.clear_rounded, size: 16, color: Color(0xFFDC2626)),
                                   onPressed: () {
                                     _customerSearchController.clear();
                                     setState(() {
@@ -577,149 +712,222 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                                   },
                                 )
                               : null,
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                            borderSide: const BorderSide(color: AppConstants.borderLightColor),
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                            borderSide: const BorderSide(color: AppConstants.borderLightColor),
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                            borderSide: const BorderSide(color: AppConstants.primaryColor),
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
-              Expanded(
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : _filteredOrders.isEmpty
-                        ? Center(
-                            child: Text(
-                              'Belum ada riwayat transaksi.',
-                              style: GoogleFonts.poppins(color: AppConstants.textLightColor),
-                            ),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.all(16),
-                            itemCount: _filteredOrders.length,
-                            itemBuilder: (context, index) {
-                              final item = _filteredOrders[index];
-                              final customer = _customerMap[item.customerId];
-                              final timeStr = DateFormat('HH:mm').format(item.createdAt);
-                              final dateStr = DateFormat('dd/MM/yyyy').format(item.createdAt);
 
-                              return Card(
-                                margin: const EdgeInsets.only(bottom: 10),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                                  side: const BorderSide(color: AppConstants.borderLightColor),
-                                ),
-                                child: ListTile(
-                                  onTap: () => _showOrderDetails(item),
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                  title: Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // Quick Summary Bar
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  color: const Color(0xFFF8FAFC),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Total ${_filteredOrders.length} Transaksi',
+                        style: GoogleFonts.poppins(fontSize: 11.5, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+                      ),
+                      Text(
+                        CurrencyFormatter.format(totalSales),
+                        style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)),
+                      ),
+                    ],
+                  ),
+                ),
+                const Divider(height: 1, color: Color(0xFFE2E8F0)),
+
+                // Transaction List
+                Expanded(
+                  child: _isLoading && _allOrders.isEmpty
+                      ? const Center(child: CircularProgressIndicator(color: Color(0xFF0F172A)))
+                      : _filteredOrders.isEmpty
+                          ? ListView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              children: [
+                                SizedBox(
+                                  height: MediaQuery.of(context).size.height * 0.45,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                Text(
-                                                  item.referenceNo,
-                                                  style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13),
-                                                ),
-                                                const SizedBox(width: 6),
-                                                GestureDetector(
-                                                  onTap: () {
-                                                    Clipboard.setData(ClipboardData(text: item.referenceNo));
-                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                      const SnackBar(
-                                                        content: Text('Nomor transaksi berhasil disalin!'),
-                                                        duration: Duration(seconds: 1),
-                                                      ),
-                                                    );
-                                                  },
-                                                  child: const Padding(
-                                                    padding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                                    child: Icon(
-                                                      Icons.copy_rounded,
-                                                      size: 13,
-                                                      color: AppConstants.textLightColor,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                            if (customer != null) ...[
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                'Pelanggan: ${customer.name}',
-                                                style: GoogleFonts.poppins(fontSize: 11, color: AppConstants.textLightColor, fontWeight: FontWeight.w500),
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ],
-                                          ],
+                                      Container(
+                                        padding: const EdgeInsets.all(16),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                                          shape: BoxShape.circle,
                                         ),
+                                        child: const Icon(Icons.receipt_long_rounded, size: 36, color: Color(0xFF64748B)),
                                       ),
-                                      const SizedBox(width: 8),
+                                      const SizedBox(height: 12),
                                       Text(
-                                        CurrencyFormatter.format(item.grandTotal),
-                                        style: GoogleFonts.poppins(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 13,
-                                          color: AppConstants.primaryColor,
-                                        ),
+                                        'Tidak ada transaksi yang cocok.',
+                                        style: GoogleFonts.poppins(color: const Color(0xFF64748B), fontSize: 12.5, fontWeight: FontWeight.w500),
                                       ),
                                     ],
                                   ),
-                                  subtitle: Padding(
-                                    padding: const EdgeInsets.only(top: 4.0),
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          '$dateStr $timeStr',
-                                          style: const TextStyle(fontSize: 11, color: AppConstants.textLightColor),
-                                        ),
-                                        _buildStatusBadge(item.paymentStatus, item.status),
-                                      ],
+                                ),
+                              ],
+                            )
+                          : ListView.builder(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              padding: const EdgeInsets.all(16),
+                              itemCount: _filteredOrders.length,
+                              itemBuilder: (context, index) {
+                                final item = _filteredOrders[index];
+                                final customer = _customerMap[item.customerId];
+                                final timeStr = DateFormat('HH:mm').format(item.createdAt);
+                                final dateStr = DateFormat('dd MMM yyyy').format(item.createdAt);
+                                final isVoid = item.status == 'void';
+
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(14),
+                                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: InkWell(
+                                    onTap: () => _showOrderDetails(item),
+                                    borderRadius: BorderRadius.circular(14),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(14),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Container(
+                                                    padding: const EdgeInsets.all(6),
+                                                    decoration: BoxDecoration(
+                                                      color: isVoid
+                                                          ? Colors.grey.withValues(alpha: 0.1)
+                                                          : const Color(0xFF0F172A).withValues(alpha: 0.06),
+                                                      borderRadius: BorderRadius.circular(8),
+                                                    ),
+                                                    child: Icon(
+                                                      isVoid ? Icons.cancel_outlined : Icons.receipt_rounded,
+                                                      size: 16,
+                                                      color: isVoid ? Colors.grey : const Color(0xFF0F172A),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    item.referenceNo,
+                                                    style: GoogleFonts.poppins(
+                                                      fontWeight: FontWeight.w700,
+                                                      fontSize: 13.5,
+                                                      color: isVoid ? Colors.grey : const Color(0xFF0F172A),
+                                                      decoration: isVoid ? TextDecoration.lineThrough : null,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              _buildStatusBadge(item.paymentStatus, item.status),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                customer != null ? 'Pelanggan: ${customer.name}' : 'Pelanggan Umum',
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: const Color(0xFF64748B),
+                                                ),
+                                              ),
+                                              Text(
+                                                CurrencyFormatter.format(item.grandTotal),
+                                                style: GoogleFonts.poppins(
+                                                  fontWeight: FontWeight.w800,
+                                                  fontSize: 14,
+                                                  color: isVoid ? Colors.grey : const Color(0xFF0F172A),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                '$dateStr, $timeStr',
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 10.5,
+                                                  color: const Color(0xFF94A3B8),
+                                                ),
+                                              ),
+                                              Row(
+                                                children: [
+                                                  Text(
+                                                    'Lihat Detail',
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: const Color(0xFF0F172A),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  const Icon(Icons.arrow_forward_ios_rounded, size: 10, color: Color(0xFF0F172A)),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppConstants.textLightColor),
-                                ),
-                              );
-                            },
-                          ),
-              ),
-            ],
+                                );
+                              },
+                            ),
+                ),
+              ],
+            ),
           ),
           if (_isPrinting)
             Container(
-              color: Colors.black.withOpacity(0.3),
-              child: const Center(
-                child: Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 16),
-                        Text('Mencetak Struk...'),
-                      ],
-                    ),
+              color: Colors.black.withValues(alpha: 0.3),
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircularProgressIndicator(color: Color(0xFF0F172A)),
+                      const SizedBox(height: 16),
+                      Text('Mencetak Struk...', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
+                    ],
                   ),
                 ),
               ),
@@ -729,3 +937,4 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
     );
   }
 }
+

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../core/constants/constants.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/database/app_database.dart';
@@ -70,16 +69,25 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
     final exists = _selectedItems.any((item) => (item['product'] as Product).id == product.id);
     if (exists) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Produk sudah ditambahkan, silakan sesuaikan kuantitas.')),
+        const SnackBar(
+          content: Text('Produk sudah ditambahkan, silakan sesuaikan kuantitas.'),
+          backgroundColor: Color(0xFF0F172A),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
 
     final repo = getIt<PurchaseRepository>();
     final units = await repo.getProductUnits(product.id);
+    if (!mounted) return;
     if (units.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Produk ini tidak memiliki unit satuan.')),
+        const SnackBar(
+          content: Text('Produk ini belum memiliki unit satuan.'),
+          backgroundColor: Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
@@ -103,21 +111,37 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
         return StatefulBuilder(
           builder: (ctx, setStateDialog) {
             return AlertDialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               title: Text(
                 'Pilih Pemasok / Supplier',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16),
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16, color: const Color(0xFF0F172A)),
               ),
               content: SizedBox(
                 width: double.maxFinite,
-                height: 350,
+                height: 380,
                 child: Column(
                   children: [
                     TextField(
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: 'Cari Pemasok...',
-                        hintStyle: TextStyle(fontSize: 12, color: AppConstants.textLightColor),
-                        prefixIcon: Icon(Icons.search_rounded, size: 18),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF94A3B8)),
+                        prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Color(0xFF64748B)),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                        ),
                       ),
                       onChanged: (val) {
                         setStateDialog(() {
@@ -130,7 +154,7 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
                       child: BlocBuilder<SupplierCubit, SupplierState>(
                         builder: (context, state) {
                           if (state is SupplierLoading) {
-                            return const Center(child: CircularProgressIndicator());
+                            return const Center(child: CircularProgressIndicator(color: Color(0xFF0F172A)));
                           }
                           if (state is SupplierLoaded) {
                             final list = state.suppliers.where((s) {
@@ -141,7 +165,7 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
                               return Center(
                                 child: Text(
                                   'Pemasok tidak ditemukan.',
-                                  style: GoogleFonts.poppins(color: AppConstants.textLightColor, fontSize: 12),
+                                  style: GoogleFonts.poppins(color: const Color(0xFF64748B), fontSize: 12),
                                 ),
                               );
                             }
@@ -151,9 +175,17 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
                               itemBuilder: (context, idx) {
                                 final s = list[idx];
                                 return ListTile(
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-                                  title: Text(s.name, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
-                                  subtitle: s.phone != null ? Text(s.phone!, style: const TextStyle(fontSize: 11)) : null,
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  leading: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(Icons.storefront_rounded, size: 18, color: Color(0xFF0F172A)),
+                                  ),
+                                  title: Text(s.name, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A))),
+                                  subtitle: s.phone != null ? Text(s.phone!, style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B))) : null,
                                   onTap: () {
                                     setState(() {
                                       _selectedSupplier = s;
@@ -174,7 +206,7 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('TUTUP'),
+                  child: Text('TUTUP', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
                 ),
               ],
             );
@@ -192,19 +224,37 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
         return StatefulBuilder(
           builder: (ctx, setStateDialog) {
             return AlertDialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               title: Text(
-                'Pilih Produk',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+                'Pilih Barang Restok',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16, color: const Color(0xFF0F172A)),
               ),
               content: SizedBox(
                 width: double.maxFinite,
-                height: 400,
+                height: 420,
                 child: Column(
                   children: [
                     TextField(
-                      decoration: const InputDecoration(
-                        labelText: 'Cari nama produk...',
-                        prefixIcon: Icon(Icons.search),
+                      decoration: InputDecoration(
+                        hintText: 'Cari nama produk atau SKU...',
+                        hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF94A3B8)),
+                        prefixIcon: const Icon(Icons.search_rounded, size: 18, color: Color(0xFF64748B)),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                        ),
                       ),
                       onChanged: (val) {
                         setStateDialog(() {
@@ -217,19 +267,20 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
                       child: BlocBuilder<ProductCubit, ProductState>(
                         builder: (context, state) {
                           if (state is ProductLoading) {
-                            return const Center(child: CircularProgressIndicator());
+                            return const Center(child: CircularProgressIndicator(color: Color(0xFF0F172A)));
                           }
                           if (state is ProductLoaded) {
                             final list = state.products.where((row) {
                               final Product p = row['product'];
-                              return p.name.toLowerCase().contains(searchQuery);
+                              return p.name.toLowerCase().contains(searchQuery) ||
+                                  (p.sku != null && p.sku!.toLowerCase().contains(searchQuery));
                             }).toList();
 
                             if (list.isEmpty) {
                               return Center(
                                 child: Text(
                                   'Produk tidak ditemukan.',
-                                  style: GoogleFonts.poppins(color: AppConstants.textLightColor),
+                                  style: GoogleFonts.poppins(color: const Color(0xFF64748B), fontSize: 12),
                                 ),
                               );
                             }
@@ -241,9 +292,19 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
                                 final Product p = row['product'];
 
                                 return ListTile(
-                                  title: Text(p.name, style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
-                                  subtitle: Text(p.sku ?? '-', style: GoogleFonts.poppins(fontSize: 11)),
-                                  trailing: const Icon(Icons.add_circle_outline, color: AppConstants.primaryColor),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  leading: Container(
+                                    width: 36,
+                                    height: 36,
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: const Icon(Icons.inventory_2_outlined, size: 18, color: Color(0xFF0F172A)),
+                                  ),
+                                  title: Text(p.name, style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13, color: const Color(0xFF0F172A))),
+                                  subtitle: Text(p.sku ?? '-', style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B))),
+                                  trailing: const Icon(Icons.add_circle_outline_rounded, color: Color(0xFF0F172A), size: 20),
                                   onTap: () {
                                     _addProductItem(p);
                                     Navigator.pop(ctx);
@@ -262,7 +323,7 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('TUTUP'),
+                  child: Text('TUTUP', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
                 ),
               ],
             );
@@ -275,13 +336,21 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
   void _savePurchaseOrder() {
     if (_selectedSupplier == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pilih supplier terlebih dahulu!'), backgroundColor: AppConstants.errorColor),
+        const SnackBar(
+          content: Text('Pilih supplier terlebih dahulu!'),
+          backgroundColor: Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
     if (_selectedItems.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tambahkan minimal 1 barang!'), backgroundColor: AppConstants.errorColor),
+        const SnackBar(
+          content: Text('Tambahkan minimal 1 barang!'),
+          backgroundColor: Color(0xFFDC2626),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
@@ -294,7 +363,8 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Kuantitas dan Harga Beli harus valid!'),
-            backgroundColor: AppConstants.errorColor,
+            backgroundColor: Color(0xFFDC2626),
+            behavior: SnackBarBehavior.floating,
           ),
         );
         return;
@@ -324,7 +394,8 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Pesanan restok berhasil disimpan sebagai pending.'),
-        backgroundColor: AppConstants.successColor,
+        backgroundColor: Color(0xFF059669),
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -332,17 +403,34 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppConstants.backgroundColor,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(
-          'Restok Baru',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 18, color: Colors.white),
-        ),
-        centerTitle: true,
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.white,
         elevation: 0,
-        backgroundColor: AppConstants.primaryColor,
-        foregroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.white),
+        foregroundColor: const Color(0xFF0F172A),
+        iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Restok Baru',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                fontSize: 17,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            Text(
+              'Input faktur & pesanan barang dari pemasok',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w400,
+                fontSize: 11,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
       ),
       body: Column(
         children: [
@@ -355,11 +443,18 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Supplier Picker Card
-                    Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-                        side: const BorderSide(color: AppConstants.borderLightColor),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
@@ -367,38 +462,50 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Informasi Pemasok / Supplier',
+                              'Pemasok / Supplier',
                               style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: AppConstants.textDarkColor,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 13.5,
+                                color: const Color(0xFF0F172A),
                               ),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 10),
                             InkWell(
                               onTap: _showSupplierSearchDialog,
-                              borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                              child: InputDecorator(
-                                decoration: InputDecoration(
-                                  labelText: 'Pilih Pemasok *',
-                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                                  suffixIcon: _selectedSupplier != null
-                                      ? IconButton(
-                                          icon: const Icon(Icons.clear_rounded, size: 16),
-                                          onPressed: () {
-                                            setState(() {
-                                              _selectedSupplier = null;
-                                            });
-                                          },
-                                        )
-                                      : const Icon(Icons.arrow_drop_down_rounded),
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
                                 ),
-                                child: Text(
-                                  _selectedSupplier?.name ?? 'Pilih Pemasok...',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14,
-                                    color: _selectedSupplier == null ? AppConstants.textLightColor : AppConstants.textDarkColor,
-                                  ),
+                                child: Row(
+                                  children: [
+                                    const Icon(Icons.storefront_rounded, size: 18, color: Color(0xFF0F172A)),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Text(
+                                        _selectedSupplier?.name ?? 'Pilih Pemasok / Supplier...',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 13,
+                                          fontWeight: _selectedSupplier == null ? FontWeight.normal : FontWeight.w600,
+                                          color: _selectedSupplier == null ? const Color(0xFF94A3B8) : const Color(0xFF0F172A),
+                                        ),
+                                      ),
+                                    ),
+                                    if (_selectedSupplier != null)
+                                      InkWell(
+                                        onTap: () {
+                                          setState(() {
+                                            _selectedSupplier = null;
+                                          });
+                                        },
+                                        child: const Icon(Icons.clear_rounded, size: 18, color: Color(0xFFDC2626)),
+                                      )
+                                    else
+                                      const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF64748B)),
+                                  ],
                                 ),
                               ),
                             ),
@@ -407,32 +514,45 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
                       ),
                     ),
 
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
 
                     // Products Selection Card
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Barang Restok',
+                          'Daftar Barang Restok',
                           style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                            color: AppConstants.textDarkColor,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14.5,
+                            color: const Color(0xFF0F172A),
                           ),
                         ),
-                        TextButton.icon(
-                          onPressed: _showProductSearchDialog,
-                          icon: const Icon(Icons.add, size: 18),
-                          label: Text(
-                            'Tambah Barang',
-                            style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+                        InkWell(
+                          onTap: _showProductSearchDialog,
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0F172A),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.add_rounded, size: 16, color: Colors.white),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Tambah Barang',
+                                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 11.5, color: Colors.white),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ],
                     ),
 
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 12),
 
                     if (_selectedItems.isEmpty)
                       Container(
@@ -440,13 +560,26 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
                         padding: const EdgeInsets.symmetric(vertical: 40),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-                          border: Border.all(color: AppConstants.borderLightColor),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
                         ),
                         child: Center(
-                          child: Text(
-                            'Belum ada barang restok yang dipilih.',
-                            style: GoogleFonts.poppins(color: AppConstants.textLightColor),
+                          child: Column(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(Icons.inventory_2_outlined, size: 32, color: Color(0xFF64748B)),
+                              ),
+                              const SizedBox(height: 10),
+                              Text(
+                                'Belum ada barang restok yang dipilih.',
+                                style: GoogleFonts.poppins(color: const Color(0xFF64748B), fontSize: 12.5),
+                              ),
+                            ],
                           ),
                         ),
                       )
@@ -461,15 +594,22 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
                           final List<ProductUnit> units = item['units'];
                           final ProductUnit selectedUnit = item['selectedUnit'];
 
-                          return Card(
+                          return Container(
                             margin: const EdgeInsets.only(bottom: 12),
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-                              side: const BorderSide(color: AppConstants.borderLightColor),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
                             child: Padding(
-                              padding: const EdgeInsets.all(16.0),
+                              padding: const EdgeInsets.all(14.0),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -480,59 +620,91 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
                                         child: Text(
                                           product.name,
                                           style: GoogleFonts.poppins(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 14,
-                                            color: AppConstants.textDarkColor,
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 13.5,
+                                            color: const Color(0xFF0F172A),
                                           ),
                                         ),
                                       ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete_outline, color: AppConstants.errorColor),
-                                        onPressed: () {
+                                      InkWell(
+                                        onTap: () {
                                           setState(() {
                                             _selectedItems.removeAt(index);
                                           });
                                         },
+                                        borderRadius: BorderRadius.circular(6),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFDC2626).withValues(alpha: 0.08),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: const Icon(Icons.delete_outline_rounded, color: Color(0xFFDC2626), size: 16),
+                                        ),
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: 12),
                                   Row(
                                     children: [
                                       // Unit Dropdown
                                       Expanded(
                                         flex: 2,
-                                        child: DropdownButtonFormField<ProductUnit>(
-                                          value: selectedUnit,
-                                          decoration: const InputDecoration(
-                                            labelText: 'Satuan',
-                                            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF8FAFC),
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: const Color(0xFFE2E8F0)),
                                           ),
-                                          items: units.map((u) {
-                                            return DropdownMenuItem<ProductUnit>(
-                                              value: u,
-                                              child: Text(u.name, style: GoogleFonts.poppins(fontSize: 12)),
-                                            );
-                                          }).toList(),
-                                          onChanged: (val) {
-                                            if (val != null) {
-                                              setState(() {
-                                                item['selectedUnit'] = val;
-                                              });
-                                            }
-                                          },
+                                          child: DropdownButtonHideUnderline(
+                                            child: DropdownButton<ProductUnit>(
+                                              value: selectedUnit,
+                                              isExpanded: true,
+                                              icon: const Icon(Icons.keyboard_arrow_down_rounded, size: 18, color: Color(0xFF64748B)),
+                                              items: units.map((u) {
+                                                return DropdownMenuItem<ProductUnit>(
+                                                  value: u,
+                                                  child: Text(u.name, style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF0F172A))),
+                                                );
+                                              }).toList(),
+                                              onChanged: (val) {
+                                                if (val != null) {
+                                                  setState(() {
+                                                    item['selectedUnit'] = val;
+                                                  });
+                                                }
+                                              },
+                                            ),
+                                          ),
                                         ),
                                       ),
                                       const SizedBox(width: 8),
-                                      // Quantity (Support decimals)
+                                      // Quantity
                                       Expanded(
                                         flex: 2,
                                         child: TextFormField(
                                           initialValue: item['quantity'].toString(),
                                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                          decoration: const InputDecoration(
+                                          style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
+                                          decoration: InputDecoration(
                                             labelText: 'Jumlah',
-                                            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            labelStyle: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
+                                            filled: true,
+                                            fillColor: const Color(0xFFF8FAFC),
+                                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                            border: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(8),
+                                              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(8),
+                                              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(8),
+                                              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                                            ),
                                           ),
                                           onChanged: (val) {
                                             final qty = double.tryParse(val) ?? 0.0;
@@ -550,10 +722,26 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
                                           key: ValueKey('${product.id}_${selectedUnit.id}'),
                                           initialValue: item['costPrice'] == 0.0 ? '' : item['costPrice'].toString(),
                                           keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                          style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
                                           decoration: InputDecoration(
-                                            labelText: 'Harga Beli (${selectedUnit.name})',
+                                            labelText: 'Harga Beli',
+                                            labelStyle: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
                                             prefixText: 'Rp ',
-                                            contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            filled: true,
+                                            fillColor: const Color(0xFFF8FAFC),
+                                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                            border: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(8),
+                                              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(8),
+                                              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(8),
+                                              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                                            ),
                                           ),
                                           onChanged: (val) {
                                             final price = double.tryParse(val) ?? 0.0;
@@ -565,20 +753,20 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 12),
+                                  const SizedBox(height: 10),
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.end,
                                     children: [
                                       Text(
                                         'Subtotal: ',
-                                        style: GoogleFonts.poppins(fontSize: 12, color: AppConstants.textLightColor),
+                                        style: GoogleFonts.poppins(fontSize: 11.5, color: const Color(0xFF64748B)),
                                       ),
                                       Text(
                                         CurrencyFormatter.format((item['quantity'] as double) * (item['costPrice'] as double)),
                                         style: GoogleFonts.poppins(
-                                          fontWeight: FontWeight.bold,
+                                          fontWeight: FontWeight.w700,
                                           fontSize: 13,
-                                          color: AppConstants.textDarkColor,
+                                          color: const Color(0xFF0F172A),
                                         ),
                                       ),
                                     ],
@@ -598,16 +786,14 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
           // Invoice Details & Save Button fixed at the bottom
           Container(
             padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: Colors.white,
-              border: Border(
-                top: BorderSide(color: AppConstants.borderLightColor),
-              ),
+              border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Color(0x0A0F172A),
                   blurRadius: 10,
-                  offset: const Offset(0, -4),
+                  offset: Offset(0, -4),
                 ),
               ],
             ),
@@ -623,9 +809,25 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
                         child: TextFormField(
                           controller: _discountController,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
+                          style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
+                          decoration: InputDecoration(
                             labelText: 'Diskon (Rp)',
-                            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            labelStyle: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                            ),
                           ),
                           onChanged: (val) {
                             setState(() {
@@ -634,15 +836,31 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
                           },
                         ),
                       ),
-                      const SizedBox(width: 16),
+                      const SizedBox(width: 12),
                       // Tax
                       Expanded(
                         child: TextFormField(
                           controller: _taxController,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
+                          style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
+                          decoration: InputDecoration(
                             labelText: 'Pajak (Rp)',
-                            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            labelStyle: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                            ),
                           ),
                           onChanged: (val) {
                             setState(() {
@@ -654,131 +872,146 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
                     children: [
-                      Text(
-                        'Metode Pembayaran:',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppConstants.textLightColor,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: ChoiceChip(
-                              label: Center(
-                                child: Text(
-                                  'Tunai (Lunas)',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 11,
-                                    fontWeight: _paymentType == 'cash' ? FontWeight.bold : FontWeight.normal,
-                                    color: _paymentType == 'cash' ? Colors.white : AppConstants.textDarkColor,
-                                  ),
-                                ),
-                              ),
-                              selected: _paymentType == 'cash',
-                              selectedColor: AppConstants.primaryColor,
-                              backgroundColor: Colors.grey.shade50,
-                              checkmarkColor: Colors.white,
-                              showCheckmark: false,
-                              onSelected: (selected) {
-                                if (selected) {
-                                  setState(() {
-                                    _paymentType = 'cash';
-                                  });
-                                }
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ChoiceChip(
-                              label: Center(
-                                child: Text(
-                                  'Hutang (Kredit)',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 11,
-                                    fontWeight: _paymentType == 'debt' ? FontWeight.bold : FontWeight.normal,
-                                    color: _paymentType == 'debt' ? Colors.white : AppConstants.textDarkColor,
-                                  ),
-                                ),
-                              ),
-                              selected: _paymentType == 'debt',
-                              selectedColor: AppConstants.primaryColor,
-                              backgroundColor: Colors.grey.shade50,
-                              checkmarkColor: Colors.white,
-                              showCheckmark: false,
-                              onSelected: (selected) {
-                                if (selected) {
-                                  setState(() {
-                                    _paymentType = 'debt';
-                                  });
-                                }
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (_paymentType == 'debt') ...[
-                        const SizedBox(height: 12),
-                        TextFormField(
-                          controller: _downPaymentController,
-                          keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Uang Muka / DP (Rp)',
-                            contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          ),
-                          onChanged: (val) {
+                      Expanded(
+                        child: InkWell(
+                          onTap: () {
                             setState(() {
-                              _downPayment = double.tryParse(val) ?? 0.0;
+                              _paymentType = 'cash';
                             });
                           },
+                          borderRadius: BorderRadius.circular(8),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: _paymentType == 'cash' ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: _paymentType == 'cash' ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'Tunai (Lunas)',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11.5,
+                                  fontWeight: _paymentType == 'cash' ? FontWeight.w700 : FontWeight.w500,
+                                  color: _paymentType == 'cash' ? Colors.white : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
-                      ],
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: InkWell(
+                          onTap: () {
+                            setState(() {
+                              _paymentType = 'debt';
+                            });
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 180),
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: _paymentType == 'debt' ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: _paymentType == 'debt' ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                'Hutang (Kredit)',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11.5,
+                                  fontWeight: _paymentType == 'debt' ? FontWeight.w700 : FontWeight.w500,
+                                  color: _paymentType == 'debt' ? Colors.white : const Color(0xFF64748B),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  if (_paymentType == 'debt') ...[
+                    const SizedBox(height: 10),
+                    TextFormField(
+                      controller: _downPaymentController,
+                      keyboardType: TextInputType.number,
+                      style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
+                      decoration: InputDecoration(
+                        labelText: 'Uang Muka / DP (Rp)',
+                        labelStyle: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                        ),
+                      ),
+                      onChanged: (val) {
+                        setState(() {
+                          _downPayment = double.tryParse(val) ?? 0.0;
+                        });
+                      },
+                    ),
+                  ],
+                  const SizedBox(height: 14),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         'Total Restok:',
                         style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: AppConstants.textDarkColor,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13.5,
+                          color: const Color(0xFF0F172A),
                         ),
                       ),
                       Text(
                         CurrencyFormatter.format(_grandTotal),
                         style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w800,
                           fontSize: 18,
-                          color: AppConstants.primaryColor,
+                          color: const Color(0xFF0F172A),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
                   SizedBox(
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0F172A),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       onPressed: _savePurchaseOrder,
                       child: Text(
                         'SIMPAN ORDER RESTOK',
                         style: GoogleFonts.poppins(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
                         ),
                       ),
                     ),
@@ -792,3 +1025,4 @@ class _PurchaseFormPageState extends State<PurchaseFormPage> {
     );
   }
 }
+

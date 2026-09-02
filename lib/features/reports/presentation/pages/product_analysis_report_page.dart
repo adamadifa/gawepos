@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/constants/constants.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../../core/database/app_database.dart';
 import '../bloc/reports_cubit.dart';
@@ -56,8 +55,11 @@ class _ProductAnalysisReportPageState extends State<ProductAnalysisReportPage> w
   Widget _buildPeriodFilter() {
     return Container(
       width: double.infinity,
-      color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -67,28 +69,28 @@ class _ProductAnalysisReportPageState extends State<ProductAnalysisReportPage> w
               Text(
                 'Periode Laporan',
                 style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                   fontSize: 11,
-                  color: AppConstants.textLightColor,
+                  color: const Color(0xFF64748B),
                 ),
               ),
               Text(
                 '${DateFormat('dd MMM yyyy').format(_startDate)} - ${DateFormat('dd MMM yyyy').format(_endDate)}',
                 style: GoogleFonts.poppins(
                   fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppConstants.primaryColor,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF0F172A),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
             children: ['Hari Ini', '7 Hari Terakhir', 'Bulan Ini', 'Kustom'].map((range) {
               final isSelected = _selectedRange == range;
               return Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 3.0),
                   child: InkWell(
                     onTap: () async {
                       if (range == 'Kustom') {
@@ -103,14 +105,14 @@ class _ProductAnalysisReportPageState extends State<ProductAnalysisReportPage> w
                           builder: (context, child) {
                             return Theme(
                               data: Theme.of(context).copyWith(
-                                colorScheme: ColorScheme.light(
-                                  primary: AppConstants.primaryColor,
+                                colorScheme: const ColorScheme.light(
+                                  primary: Color(0xFF0F172A),
                                   onPrimary: Colors.white,
-                                  onSurface: AppConstants.textDarkColor,
+                                  onSurface: Color(0xFF0F172A),
                                 ),
                                 textButtonTheme: TextButtonThemeData(
                                   style: TextButton.styleFrom(
-                                    foregroundColor: AppConstants.primaryColor,
+                                    foregroundColor: const Color(0xFF0F172A),
                                   ),
                                 ),
                               ),
@@ -134,34 +136,25 @@ class _ProductAnalysisReportPageState extends State<ProductAnalysisReportPage> w
                         _loadData();
                       }
                     },
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(10),
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(vertical: 7),
                       decoration: BoxDecoration(
-                        color: isSelected ? AppConstants.primaryColor : Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(20),
+                        color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: isSelected ? AppConstants.primaryColor : Colors.grey.shade300,
+                          color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
                           width: 1,
                         ),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: AppConstants.primaryColor.withValues(alpha: 0.2),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 3),
-                                )
-                              ]
-                            : null,
                       ),
                       child: Center(
                         child: Text(
                           range,
                           style: GoogleFonts.poppins(
                             fontSize: 10,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                            color: isSelected ? Colors.white : AppConstants.textDarkColor,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                            color: isSelected ? Colors.white : const Color(0xFF64748B),
                           ),
                         ),
                       ),
@@ -179,28 +172,28 @@ class _ProductAnalysisReportPageState extends State<ProductAnalysisReportPage> w
   Widget _buildSummaryCards(int bestCount, int slowCount) {
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: Row(
         children: [
           Expanded(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.amber.shade50.withValues(alpha: 0.5),
+                color: const Color(0xFF0F172A).withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.amber.shade200.withValues(alpha: 0.5)),
+                border: Border.all(color: const Color(0xFF0F172A).withValues(alpha: 0.15)),
               ),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade100,
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF0F172A),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.star_rounded, color: Colors.amber.shade800, size: 16),
+                    child: const Icon(Icons.star_rounded, color: Color(0xFFFBBF24), size: 18),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -208,9 +201,9 @@ class _ProductAnalysisReportPageState extends State<ProductAnalysisReportPage> w
                         Text(
                           'Produk Terlaris',
                           style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            color: Colors.amber.shade900,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 10.5,
+                            color: const Color(0xFF64748B),
+                            fontWeight: FontWeight.w600,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -219,9 +212,9 @@ class _ProductAnalysisReportPageState extends State<ProductAnalysisReportPage> w
                         Text(
                           '$bestCount Produk',
                           style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.amber.shade900,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF0F172A),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -236,23 +229,23 @@ class _ProductAnalysisReportPageState extends State<ProductAnalysisReportPage> w
           const SizedBox(width: 10),
           Expanded(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Colors.grey.shade50,
+                color: const Color(0xFFF8FAFC),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade300),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
               ),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade200,
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFE2E8F0),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.inventory_2_outlined, color: Colors.grey.shade600, size: 16),
+                    child: const Icon(Icons.inventory_2_outlined, color: Color(0xFF64748B), size: 18),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -260,9 +253,9 @@ class _ProductAnalysisReportPageState extends State<ProductAnalysisReportPage> w
                         Text(
                           'Tidak Laku',
                           style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            color: Colors.grey.shade800,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 10.5,
+                            color: const Color(0xFF64748B),
+                            fontWeight: FontWeight.w600,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -271,9 +264,9 @@ class _ProductAnalysisReportPageState extends State<ProductAnalysisReportPage> w
                         Text(
                           '$slowCount Produk',
                           style: GoogleFonts.poppins(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey.shade900,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF0F172A),
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -297,11 +290,18 @@ class _ProductAnalysisReportPageState extends State<ProductAnalysisReportPage> w
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.inventory_2_outlined, size: 48, color: Colors.grey.shade400),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.inventory_2_outlined, size: 36, color: Color(0xFF64748B)),
+            ),
             const SizedBox(height: 12),
             Text(
               message,
-              style: GoogleFonts.poppins(fontSize: 12, color: AppConstants.textLightColor),
+              style: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
               textAlign: TextAlign.center,
             ),
           ],
@@ -316,7 +316,7 @@ class _ProductAnalysisReportPageState extends State<ProductAnalysisReportPage> w
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.all(16),
       itemCount: list.length,
       itemBuilder: (context, index) {
         final row = list[index];
@@ -327,154 +327,124 @@ class _ProductAnalysisReportPageState extends State<ProductAnalysisReportPage> w
 
         final rank = index + 1;
         final isTop3 = rank <= 3;
-        Color rankColor = Colors.grey.shade400;
+        Color rankColor = const Color(0xFF64748B);
 
         if (rank == 1) {
-          rankColor = const Color(0xFFD4AF37); // Gold
+          rankColor = const Color(0xFFD97706); // Amber Gold
         } else if (rank == 2) {
-          rankColor = const Color(0xFFC0C0C0); // Silver
+          rankColor = const Color(0xFF64748B); // Silver Slate
         } else if (rank == 3) {
-          rankColor = const Color(0xFFCD7F32); // Bronze
+          rankColor = const Color(0xFFB45309); // Bronze
         }
 
         final qtyStr = quantity.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '');
 
         return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppConstants.borderLightColor),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isTop3 ? rankColor.withValues(alpha: 0.3) : const Color(0xFFE2E8F0),
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
+                color: const Color(0xFF0F172A).withValues(alpha: 0.03),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border(
-                  left: BorderSide(
-                    color: isTop3 ? rankColor : Colors.transparent,
-                    width: 4,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                // Rank Badge
+                Container(
+                  width: 34,
+                  height: 34,
+                  decoration: BoxDecoration(
+                    color: isTop3 ? rankColor.withValues(alpha: 0.12) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Center(
+                    child: Text(
+                      '#$rank',
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: isTop3 ? rankColor : const Color(0xFF64748B),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              child: Row(
-                children: [
-                  // Rank Badge
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: isTop3 ? rankColor.withValues(alpha: 0.1) : Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: isTop3 ? rankColor.withValues(alpha: 0.3) : Colors.grey.shade200,
-                        width: 1,
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '#$rank',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: isTop3 ? rankColor : AppConstants.textLightColor,
-                        ),
-                      ),
-                    ),
+                const SizedBox(width: 12),
+                // Product Image
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
                   ),
-                  const SizedBox(width: 12),
-                  // Product Image
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppConstants.backgroundColor,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppConstants.borderLightColor),
-                    ),
-                    child: product.imagePath != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.file(
-                              File(product.imagePath!),
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(Icons.shopping_bag_outlined,
-                                      color: AppConstants.textLightColor, size: 18),
-                            ),
-                          )
-                        : const Icon(Icons.shopping_bag_outlined,
-                            color: AppConstants.textLightColor, size: 18),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          product.name,
-                          style: GoogleFonts.poppins(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppConstants.textDarkColor,
+                  child: product.imagePath != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.file(
+                            File(product.imagePath!),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.shopping_bag_outlined, color: Color(0xFF64748B), size: 18),
                           ),
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppConstants.primaryColor.withValues(alpha: 0.05),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                '$qtyStr ${unit.name} Terjual',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppConstants.primaryColor,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                        )
+                      : const Icon(Icons.shopping_bag_outlined, color: Color(0xFF64748B), size: 18),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        CurrencyFormatter.format(revenue),
+                        product.name,
                         style: GoogleFonts.poppins(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppConstants.textDarkColor,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0F172A),
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Omzet Bersih',
-                        style: GoogleFonts.poppins(
-                          fontSize: 9,
-                          color: AppConstants.textLightColor,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '$qtyStr ${unit.name} Terjual',
+                              style: GoogleFonts.poppins(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF0F172A),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
+                ),
+                Text(
+                  CurrencyFormatter.format(revenue),
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
+              ],
             ),
           ),
         );
@@ -484,11 +454,11 @@ class _ProductAnalysisReportPageState extends State<ProductAnalysisReportPage> w
 
   Widget _buildSlowSellersTab(List<Map<String, dynamic>> list) {
     if (list.isEmpty) {
-      return _buildEmptyState('Luar biasa! Semua produk Anda laku terjual di periode ini.');
+      return _buildEmptyState('Semua produk aktif memiliki transaksi penjualan.');
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.all(16),
       itemCount: list.length,
       itemBuilder: (context, index) {
         final row = list[index];
@@ -497,118 +467,103 @@ class _ProductAnalysisReportPageState extends State<ProductAnalysisReportPage> w
         final double currentStock = row['currentStock'];
 
         final stockStr = currentStock.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '');
-        final hasStockValue = currentStock > 0;
-        final accentColor = hasStockValue ? Colors.orange.shade600 : Colors.grey.shade400;
+        final bool hasStockValue = currentStock > 0;
 
         return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppConstants.borderLightColor),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.02),
+                color: const Color(0xFF0F172A).withValues(alpha: 0.03),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Container(
-              decoration: BoxDecoration(
-                border: Border(
-                  left: BorderSide(
-                    color: accentColor.withValues(alpha: 0.5),
-                    width: 4,
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                // Product Image
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: product.imagePath != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.file(
+                            File(product.imagePath!),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.shopping_bag_outlined, color: Color(0xFF64748B), size: 18),
+                          ),
+                        )
+                      : const Icon(Icons.shopping_bag_outlined, color: Color(0xFF64748B), size: 18),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product.name,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFDC2626).withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              '0 Terjual',
+                              style: GoogleFonts.poppins(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFFDC2626),
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: hasStockValue
+                                  ? const Color(0xFFD97706).withValues(alpha: 0.08)
+                                  : const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              hasStockValue ? 'Stok Mengendap: $stockStr ${unit.name}' : 'Stok Kosong',
+                              style: GoogleFonts.poppins(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: hasStockValue ? const Color(0xFFD97706) : const Color(0xFF64748B),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              child: Row(
-                children: [
-                  // Product Image instead of warning icon
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppConstants.backgroundColor,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppConstants.borderLightColor),
-                    ),
-                    child: product.imagePath != null
-                        ? ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.file(
-                              File(product.imagePath!),
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) =>
-                                  const Icon(Icons.shopping_bag_outlined,
-                                      color: AppConstants.textLightColor, size: 18),
-                            ),
-                          )
-                        : const Icon(Icons.shopping_bag_outlined,
-                            color: AppConstants.textLightColor, size: 18),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          product.name,
-                          style: GoogleFonts.poppins(
-                            fontSize: 13.5,
-                            fontWeight: FontWeight.w600,
-                            color: AppConstants.textDarkColor,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: Colors.red.shade50,
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(color: Colors.red.shade100),
-                              ),
-                              child: Text(
-                                '0 Terjual',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.red.shade700,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: hasStockValue ? Colors.orange.shade50 : Colors.grey.shade50,
-                                borderRadius: BorderRadius.circular(6),
-                                border: Border.all(
-                                  color: hasStockValue ? Colors.orange.shade200 : Colors.grey.shade200,
-                                ),
-                              ),
-                              child: Text(
-                                hasStockValue ? 'Stok Mengendap: $stockStr ${unit.name}' : 'Stok Kosong',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  color: hasStockValue ? Colors.orange.shade900 : Colors.grey.shade600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+              ],
             ),
           ),
         );
@@ -619,17 +574,34 @@ class _ProductAnalysisReportPageState extends State<ProductAnalysisReportPage> w
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppConstants.backgroundColor,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(
-          'Analisis Produk',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 18, color: Colors.white),
-        ),
-        centerTitle: true,
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.white,
         elevation: 0,
-        backgroundColor: AppConstants.primaryColor,
-        foregroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.white),
+        foregroundColor: const Color(0xFF0F172A),
+        iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Analisis Produk',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                fontSize: 17,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            Text(
+              'Peringkat terlaris & monitoring slow moving',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w400,
+                fontSize: 11,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
       ),
       body: BlocBuilder<ReportsCubit, ReportsState>(
         builder: (context, state) {
@@ -641,26 +613,45 @@ class _ProductAnalysisReportPageState extends State<ProductAnalysisReportPage> w
             children: [
               _buildPeriodFilter(),
               _buildSummaryCards(bestSellers.length, slowSellers.length),
-              const SizedBox(height: 6),
               Container(
                 color: Colors.white,
-                child: TabBar(
-                  controller: _tabController,
-                  labelColor: AppConstants.primaryColor,
-                  unselectedLabelColor: AppConstants.textLightColor,
-                  indicatorColor: AppConstants.primaryColor,
-                  labelStyle: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.bold),
-                  unselectedLabelStyle: GoogleFonts.poppins(fontSize: 12),
-                  tabs: const [
-                    Tab(text: 'Produk Terlaris'),
-                    Tab(text: 'Produk Tidak Laku'),
-                  ],
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    indicatorSize: TabBarIndicatorSize.tab,
+                    dividerColor: Colors.transparent,
+                    indicator: BoxDecoration(
+                      color: const Color(0xFF0F172A),
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0F172A).withValues(alpha: 0.15),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    labelColor: Colors.white,
+                    unselectedLabelColor: const Color(0xFF64748B),
+                    labelStyle: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
+                    unselectedLabelStyle: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500),
+                    tabs: const [
+                      Tab(text: 'Produk Terlaris'),
+                      Tab(text: 'Produk Tidak Laku'),
+                    ],
+                  ),
                 ),
               ),
-              const Divider(height: 1, color: AppConstants.borderLightColor),
+              const Divider(height: 1, color: Color(0xFFE2E8F0)),
               Expanded(
                 child: state.isProductAnalysisLoading && state.productAnalysisData == null
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const Center(child: CircularProgressIndicator(color: Color(0xFF0F172A)))
                     : TabBarView(
                         controller: _tabController,
                         children: [

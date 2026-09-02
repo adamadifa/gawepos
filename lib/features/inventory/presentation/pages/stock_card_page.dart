@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/constants/constants.dart';
 import '../../../../core/database/app_database.dart';
-import '../../../../core/widgets/curved_header.dart';
 import '../bloc/inventory_cubit.dart';
 
 class StockCardPage extends StatefulWidget {
@@ -53,17 +51,17 @@ class _StockCardPageState extends State<StockCardPage> {
   Color _getTypeColor(String type) {
     switch (type) {
       case 'sale':
-        return AppConstants.errorColor;
+        return const Color(0xFFDC2626);
       case 'purchase':
-        return AppConstants.successColor;
+        return const Color(0xFF059669);
       case 'opname':
-        return AppConstants.primaryColor;
+        return const Color(0xFF0F172A);
       case 'manual_in':
-        return AppConstants.successColor;
+        return const Color(0xFF059669);
       case 'manual_out':
-        return AppConstants.errorColor;
+        return const Color(0xFFDC2626);
       default:
-        return AppConstants.textLightColor;
+        return const Color(0xFF64748B);
     }
   }
 
@@ -74,13 +72,13 @@ class _StockCardPageState extends State<StockCardPage> {
       case 'purchase':
         return 'Pembelian';
       case 'opname':
-        return 'Opname (Penyesuaian)';
+        return 'Opname';
       case 'void':
         return 'Batal Transaksi';
       case 'manual_in':
-        return 'Stok Masuk Manual';
+        return 'Stok Masuk';
       case 'manual_out':
-        return 'Stok Keluar Manual';
+        return 'Stok Keluar';
       default:
         return type.toUpperCase();
     }
@@ -106,8 +104,11 @@ class _StockCardPageState extends State<StockCardPage> {
   Widget _buildPeriodFilter() {
     return Container(
       width: double.infinity,
-      color: Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -117,28 +118,28 @@ class _StockCardPageState extends State<StockCardPage> {
               Text(
                 'Periode Mutasi',
                 style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                   fontSize: 11,
-                  color: AppConstants.textLightColor,
+                  color: const Color(0xFF64748B),
                 ),
               ),
               Text(
                 '${DateFormat('dd MMM yyyy').format(_startDate)} - ${DateFormat('dd MMM yyyy').format(_endDate)}',
                 style: GoogleFonts.poppins(
                   fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: AppConstants.primaryColor,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF0F172A),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
             children: ['Hari Ini', '7 Hari Terakhir', 'Bulan Ini', 'Kustom'].map((range) {
               final isSelected = _selectedRange == range;
               return Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 3.0),
                   child: InkWell(
                     onTap: () async {
                       if (range == 'Kustom') {
@@ -153,14 +154,14 @@ class _StockCardPageState extends State<StockCardPage> {
                           builder: (context, child) {
                             return Theme(
                               data: Theme.of(context).copyWith(
-                                colorScheme: ColorScheme.light(
-                                  primary: AppConstants.primaryColor,
+                                colorScheme: const ColorScheme.light(
+                                  primary: Color(0xFF0F172A),
                                   onPrimary: Colors.white,
-                                  onSurface: AppConstants.textDarkColor,
+                                  onSurface: Color(0xFF0F172A),
                                 ),
                                 textButtonTheme: TextButtonThemeData(
                                   style: TextButton.styleFrom(
-                                    foregroundColor: AppConstants.primaryColor,
+                                    foregroundColor: const Color(0xFF0F172A),
                                   ),
                                 ),
                               ),
@@ -184,15 +185,15 @@ class _StockCardPageState extends State<StockCardPage> {
                         _loadData();
                       }
                     },
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(10),
                     child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(vertical: 7),
                       decoration: BoxDecoration(
-                        color: isSelected ? AppConstants.primaryColor : Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(20),
+                        color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: isSelected ? AppConstants.primaryColor : Colors.grey.shade300,
+                          color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
                           width: 1,
                         ),
                       ),
@@ -201,8 +202,8 @@ class _StockCardPageState extends State<StockCardPage> {
                           range,
                           style: GoogleFonts.poppins(
                             fontSize: 10,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                            color: isSelected ? Colors.white : AppConstants.textDarkColor,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                            color: isSelected ? Colors.white : const Color(0xFF64748B),
                           ),
                         ),
                       ),
@@ -221,21 +222,22 @@ class _StockCardPageState extends State<StockCardPage> {
     return Container(
       width: double.infinity,
       color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Pilih Satuan',
+            'PILIH SATUAN',
             style: GoogleFonts.poppins(
-              fontWeight: FontWeight.bold,
-              fontSize: 11,
-              color: AppConstants.textLightColor,
+              fontWeight: FontWeight.w700,
+              fontSize: 10,
+              color: const Color(0xFF64748B),
+              letterSpacing: 0.5,
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           SizedBox(
-            height: 36,
+            height: 34,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: units.length,
@@ -250,24 +252,24 @@ class _StockCardPageState extends State<StockCardPage> {
                         _selectedUnitId = unit.id;
                       });
                     },
-                    borderRadius: BorderRadius.circular(18),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    borderRadius: BorderRadius.circular(10),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                       decoration: BoxDecoration(
-                        color: isSelected ? AppConstants.primaryColor.withValues(alpha: 0.1) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(18),
+                        color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
                         border: Border.all(
-                          color: isSelected ? AppConstants.primaryColor : Colors.grey.shade300,
-                          width: 1.5,
+                          color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
                         ),
                       ),
                       child: Center(
                         child: Text(
                           unit.name,
                           style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                            color: isSelected ? AppConstants.primaryColor : AppConstants.textDarkColor,
+                            fontSize: 11.5,
+                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                            color: isSelected ? Colors.white : const Color(0xFF0F172A),
                           ),
                         ),
                       ),
@@ -285,218 +287,234 @@ class _StockCardPageState extends State<StockCardPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppConstants.backgroundColor,
-      body: Stack(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: const Color(0xFF0F172A),
+        iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Kartu Stok Barang',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                fontSize: 16.5,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            Text(
+              widget.product.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w400,
+                fontSize: 11,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+          ],
+        ),
+      ),
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const CurvedHeader(height: 155),
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Top AppBar
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                  child: Row(
+          // Filter Periode
+          _buildPeriodFilter(),
+
+          // Movements list
+          Expanded(
+            child: BlocBuilder<InventoryCubit, InventoryState>(
+              builder: (context, state) {
+                if (state is InventoryLoading) {
+                  return const Center(child: CircularProgressIndicator(color: Color(0xFF0F172A)));
+                }
+                if (state is InventoryError) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24.0),
+                      child: Text(
+                        state.message,
+                        style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFFDC2626)),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  );
+                }
+                if (state is StockCardLoaded) {
+                  final List<ProductUnit> units = List<ProductUnit>.from(state.units)
+                    ..sort((a, b) => b.conversionFactor.compareTo(a.conversionFactor));
+
+                  if (units.isNotEmpty && _selectedUnitId == null) {
+                    _selectedUnitId = units.first.id;
+                  }
+
+                  final filteredList = state.movements.where((item) {
+                    final ProductUnit unit = item['unit'];
+                    return unit.id == _selectedUnitId;
+                  }).toList();
+
+                  return Column(
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                            color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
-                      ),
+                      if (units.isNotEmpty) ...[
+                        _buildUnitTabs(units),
+                        const Divider(height: 1, color: Color(0xFFE2E8F0)),
+                      ],
                       Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Kartu Stok Barang',
-                              style: GoogleFonts.poppins(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            Text(
-                              widget.product.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Colors.white70, fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Filter Periode
-                _buildPeriodFilter(),
-                const Divider(height: 1, color: AppConstants.borderLightColor),
-
-                // Movements list
-                Expanded(
-                  child: BlocBuilder<InventoryCubit, InventoryState>(
-                    builder: (context, state) {
-                      if (state is InventoryLoading) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      if (state is InventoryError) {
-                        return Center(child: Text(state.message));
-                      }
-                      if (state is StockCardLoaded) {
-                        final List<ProductUnit> units = List<ProductUnit>.from(state.units)
-                          ..sort((a, b) => b.conversionFactor.compareTo(a.conversionFactor));
-
-                        if (units.isNotEmpty && _selectedUnitId == null) {
-                          _selectedUnitId = units.first.id;
-                        }
-
-                        final filteredList = state.movements.where((item) {
-                          final ProductUnit unit = item['unit'];
-                          return unit.id == _selectedUnitId;
-                        }).toList();
-
-                        return Column(
-                          children: [
-                            if (units.isNotEmpty) ...[
-                              _buildUnitTabs(units),
-                              const Divider(height: 1, color: AppConstants.borderLightColor),
-                            ],
-                            Expanded(
-                              child: RefreshIndicator(
-                                onRefresh: () async {
-                                  _loadData();
-                                },
-                                child: filteredList.isEmpty
-                                    ? ListView(
-                                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: RefreshIndicator(
+                          color: const Color(0xFF0F172A),
+                          onRefresh: () async {
+                            _loadData();
+                          },
+                          child: filteredList.isEmpty
+                              ? ListView(
+                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  children: [
+                                    SizedBox(
+                                      height: MediaQuery.of(context).size.height * 0.5,
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
                                         children: [
-                                          SizedBox(
-                                            height: MediaQuery.of(context).size.height * 0.5,
-                                            child: Column(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              children: [
-                                                const Icon(Icons.history_rounded,
-                                                    size: 48, color: AppConstants.textLightColor),
-                                                const SizedBox(height: 12),
-                                                Text(
-                                                  'Belum ada riwayat mutasi stok untuk produk ini pada satuan yang dipilih.',
-                                                  textAlign: TextAlign.center,
-                                                  style: GoogleFonts.poppins(
-                                                      color: AppConstants.textLightColor, fontSize: 13),
-                                                ),
-                                              ],
+                                          Container(
+                                            padding: const EdgeInsets.all(16),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                                              shape: BoxShape.circle,
                                             ),
+                                            child: const Icon(Icons.history_rounded,
+                                                size: 36, color: Color(0xFF64748B)),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          Text(
+                                            'Belum ada riwayat mutasi stok untuk satuan ini.',
+                                            textAlign: TextAlign.center,
+                                            style: GoogleFonts.poppins(
+                                                color: const Color(0xFF64748B), fontSize: 12.5, fontWeight: FontWeight.w500),
                                           ),
                                         ],
-                                      )
-                                    : ListView.builder(
-                                        physics: const AlwaysScrollableScrollPhysics(),
-                                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                        itemCount: filteredList.length,
-                                        itemBuilder: (context, index) {
-                                          final item = filteredList[index];
-                                          final StockMovement move = item['movement'];
-                                          final ProductUnit unit = item['unit'];
-                                          final color = _getTypeColor(move.type);
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : ListView.builder(
+                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  padding: const EdgeInsets.all(16),
+                                  itemCount: filteredList.length,
+                                  itemBuilder: (context, index) {
+                                    final item = filteredList[index];
+                                    final StockMovement move = item['movement'];
+                                    final ProductUnit unit = item['unit'];
+                                    final color = _getTypeColor(move.type);
 
-                                          return Card(
-                                            margin: const EdgeInsets.only(bottom: 10),
-                                            elevation: 0,
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                                              side: const BorderSide(color: AppConstants.borderLightColor),
+                                    return Container(
+                                      margin: const EdgeInsets.only(bottom: 12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(14),
+                                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                                        boxShadow: [
+                                          BoxShadow(
+                                            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                                            blurRadius: 8,
+                                            offset: const Offset(0, 2),
+                                          ),
+                                        ],
+                                      ),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(14),
+                                        child: Row(
+                                          children: [
+                                            // Colored icon circle indicator
+                                            Container(
+                                              width: 38,
+                                              height: 38,
+                                              decoration: BoxDecoration(
+                                                color: color.withValues(alpha: 0.1),
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                              child: Icon(_getTypeIcon(move.type), color: color, size: 18),
                                             ),
-                                            child: Padding(
-                                              padding: const EdgeInsets.all(12),
-                                              child: Row(
+                                            const SizedBox(width: 12),
+                                            // Details column
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
                                                 children: [
-                                                  // Colored icon circle indicator
                                                   Container(
-                                                    width: 40,
-                                                    height: 40,
+                                                    padding: const EdgeInsets.symmetric(
+                                                        horizontal: 7, vertical: 2),
                                                     decoration: BoxDecoration(
-                                                      color: color.withValues(alpha: 0.1),
-                                                      shape: BoxShape.circle,
+                                                      color: color.withValues(alpha: 0.08),
+                                                      borderRadius: BorderRadius.circular(6),
                                                     ),
-                                                    child: Icon(_getTypeIcon(move.type), color: color, size: 18),
-                                                  ),
-                                                  const SizedBox(width: 14),
-                                                  // Details column
-                                                  Expanded(
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        Container(
-                                                          padding: const EdgeInsets.symmetric(
-                                                              horizontal: 6, vertical: 2),
-                                                          decoration: BoxDecoration(
-                                                            color: color.withValues(alpha: 0.1),
-                                                            borderRadius: BorderRadius.circular(4),
-                                                          ),
-                                                          child: Text(
-                                                            _getTypeLabel(move.type),
-                                                            style: TextStyle(
-                                                              fontSize: 10,
-                                                              fontWeight: FontWeight.bold,
-                                                              color: color,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                        const SizedBox(height: 6),
-                                                        Text(
-                                                          move.createdAt.toString().substring(0, 16),
-                                                          style: const TextStyle(
-                                                            fontSize: 10,
-                                                            color: AppConstants.textLightColor,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(height: 4),
-                                                        if (move.notes != null)
-                                                          Text(
-                                                            move.notes!,
-                                                            style: GoogleFonts.poppins(
-                                                              fontSize: 12,
-                                                              color: AppConstants.textDarkColor,
-                                                              fontWeight: FontWeight.w500,
-                                                            ),
-                                                          ),
-                                                        if (move.referenceNo != null)
-                                                          Text(
-                                                            'Reff: ${move.referenceNo!}',
-                                                            style: const TextStyle(
-                                                                fontSize: 11,
-                                                                color: AppConstants.textLightColor),
-                                                          ),
-                                                      ],
+                                                    child: Text(
+                                                      _getTypeLabel(move.type),
+                                                      style: GoogleFonts.poppins(
+                                                        fontSize: 9.5,
+                                                        fontWeight: FontWeight.w700,
+                                                        color: color,
+                                                      ),
                                                     ),
                                                   ),
-                                                  const SizedBox(width: 12),
-                                                  // Qty diff indicator
+                                                  const SizedBox(height: 4),
                                                   Text(
-                                                    '${move.quantity > 0 ? "+" : ""}${move.quantity} ${unit.name}',
+                                                    DateFormat('dd MMM yyyy, HH:mm').format(move.createdAt),
                                                     style: GoogleFonts.poppins(
-                                                      fontWeight: FontWeight.bold,
-                                                      fontSize: 14,
-                                                      color: color,
+                                                      fontSize: 10.5,
+                                                      color: const Color(0xFF94A3B8),
                                                     ),
                                                   ),
+                                                  if (move.referenceNo != null && move.referenceNo!.isNotEmpty) ...[
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      'Ref: ${move.referenceNo}',
+                                                      style: GoogleFonts.poppins(
+                                                          fontSize: 11, color: const Color(0xFF64748B)),
+                                                    ),
+                                                  ],
                                                 ],
                                               ),
                                             ),
-                                          );
-                                        },
+                                            // Numbers column
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.end,
+                                              children: [
+                                                Text(
+                                                  '${move.quantity > 0 ? "+" : ""}${move.quantity.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '')} ${unit.name}',
+                                                  style: GoogleFonts.poppins(
+                                                    fontWeight: FontWeight.w700,
+                                                    fontSize: 13,
+                                                    color: move.quantity >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                                                  ),
+                                                ),
+                                                if (move.notes != null && move.notes!.isNotEmpty) ...[
+                                                  const SizedBox(height: 3),
+                                                  Text(
+                                                    move.notes!,
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 11,
+                                                      color: const Color(0xFF64748B),
+                                                      fontWeight: FontWeight.w500,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                              ),
-                            ),
-                          ],
-                        );
-                      }
-                      return const SizedBox();
-                    },
-                  ),
-                ),
-              ],
+                                    );
+                                  },
+                                ),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                return const SizedBox();
+              },
             ),
           ),
         ],
@@ -504,3 +522,4 @@ class _StockCardPageState extends State<StockCardPage> {
     );
   }
 }
+

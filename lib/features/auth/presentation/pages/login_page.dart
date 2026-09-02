@@ -51,17 +51,17 @@ class _LoginPageState extends State<LoginPage> {
       height: isFilled ? 18 : 14,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: isFilled ? const Color(0xFF2563EB) : const Color(0xFFE2E8F0),
+        color: isFilled ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
         border: Border.all(
           color: isFilled
-              ? const Color(0xFF2563EB)
+              ? const Color(0xFF0F172A)
               : const Color(0xFFCBD5E1),
           width: 2,
         ),
         boxShadow: isFilled
             ? [
                 BoxShadow(
-                  color: const Color(0xFF2563EB).withValues(alpha: 0.35),
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.25),
                   blurRadius: 10,
                   spreadRadius: 2,
                 ),
@@ -198,192 +198,192 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
 
-                          // User Selector
-                          Text(
-                            'PILIH PENGGUNA',
-                            style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF64748B),
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: const Color(0xFFE2E8F0)),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: const Color(0xFF0F172A).withValues(alpha: 0.03),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<User>(
-                                value: _selectedUser,
-                                isExpanded: true,
-                                icon: const Icon(
-                                  Icons.keyboard_arrow_down_rounded,
-                                  color: Color(0xFF2563EB),
-                                ),
-                                onChanged: (User? newUser) {
-                                  setState(() {
-                                    _selectedUser = newUser;
-                                    _pinCode = '';
-                                  });
-                                },
-                                items: widget.users.map((User user) {
-                                  return DropdownMenuItem<User>(
-                                    value: user,
-                                    child: Row(
-                                      children: [
-                                        CircleAvatar(
-                                          backgroundColor: const Color(0xFF2563EB).withValues(alpha: 0.1),
-                                          radius: 16,
-                                          child: Text(
-                                            user.name[0].toUpperCase(),
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.bold,
-                                              color: const Color(0xFF2563EB),
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Text(
-                                            user.name,
-                                            style: GoogleFonts.poppins(
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: 13.5,
-                                              color: const Color(0xFF0F172A),
-                                            ),
-                                          ),
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFF2563EB).withValues(alpha: 0.08),
-                                            borderRadius: BorderRadius.circular(20),
-                                          ),
-                                          child: Text(
-                                            user.role.toUpperCase(),
-                                            style: GoogleFonts.poppins(
-                                              fontSize: 10,
-                                              color: const Color(0xFF2563EB),
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          // PIN Dots Area
-                          Center(
-                            child: Column(
+                  // User Selector
+                  Text(
+                    'PILIH PENGGUNA',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF64748B),
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0F172A).withValues(alpha: 0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<User>(
+                        value: _selectedUser,
+                        isExpanded: true,
+                        icon: const Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: Color(0xFF0F172A),
+                        ),
+                        onChanged: (User? newUser) {
+                          setState(() {
+                            _selectedUser = newUser;
+                            _pinCode = '';
+                          });
+                        },
+                        items: widget.users.map((User user) {
+                          return DropdownMenuItem<User>(
+                            value: user,
+                            child: Row(
                               children: [
-                                Text(
-                                  'Ketik PIN',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: const Color(0xFF64748B),
+                                CircleAvatar(
+                                  backgroundColor: const Color(0xFF0F172A).withValues(alpha: 0.1),
+                                  radius: 16,
+                                  child: Text(
+                                    user.name[0].toUpperCase(),
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xFF0F172A),
+                                    ),
                                   ),
                                 ),
-                                const SizedBox(height: 12),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: List.generate(6, (i) => _buildPinDot(i)),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    user.name,
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13.5,
+                                      color: const Color(0xFF0F172A),
+                                    ),
+                                  ),
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0F172A).withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    user.role.toUpperCase(),
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 10,
+                                      color: const Color(0xFF0F172A),
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                          const SizedBox(height: 24),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
 
-                          // Keypad
-                          Column(
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  _buildKeypadButton('1'),
-                                  _buildKeypadButton('2'),
-                                  _buildKeypadButton('3'),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  _buildKeypadButton('4'),
-                                  _buildKeypadButton('5'),
-                                  _buildKeypadButton('6'),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  _buildKeypadButton('7'),
-                                  _buildKeypadButton('8'),
-                                  _buildKeypadButton('9'),
-                                ],
-                              ),
-                              const SizedBox(height: 10),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  _buildKeypadButton('C',
-                                      onPressed: _onClear,
-                                      icon: Icons.clear_rounded,
-                                      iconColor: const Color(0xFFEF4444)),
-                                  _buildKeypadButton('0'),
-                                  _buildKeypadButton('⌫',
-                                      onPressed: _onBackspace,
-                                      icon: Icons.backspace_outlined,
-                                      iconColor: const Color(0xFF64748B)),
-                                ],
-                              ),
-                            ],
+                  // PIN Dots Area
+                  Center(
+                    child: Column(
+                      children: [
+                        Text(
+                          'Ketik PIN',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF64748B),
                           ),
-                          const SizedBox(height: 22),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(6, (i) => _buildPinDot(i)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
 
-                          // Submit Button
-                          SizedBox(
-                            height: 50,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2563EB),
-                                foregroundColor: Colors.white,
-                                disabledBackgroundColor: const Color(0xFFCBD5E1),
-                                disabledForegroundColor: Colors.white70,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                              ),
-                              onPressed: _pinCode.length >= 4 ? _submit : null,
-                              child: Text(
-                                'MASUK KASIR',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 1.0,
-                                ),
-                              ),
-                            ),
-                          ),
+                  // Keypad
+                  Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildKeypadButton('1'),
+                          _buildKeypadButton('2'),
+                          _buildKeypadButton('3'),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildKeypadButton('4'),
+                          _buildKeypadButton('5'),
+                          _buildKeypadButton('6'),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildKeypadButton('7'),
+                          _buildKeypadButton('8'),
+                          _buildKeypadButton('9'),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          _buildKeypadButton('C',
+                              onPressed: _onClear,
+                              icon: Icons.clear_rounded,
+                              iconColor: const Color(0xFFEF4444)),
+                          _buildKeypadButton('0'),
+                          _buildKeypadButton('⌫',
+                              onPressed: _onBackspace,
+                              icon: Icons.backspace_outlined,
+                              iconColor: const Color(0xFF64748B)),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 22),
+
+                  // Submit Button
+                  SizedBox(
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0F172A),
+                        foregroundColor: Colors.white,
+                        disabledBackgroundColor: const Color(0xFFCBD5E1),
+                        disabledForegroundColor: Colors.white70,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: _pinCode.length >= 4 ? _submit : null,
+                      child: Text(
+                        'MASUK KASIR',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                    ),
+                  ),
                         ],
                       ),
                     ),

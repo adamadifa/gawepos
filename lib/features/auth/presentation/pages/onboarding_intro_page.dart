@@ -22,7 +22,7 @@ class _OnboardingIntroPageState extends State<OnboardingIntroPage> {
       title: 'Transaksi Kasir Cepat & Praktis',
       description:
           'Catat transaksi penjualan kasir dalam hitungan detik. Mendukung multi-pembayaran: Tunai, QRIS, Kartu, dan Hutang.',
-      color: AppConstants.primaryColor,
+      color: Color(0xFF0F172A),
     ),
     _IntroSlide(
       icon: Icons.inventory_2_outlined,
@@ -72,12 +72,12 @@ class _OnboardingIntroPageState extends State<OnboardingIntroPage> {
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: AppConstants.primaryColor.withValues(alpha: 0.1),
+                color: const Color(0xFF0F172A).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Icon(
                 Icons.storefront_rounded,
-                color: AppConstants.primaryColor,
+                color: Color(0xFF0F172A),
                 size: 18,
               ),
             ),
@@ -213,7 +213,7 @@ class _OnboardingIntroPageState extends State<OnboardingIntroPage> {
                         height: 6,
                         decoration: BoxDecoration(
                           color: active
-                              ? AppConstants.primaryColor
+                              ? const Color(0xFF0F172A)
                               : const Color(0xFFCBD5E1),
                           borderRadius: BorderRadius.circular(4),
                         ),
@@ -228,7 +228,7 @@ class _OnboardingIntroPageState extends State<OnboardingIntroPage> {
                     height: 48,
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppConstants.primaryColor,
+                        backgroundColor: const Color(0xFF0F172A),
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
