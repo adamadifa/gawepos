@@ -24,139 +24,286 @@ class SettingsPage extends StatelessWidget {
     final canManageUsers = authCubit.isMenuAllowed('users');
 
     return Scaffold(
-      backgroundColor: AppConstants.backgroundColor,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(
-          'Pengaturan Aplikasi',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: const Color(0xFF0F172A),
+        iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Pengaturan Aplikasi',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                fontSize: 17,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            Text(
+              'Konfigurasi toko, kasir, printer, dan sistem',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w400,
+                fontSize: 11,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+          ],
         ),
-        backgroundColor: AppConstants.primaryColor,
-        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
+          // ─── GRUP 1: PENGGUNA & HAK AKSES ────────────────────────────────
           if (canManageUsers) ...[
+            _buildSectionHeader('Akun & Keamanan'),
+            const SizedBox(height: 8),
             _buildMenuCard(
               context: context,
-              icon: Icons.people_outline_rounded,
-              iconColor: Colors.teal.shade600,
-              bgColor: Colors.teal.shade50,
+              icon: Icons.people_alt_rounded,
+              iconColor: const Color(0xFF0D9488), // Teal
+              bgColor: const Color(0xFFF0FDFA),
               title: 'Manajemen User',
-              subtitle: 'Tambah kasir baru, ubah nama, ganti PIN, atau ubah status aktif.',
+              subtitle: 'Kelola data kasir, tambah admin baru, ubah status aktif & ganti PIN.',
               destination: const UserManagementPage(),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             _buildMenuCard(
               context: context,
-              icon: Icons.security_rounded,
-              iconColor: Colors.red.shade600,
-              bgColor: Colors.red.shade50,
-              title: 'Hak Akses Menu',
-              subtitle: 'Batasi menu apa saja yang boleh dibuka oleh Kasir atau Admin.',
+              icon: Icons.admin_panel_settings_rounded,
+              iconColor: const Color(0xFF7C3AED), // Violet
+              bgColor: const Color(0xFFF5F3FF),
+              title: 'Hak Akses Menu (Role)',
+              subtitle: 'Atur izin akses menu yang boleh dibuka oleh Kasir vs Admin.',
               destination: const RolePermissionsPage(),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
           ],
+
+          // ─── GRUP 2: TOKO & STRUK ─────────────────────────────────────────
+          _buildSectionHeader('Toko & Pelanggan'),
+          const SizedBox(height: 8),
           _buildMenuCard(
             context: context,
-            icon: Icons.store_rounded,
-            iconColor: Colors.blue.shade600,
-            bgColor: Colors.blue.shade50,
-            title: 'Profil & Struk Toko',
-            subtitle: 'Nama, telepon, alamat toko, header & footer cetakan struk.',
+            icon: Icons.storefront_rounded,
+            iconColor: const Color(0xFF1A56DB), // Blue
+            bgColor: const Color(0xFFEFF6FF),
+            title: 'Profil & Header Struk Toko',
+            subtitle: 'Nama, telepon, alamat toko, logo, serta teks header & footer struk.',
             destination: const ShopSettingsPage(),
           ),
-          const SizedBox(height: 12),
-          _buildMenuCard(
-            context: context,
-            icon: Icons.print_rounded,
-            iconColor: Colors.purple.shade600,
-            bgColor: Colors.purple.shade50,
-            title: 'Printer Bluetooth',
-            subtitle: 'Hubungkan printer thermal kasir dan lakukan uji test print.',
-            destination: const PrinterSettingsPage(),
-          ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           _buildMenuCard(
             context: context,
             icon: Icons.card_giftcard_rounded,
-            iconColor: Colors.orange.shade600,
-            bgColor: Colors.orange.shade50,
-            title: 'Poin Pelanggan',
-            subtitle: 'Aktifkan/nonaktifkan poin, atur nilai tukar & penukaran poin.',
+            iconColor: const Color(0xFFD97706), // Amber
+            bgColor: const Color(0xFFFFFBEB),
+            title: 'Poin Loyalitas Pelanggan',
+            subtitle: 'Aktifkan program perolehan poin dan atur nilai tukar rupiah.',
             destination: const PointsSettingsPage(),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 20),
+
+          // ─── GRUP 3: PERANGKAT & HARDWARE ─────────────────────────────────
+          _buildSectionHeader('Perangkat & Cetak'),
+          const SizedBox(height: 8),
+          _buildMenuCard(
+            context: context,
+            icon: Icons.print_rounded,
+            iconColor: const Color(0xFF0284C7), // Sky
+            bgColor: const Color(0xFFF0F9FF),
+            title: 'Printer Thermal Bluetooth',
+            subtitle: 'Pindai printer kasir, hubungkan Bluetooth, dan tes cetak struk.',
+            destination: const PrinterSettingsPage(),
+          ),
+          const SizedBox(height: 20),
+
+          // ─── GRUP 4: DATA & DATABASE ──────────────────────────────────────
+          _buildSectionHeader('Data & Pemeliharaan'),
+          const SizedBox(height: 8),
           _buildMenuCard(
             context: context,
             icon: Icons.storage_rounded,
-            iconColor: Colors.indigo.shade600,
-            bgColor: Colors.indigo.shade50,
-            title: 'Backup & Restore Data',
-            subtitle: 'Cadangkan data database lokal atau pulihkan dari file luar.',
+            iconColor: const Color(0xFF4F46E5), // Indigo
+            bgColor: const Color(0xFFEEF2FF),
+            title: 'Backup & Restore Database',
+            subtitle: 'Cadangkan database SQLite lokal atau pulihkan dari file luar (ZIP).',
             destination: const DatabaseManagementPage(),
           ),
           if (canManageUsers) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             _buildResetDataCard(context),
           ],
+
+          const SizedBox(height: 24),
+          // App Version Branding Footer
+          Center(
+            child: Column(
+              children: [
+                Text(
+                  '${AppConstants.appName} v1.0.0',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'Aplikasi Kasir Offline-First untuk UMKM Indonesia',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    color: const Color(0xFF94A3B8),
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      child: Text(
+        title,
+        style: GoogleFonts.poppins(
+          fontSize: 12.5,
+          fontWeight: FontWeight.w700,
+          color: const Color(0xFF64748B),
+          letterSpacing: 0.2,
+        ),
       ),
     );
   }
 
   void _showResetConfirmationDialog(BuildContext context) {
     final controller = TextEditingController();
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(
-          'Reset Data Aplikasi?',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: AppConstants.errorColor),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
-        content: Column(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 14,
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+        ),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
-              'Tindakan ini akan menghapus seluruh data transaksi, produk, kasir, biaya, dan semua gambar secara permanen dari perangkat ini.\n\nKetik kata "RESET" (huruf kapital) untuk melanjutkan:',
-              style: TextStyle(fontSize: 13, color: AppConstants.textDarkColor),
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFCBD5E1),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFDC2626).withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Reset Data Aplikasi?',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                      color: const Color(0xFFDC2626),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ],
+            ),
+            const Divider(height: 20, color: Color(0xFFF1F5F9)),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFFEE2E2)),
+              ),
+              child: Text(
+                'Tindakan ini akan menghapus seluruh transaksi, produk, kasir, log biaya, dan gambar secara permanen dari perangkat ini.',
+                style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF991B1B)),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              'Ketik kata "RESET" (huruf kapital) untuk konfirmasi:',
+              style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
+            ),
+            const SizedBox(height: 8),
             TextField(
               controller: controller,
-              decoration: const InputDecoration(
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, letterSpacing: 1),
+              decoration: InputDecoration(
                 hintText: 'RESET',
-                border: OutlineInputBorder(),
+                hintStyle: GoogleFonts.poppins(color: const Color(0xFF94A3B8)),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                filled: true,
+                fillColor: const Color(0xFFF8FAFC),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFDC2626),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: () async {
+                if (controller.text.trim() == 'RESET') {
+                  Navigator.pop(ctx);
+                  _performReset(context);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Kata konfirmasi salah. Reset dibatalkan.', style: GoogleFonts.poppins()),
+                      backgroundColor: AppConstants.errorColor,
+                    ),
+                  );
+                  Navigator.pop(ctx);
+                }
+              },
+              child: Text(
+                'RESET DATA SEKARANG',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13),
               ),
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('BATAL'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (controller.text.trim() == 'RESET') {
-                Navigator.pop(ctx);
-                _performReset(context);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Kata konfirmasi salah. Reset dibatalkan.'),
-                    backgroundColor: AppConstants.errorColor,
-                  ),
-                );
-                Navigator.pop(ctx);
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppConstants.errorColor),
-            child: const Text('RESET SEKARANG'),
-          ),
-        ],
       ),
     );
   }
@@ -165,18 +312,23 @@ class SettingsPage extends StatelessWidget {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => const Center(
-        child: Card(
-          child: Padding(
-            padding: EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Sedang mereset data...', style: TextStyle(fontWeight: FontWeight.bold)),
-              ],
-            ),
+      builder: (ctx) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: Color(0xFF0F172A)),
+              const SizedBox(height: 16),
+              Text(
+                'Sedang mereset data...',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 14),
+              ),
+            ],
           ),
         ),
       ),
@@ -218,18 +370,24 @@ class SettingsPage extends StatelessWidget {
           context: context,
           barrierDismissible: false,
           builder: (ctx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: Text(
               'Reset Berhasil',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.bold, color: AppConstants.successColor),
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: const Color(0xFF059669)),
             ),
-            content: const Text(
-              'Seluruh data berhasil dihapus. Aplikasi harus ditutup untuk menerapkan perubahan ini. Silakan buka kembali aplikasi setelah keluar.',
-              style: TextStyle(fontSize: 13),
+            content: Text(
+              'Seluruh data berhasil dihapus. Silakan tutup dan buka kembali aplikasi untuk memulai dari awal.',
+              style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF64748B)),
             ),
             actions: [
               ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F172A),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
                 onPressed: () => exit(0),
-                child: const Text('KELUAR APLIKASI'),
+                child: Text('KELUAR APLIKASI', style: GoogleFonts.poppins(fontWeight: FontWeight.w700)),
               ),
             ],
           ),
@@ -240,7 +398,7 @@ class SettingsPage extends StatelessWidget {
         Navigator.pop(context); // Close loading dialog
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal mereset data: $e'),
+            content: Text('Gagal mereset data: $e', style: GoogleFonts.poppins()),
             backgroundColor: AppConstants.errorColor,
           ),
         );
@@ -249,54 +407,65 @@ class SettingsPage extends StatelessWidget {
   }
 
   Widget _buildResetDataCard(BuildContext context) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.red.shade200),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFFCA5A5).withValues(alpha: 0.6)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFDC2626).withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: InkWell(
-        onTap: () => _showResetConfirmationDialog(context),
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  shape: BoxShape.circle,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: () => _showResetConfirmationDialog(context),
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.delete_forever_rounded, color: Color(0xFFDC2626), size: 22),
                 ),
-                child: Icon(Icons.delete_forever_rounded, color: AppConstants.errorColor, size: 24),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Reset Data Aplikasi',
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppConstants.errorColor,
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Reset Data Aplikasi',
+                        style: GoogleFonts.poppins(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFFDC2626),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Hapus permanen semua produk, transaksi, biaya, dan database lokal.',
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        color: AppConstants.textLightColor,
+                      const SizedBox(height: 2),
+                      Text(
+                        'Hapus permanen database lokal & reset aplikasi.',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: const Color(0xFF64748B),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400, size: 24),
-            ],
+                const SizedBox(width: 8),
+                const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8), size: 20),
+              ],
+            ),
           ),
         ),
       ),
@@ -312,59 +481,70 @@ class SettingsPage extends StatelessWidget {
     required String subtitle,
     required Widget destination,
   }) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.shade200),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => destination),
-          );
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  shape: BoxShape.circle,
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => destination),
+            );
+          },
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, color: iconColor, size: 22),
                 ),
-                child: Icon(icon, color: iconColor, size: 24),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: GoogleFonts.poppins(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: AppConstants.textDarkColor,
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF0F172A),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: GoogleFonts.poppins(
-                        fontSize: 11,
-                        color: AppConstants.textLightColor,
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: const Color(0xFF64748B),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Icon(Icons.chevron_right_rounded, color: Colors.grey.shade400, size: 24),
-            ],
+                const SizedBox(width: 8),
+                const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8), size: 20),
+              ],
+            ),
           ),
         ),
       ),

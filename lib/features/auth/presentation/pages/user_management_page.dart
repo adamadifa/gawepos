@@ -19,7 +19,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
     context.read<UserManagementCubit>().loadUsers();
   }
 
-  void _showAddEditUserDialog({User? user}) {
+  void _showAddEditUserBottomSheet({User? user}) {
     final nameController = TextEditingController(text: user?.name ?? '');
     final usernameController = TextEditingController(text: user?.username ?? '');
     final pinController = TextEditingController();
@@ -28,61 +28,156 @@ class _UserManagementPageState extends State<UserManagementPage> {
 
     final formKey = GlobalKey<FormState>();
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      barrierDismissible: false,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
         return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: Text(
-                user == null ? 'Tambah User Baru' : 'Edit User',
-                style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+          builder: (context, setModalState) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
-              content: SingleChildScrollView(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 14,
+                bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+              ),
+              child: SingleChildScrollView(
                 child: Form(
                   key: formKey,
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      // Handle bar
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFCBD5E1),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user == null ? 'Tambah Pengguna Baru' : 'Edit Data Pengguna',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 16,
+                                  color: const Color(0xFF0F172A),
+                                ),
+                              ),
+                              Text(
+                                user == null
+                                    ? 'Daftarkan akun kasir atau staf baru'
+                                    : 'Perbarui nama, peran, atau ubah PIN akun',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11.5,
+                                  color: const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
+                            onPressed: () => Navigator.pop(ctx),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 20, color: Color(0xFFF1F5F9)),
+
+                      // Nama Lengkap
+                      Text(
+                        'Nama Lengkap',
+                        style: GoogleFonts.poppins(fontSize: 11.5, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+                      ),
+                      const SizedBox(height: 6),
                       TextFormField(
                         controller: nameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Nama Lengkap',
-                          prefixIcon: Icon(Icons.person_rounded),
+                        style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A)),
+                        decoration: InputDecoration(
+                          hintText: 'Contoh: Ahmad Kasir',
+                          hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                          prefixIcon: const Icon(Icons.person_rounded, size: 18, color: Color(0xFF64748B)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5)),
                         ),
-                        validator: (value) =>
-                            value == null || value.isEmpty ? 'Nama harus diisi' : null,
+                        validator: (value) => value == null || value.trim().isEmpty ? 'Nama wajib diisi' : null,
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
+
+                      // Username
+                      Text(
+                        'Username (ID Login)',
+                        style: GoogleFonts.poppins(fontSize: 11.5, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+                      ),
+                      const SizedBox(height: 6),
                       TextFormField(
                         controller: usernameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Username',
-                          prefixIcon: Icon(Icons.alternate_email_rounded),
+                        enabled: user == null,
+                        style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A)),
+                        decoration: InputDecoration(
+                          hintText: 'Contoh: ahmad01',
+                          hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                          prefixIcon: const Icon(Icons.alternate_email_rounded, size: 18, color: Color(0xFF64748B)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          filled: true,
+                          fillColor: user == null ? const Color(0xFFF8FAFC) : const Color(0xFFF1F5F9),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5)),
                         ),
-                        enabled: user == null, // Username tidak boleh diedit karena unique key
                         validator: (value) {
-                          if (value == null || value.isEmpty) return 'Username harus diisi';
-                          if (value.length < 3) return 'Minimal 3 karakter';
+                          if (value == null || value.trim().isEmpty) return 'Username wajib diisi';
+                          if (value.trim().length < 3) return 'Minimal 3 karakter';
                           return null;
                         },
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
+
+                      // PIN
+                      Text(
+                        user == null ? 'PIN Akses (4-6 Digit Angka)' : 'PIN Baru (Kosongkan jika tidak diubah)',
+                        style: GoogleFonts.poppins(fontSize: 11.5, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+                      ),
+                      const SizedBox(height: 6),
                       TextFormField(
                         controller: pinController,
-                        decoration: InputDecoration(
-                          labelText: user == null ? 'PIN (4-6 Digit)' : 'PIN Baru (Kosongkan jika tidak diubah)',
-                          prefixIcon: const Icon(Icons.pin_rounded),
-                          hintText: user == null ? '1234' : '••••',
-                        ),
                         keyboardType: TextInputType.number,
                         obscureText: true,
+                        style: GoogleFonts.poppins(fontSize: 14, letterSpacing: 3, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)),
+                        decoration: InputDecoration(
+                          hintText: user == null ? '1234' : '••••',
+                          hintStyle: GoogleFonts.poppins(fontSize: 12.5, letterSpacing: 0, color: const Color(0xFF94A3B8)),
+                          prefixIcon: const Icon(Icons.pin_rounded, size: 18, color: Color(0xFF64748B)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5)),
+                        ),
                         validator: (value) {
                           if (user == null) {
-                            if (value == null || value.isEmpty) return 'PIN harus diisi';
-                            if (value.length < 4 || value.length > 6) return 'PIN harus 4-6 digit';
+                            if (value == null || value.isEmpty) return 'PIN wajib diisi';
+                            if (value.length < 4 || value.length > 6) return 'PIN harus 4-6 digit angka';
                           } else {
                             if (value != null && value.isNotEmpty && (value.length < 4 || value.length > 6)) {
                               return 'PIN baru harus 4-6 digit';
@@ -91,82 +186,111 @@ class _UserManagementPageState extends State<UserManagementPage> {
                           return null;
                         },
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 14),
+
+                      // Role Akses
+                      Text(
+                        'Peran / Role Akses',
+                        style: GoogleFonts.poppins(fontSize: 11.5, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+                      ),
+                      const SizedBox(height: 6),
                       DropdownButtonFormField<String>(
-                        value: selectedRole,
-                        decoration: const InputDecoration(
-                          labelText: 'Role Akses',
-                          prefixIcon: Icon(Icons.security_rounded),
+                        initialValue: selectedRole,
+                        decoration: InputDecoration(
+                          prefixIcon: const Icon(Icons.security_rounded, size: 18, color: Color(0xFF64748B)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5)),
                         ),
-                        items: const [
-                          DropdownMenuItem(value: 'admin', child: Text('Admin (Pemilik)')),
-                          DropdownMenuItem(value: 'cashier', child: Text('Kasir')),
+                        items: [
+                          DropdownMenuItem(
+                            value: 'cashier',
+                            child: Text('Kasir (Akses Terbatas)', style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A))),
+                          ),
+                          DropdownMenuItem(
+                            value: 'admin',
+                            child: Text('Admin (Pemilik / Akses Penuh)', style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A))),
+                          ),
                         ],
                         onChanged: (val) {
                           if (val != null) {
-                            setDialogState(() {
-                              selectedRole = val;
-                            });
+                            setModalState(() => selectedRole = val);
                           }
                         },
                       ),
+
                       if (user != null) ...[
                         const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Status Akun Aktif',
-                              style: GoogleFonts.poppins(fontSize: 14),
-                            ),
-                            Switch.adaptive(
-                              value: isActive,
-                              activeColor: AppConstants.primaryColor,
-                              onChanged: (val) {
-                                setDialogState(() {
-                                  isActive = val;
-                                });
-                              },
-                            ),
-                          ],
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Status Akun Aktif',
+                                style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
+                              ),
+                              Switch(
+                                value: isActive,
+                                activeThumbColor: const Color(0xFF0F172A),
+                                onChanged: (val) {
+                                  setModalState(() => isActive = val);
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       ],
+
+                      const SizedBox(height: 24),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF0F172A),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () {
+                          if (formKey.currentState!.validate()) {
+                            if (user == null) {
+                              context.read<UserManagementCubit>().addUser(
+                                    name: nameController.text.trim(),
+                                    username: usernameController.text.trim(),
+                                    pin: pinController.text,
+                                    role: selectedRole,
+                                  );
+                            } else {
+                              final updatedUser = user.copyWith(
+                                name: nameController.text.trim(),
+                                role: selectedRole,
+                                isActive: isActive,
+                              );
+                              context.read<UserManagementCubit>().editUser(
+                                    updatedUser,
+                                    newPin: pinController.text.isNotEmpty ? pinController.text : null,
+                                  );
+                            }
+                            Navigator.pop(ctx);
+                          }
+                        },
+                        child: Text(
+                          user == null ? 'TAMBAH PENGGUNA' : 'SIMPAN PERUBAHAN',
+                          style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13),
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('BATAL'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    if (formKey.currentState!.validate()) {
-                      if (user == null) {
-                        context.read<UserManagementCubit>().addUser(
-                              name: nameController.text.trim(),
-                              username: usernameController.text.trim(),
-                              pin: pinController.text,
-                              role: selectedRole,
-                            );
-                      } else {
-                        final updatedUser = user.copyWith(
-                          name: nameController.text.trim(),
-                          role: selectedRole,
-                          isActive: isActive,
-                        );
-                        context.read<UserManagementCubit>().editUser(
-                              updatedUser,
-                              newPin: pinController.text.isNotEmpty ? pinController.text : null,
-                            );
-                      }
-                      Navigator.pop(ctx);
-                    }
-                  },
-                  child: const Text('SIMPAN'),
-                ),
-              ],
             );
           },
         );
@@ -177,19 +301,39 @@ class _UserManagementPageState extends State<UserManagementPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppConstants.backgroundColor,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(
-          'Manajemen User',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: const Color(0xFF0F172A),
+        iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Manajemen User',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                fontSize: 17,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            Text(
+              'Kelola akun kasir, admin, dan hak otorisasi',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w400,
+                fontSize: 11,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+          ],
         ),
-        backgroundColor: AppConstants.primaryColor,
-        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_rounded),
-            tooltip: 'Tambah User',
-            onPressed: () => _showAddEditUserDialog(),
+            icon: const Icon(Icons.add_rounded, color: Color(0xFF0F172A)),
+            tooltip: 'Tambah User Baru',
+            onPressed: () => _showAddEditUserBottomSheet(),
           ),
         ],
       ),
@@ -199,7 +343,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
             if (state is UserManagementError) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(state.message),
+                  content: Text(state.message, style: GoogleFonts.poppins()),
                   backgroundColor: AppConstants.errorColor,
                 ),
               );
@@ -207,9 +351,9 @@ class _UserManagementPageState extends State<UserManagementPage> {
           },
           builder: (context, state) {
             if (state is UserManagementLoading) {
-              return const Center(child: CircularProgressIndicator());
+              return const Center(child: CircularProgressIndicator(color: Color(0xFF0F172A)));
             }
-  
+
             if (state is UserManagementLoaded) {
               final users = state.users;
               if (users.isEmpty) {
@@ -217,86 +361,123 @@ class _UserManagementPageState extends State<UserManagementPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.people_outline_rounded, size: 64, color: Colors.grey.shade400),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.people_outline_rounded, size: 36, color: Color(0xFF64748B)),
+                      ),
                       const SizedBox(height: 12),
                       Text(
-                        'Belum ada user terdaftar',
-                        style: GoogleFonts.poppins(color: AppConstants.textLightColor, fontSize: 14),
+                        'Belum ada pengguna terdaftar.',
+                        style: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
                       ),
                     ],
                   ),
                 );
               }
-  
+
               return ListView.builder(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 24),
                 itemCount: users.length,
                 itemBuilder: (context, index) {
                   final user = users[index];
                   final isAdmin = user.role == 'admin';
-  
-                  return Card(
-                    elevation: 0,
-                    margin: const EdgeInsets.only(bottom: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      side: BorderSide(color: Colors.grey.shade200),
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(14),
                       child: Row(
                         children: [
                           CircleAvatar(
-                            radius: 24,
+                            radius: 22,
                             backgroundColor: isAdmin
-                                ? AppConstants.primaryColor.withValues(alpha: 0.1)
-                                : AppConstants.successColor.withValues(alpha: 0.1),
+                                ? const Color(0xFF7C3AED).withValues(alpha: 0.1)
+                                : const Color(0xFF0D9488).withValues(alpha: 0.1),
                             child: Text(
-                              user.name[0].toUpperCase(),
+                              user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
                               style: GoogleFonts.poppins(
-                                fontWeight: FontWeight.bold,
-                                color: isAdmin ? AppConstants.primaryColor : AppConstants.successColor,
+                                fontWeight: FontWeight.w700,
+                                color: isAdmin ? const Color(0xFF7C3AED) : const Color(0xFF0D9488),
+                                fontSize: 14,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 16),
+                          const SizedBox(width: 14),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text(
-                                  user.name,
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: AppConstants.textDarkColor,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
                                 Row(
                                   children: [
                                     Text(
-                                      '@${user.username}',
-                                      style: TextStyle(
-                                        color: AppConstants.textLightColor,
-                                        fontSize: 12,
+                                      user.name,
+                                      style: GoogleFonts.poppins(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
+                                        color: const Color(0xFF0F172A),
                                       ),
                                     ),
                                     const SizedBox(width: 8),
                                     Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 1.5),
+                                      decoration: BoxDecoration(
+                                        color: isAdmin
+                                            ? const Color(0xFF7C3AED).withValues(alpha: 0.1)
+                                            : const Color(0xFF0D9488).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        isAdmin ? 'ADMIN' : 'KASIR',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: isAdmin ? const Color(0xFF7C3AED) : const Color(0xFF0D9488),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 3),
+                                Row(
+                                  children: [
+                                    Text(
+                                      '@${user.username}',
+                                      style: GoogleFonts.poppins(
+                                        color: const Color(0xFF64748B),
+                                        fontSize: 11,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
                                       decoration: BoxDecoration(
                                         color: user.isActive
-                                            ? AppConstants.successColor.withValues(alpha: 0.1)
-                                            : AppConstants.errorColor.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(12),
+                                            ? const Color(0xFF059669).withValues(alpha: 0.1)
+                                            : const Color(0xFFDC2626).withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(4),
                                       ),
                                       child: Text(
                                         user.isActive ? 'Aktif' : 'Nonaktif',
-                                        style: TextStyle(
-                                          color: user.isActive ? AppConstants.successColor : AppConstants.errorColor,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
+                                        style: GoogleFonts.poppins(
+                                          color: user.isActive ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                                          fontSize: 9.5,
+                                          fontWeight: FontWeight.w700,
                                         ),
                                       ),
                                     ),
@@ -305,41 +486,24 @@ class _UserManagementPageState extends State<UserManagementPage> {
                               ],
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              user.role.toUpperCase(),
-                              style: GoogleFonts.poppins(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey.shade700,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
                           PopupMenuButton<String>(
-                            icon: const Icon(Icons.more_vert_rounded),
+                            icon: const Icon(Icons.more_vert_rounded, color: Color(0xFF64748B), size: 20),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             onSelected: (action) {
                               if (action == 'edit') {
-                                _showAddEditUserDialog(user: user);
+                                _showAddEditUserBottomSheet(user: user);
                               } else if (action == 'status') {
                                 context.read<UserManagementCubit>().toggleUserStatus(user);
                               }
                             },
                             itemBuilder: (context) => [
-                              const PopupMenuItem(
+                              PopupMenuItem(
                                 value: 'edit',
                                 child: Row(
                                   children: [
-                                    Icon(Icons.edit_rounded, size: 18),
-                                    SizedBox(width: 8),
-                                    Text('Edit Profile / PIN'),
+                                    const Icon(Icons.edit_rounded, size: 16, color: Color(0xFF0F172A)),
+                                    const SizedBox(width: 8),
+                                    Text('Edit Profil / PIN', style: GoogleFonts.poppins(fontSize: 12)),
                                   ],
                                 ),
                               ),
@@ -349,11 +513,14 @@ class _UserManagementPageState extends State<UserManagementPage> {
                                   children: [
                                     Icon(
                                       user.isActive ? Icons.block_rounded : Icons.check_circle_outline_rounded,
-                                      size: 18,
-                                      color: user.isActive ? AppConstants.errorColor : AppConstants.successColor,
+                                      size: 16,
+                                      color: user.isActive ? const Color(0xFFDC2626) : const Color(0xFF059669),
                                     ),
                                     const SizedBox(width: 8),
-                                    Text(user.isActive ? 'Nonaktifkan User' : 'Aktifkan User'),
+                                    Text(
+                                      user.isActive ? 'Nonaktifkan Akun' : 'Aktifkan Akun',
+                                      style: GoogleFonts.poppins(fontSize: 12),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -366,7 +533,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                 },
               );
             }
-  
+
             return const SizedBox.shrink();
           },
         ),

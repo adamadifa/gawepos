@@ -258,6 +258,8 @@ class _PaymentPageState extends State<PaymentPage>
 
   @override
   Widget build(BuildContext context) {
+    final bool isTablet = MediaQuery.of(context).size.width > 720;
+
     return BlocListener<SalesCubit, SalesState>(
       listener: (context, state) {
         if (state is SalesSuccess) {
@@ -292,125 +294,70 @@ class _PaymentPageState extends State<PaymentPage>
         }
       },
       child: Scaffold(
-        backgroundColor: AppConstants.backgroundColor,
-        body: Column(
-          children: [
-            // ── Header Executive Deep Slate ──────────────────────────────
-            Container(
-              decoration: const BoxDecoration(
-                color: Color(0xFF0F172A),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(24),
-                  bottomRight: Radius.circular(24),
-                ),
-              ),
-              child: SafeArea(
-                bottom: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 6, 16, 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+        backgroundColor: const Color(0xFFF8FAFC),
+        body: isTablet ? _buildTabletLayout() : _buildMobileLayout(),
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 📱 MOBILE PAYMENT LAYOUT (< 720px)
+  // ═══════════════════════════════════════════════════════════════════════════
+  Widget _buildMobileLayout() {
+    return Column(
+      children: [
+        // ── Header Executive Deep Slate ──────────────────────────────
+        Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF0F172A),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(24),
+              bottomRight: Radius.circular(24),
+            ),
+          ),
+          child: SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 6, 16, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                                color: Colors.white, size: 18),
-                            onPressed: () => Navigator.pop(context),
-                          ),
-                          Text(
-                            'Pembayaran Transaksi',
-                            style: GoogleFonts.poppins(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const Spacer(),
-                          // Badge Detail
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.shopping_bag_outlined,
-                                    size: 13, color: Colors.white70),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${widget.cart.items.length} Item',
-                                  style: GoogleFonts.poppins(
-                                    color: Colors.white,
-                                    fontSize: 11.5,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                      IconButton(
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                            color: Colors.white, size: 18),
+                        onPressed: () => Navigator.pop(context),
                       ),
-                      const SizedBox(height: 10),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      Text(
+                        'Pembayaran Transaksi',
+                        style: GoogleFonts.poppins(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const Spacer(),
+                      // Badge Detail
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
+                            const Icon(Icons.shopping_bag_outlined,
+                                size: 13, color: Colors.white70),
+                            const SizedBox(width: 4),
                             Text(
-                              'TOTAL TAGIHAN PEMBAYARAN',
+                              '${widget.cart.items.length} Item',
                               style: GoogleFonts.poppins(
-                                color: Colors.white.withValues(alpha: 0.6),
-                                fontSize: 10.5,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.8,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            ScaleTransition(
-                              scale: _pulseAnimation,
-                              child: Text(
-                                CurrencyFormatter.format(
-                                    widget.cart.grandTotal),
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: -0.5,
-                                  height: 1.1,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            // Summary Row
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.06),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  _buildHeaderStat(
-                                      'Subtotal',
-                                      CurrencyFormatter.format(
-                                          widget.cart.subtotal)),
-                                  if (widget.cart.discountAmount > 0)
-                                    _buildHeaderStat(
-                                        'Diskon',
-                                        '-${CurrencyFormatter.format(widget.cart.discountAmount)}'),
-                                  if (widget.cart.taxAmount > 0)
-                                    _buildHeaderStat(
-                                        'Pajak',
-                                        CurrencyFormatter.format(
-                                            widget.cart.taxAmount)),
-                                ],
+                                color: Colors.white,
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
@@ -418,59 +365,430 @@ class _PaymentPageState extends State<PaymentPage>
                       ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 10),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'TOTAL TAGIHAN PEMBAYARAN',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white.withValues(alpha: 0.6),
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        ScaleTransition(
+                          scale: _pulseAnimation,
+                          child: Text(
+                            CurrencyFormatter.format(
+                                widget.cart.grandTotal),
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.5,
+                              height: 1.1,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        // Summary Row
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _buildHeaderStat(
+                                  'Subtotal',
+                                  CurrencyFormatter.format(
+                                      widget.cart.subtotal)),
+                              if (widget.cart.discountAmount > 0)
+                                _buildHeaderStat(
+                                    'Diskon',
+                                    '-${CurrencyFormatter.format(widget.cart.discountAmount)}'),
+                              if (widget.cart.taxAmount > 0)
+                                _buildHeaderStat(
+                                    'Pajak',
+                                    CurrencyFormatter.format(
+                                        widget.cart.taxAmount)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
+          ),
+        ),
 
-            // ── Scrollable Content ───────────────────────────────────
-            Expanded(
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        // ── Scrollable Content ───────────────────────────────────
+        Expanded(
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              children: [
+                // Metode Pembayaran Label
+                _buildSectionLabel('Pilih Metode Pembayaran', Icons.payment_rounded),
+                const SizedBox(height: 6),
+                _buildPaymentMethodGrid(),
+                const SizedBox(height: 14),
+
+                // Detail input pembayaran
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: _paymentMethod == 'cash'
+                      ? Column(
+                          key: const ValueKey('cash_section'),
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildSectionLabel('Detail Tunai', Icons.payments_outlined),
+                            const SizedBox(height: 6),
+                            _buildCashPaymentCard(),
+                            const SizedBox(height: 14),
+                          ],
+                        )
+                      : _buildNonCashInfo(),
+                ),
+
+                // Poin Pelanggan
+                if (_pointsSettings['enabled'] == 1 && widget.cart.selectedCustomer != null)
+                  _buildPointsCard(),
+                const SizedBox(height: 12),
+
+                // Catatan Transaksi
+                _buildSectionLabel('Catatan Transaksi', Icons.edit_note_rounded),
+                const SizedBox(height: 6),
+                _buildNotesCard(),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+        ),
+
+        // ── Action Button ────────────────────────────────────────
+        _buildCheckoutButton(),
+      ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 📟 TABLET DUAL-PANE PAYMENT LAYOUT (>= 720px)
+  // ═══════════════════════════════════════════════════════════════════════════
+  Widget _buildTabletLayout() {
+    return SafeArea(
+      child: Column(
+        children: [
+          // Tablet Header Bar
+          Container(
+            color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(12, 8, 20, 10),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                      color: Color(0xFF0F172A), size: 18),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                const SizedBox(width: 4),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Metode Pembayaran Label
-                    _buildSectionLabel('Pilih Metode Pembayaran', Icons.payment_rounded),
-                    const SizedBox(height: 6),
-                    _buildPaymentMethodGrid(),
-                    const SizedBox(height: 14),
-
-                    // Detail input pembayaran
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 200),
-                      child: _paymentMethod == 'cash'
-                          ? Column(
-                              key: const ValueKey('cash_section'),
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildSectionLabel('Detail Tunai', Icons.payments_outlined),
-                                const SizedBox(height: 6),
-                                _buildCashPaymentCard(),
-                                const SizedBox(height: 14),
-                              ],
-                            )
-                          : _buildNonCashInfo(),
+                    Text(
+                      'Pembayaran Transaksi',
+                      style: GoogleFonts.poppins(
+                        color: const Color(0xFF0F172A),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.2,
+                      ),
                     ),
-
-                    // Poin Pelanggan
-                    if (_pointsSettings['enabled'] == 1 && widget.cart.selectedCustomer != null)
-                      _buildPointsCard(),
-                    const SizedBox(height: 12),
-
-                    // Catatan Transaksi
-                    _buildSectionLabel('Catatan Transaksi', Icons.edit_note_rounded),
-                    const SizedBox(height: 6),
-                    _buildNotesCard(),
-                    const SizedBox(height: 12),
+                    Text(
+                      'Kasir: ${widget.user.name} • Sesi #${widget.session.id}',
+                      style: GoogleFonts.poppins(
+                        color: const Color(0xFF64748B),
+                        fontSize: 11,
+                      ),
+                    ),
                   ],
                 ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.shopping_bag_outlined,
+                          size: 14, color: Color(0xFF0F172A)),
+                      const SizedBox(width: 6),
+                      Text(
+                        '${widget.cart.items.length} Item di Keranjang',
+                        style: GoogleFonts.poppins(
+                          color: const Color(0xFF0F172A),
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(height: 1, color: const Color(0xFFE2E8F0)),
+
+          // Main Tablet Body
+          Expanded(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1200),
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ── LEFT COLUMN: Total & Invoice Breakdown (Flex: 45) ──
+                      Expanded(
+                        flex: 45,
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Total Tagihan Slate Card
+                              Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0F172A),
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: const Color(0xFF0F172A).withValues(alpha: 0.2),
+                                      blurRadius: 16,
+                                      offset: const Offset(0, 6),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'TOTAL TAGIHAN PEMBAYARAN',
+                                      style: GoogleFonts.poppins(
+                                        color: Colors.white.withValues(alpha: 0.6),
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.8,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    ScaleTransition(
+                                      scale: _pulseAnimation,
+                                      child: Text(
+                                        CurrencyFormatter.format(widget.cart.grandTotal),
+                                        style: GoogleFonts.poppins(
+                                          color: Colors.white,
+                                          fontSize: 30,
+                                          fontWeight: FontWeight.w800,
+                                          letterSpacing: -0.5,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 14),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.06),
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          _buildHeaderStat('Subtotal', CurrencyFormatter.format(widget.cart.subtotal)),
+                                          if (widget.cart.discountAmount > 0)
+                                            _buildHeaderStat('Diskon', '-${CurrencyFormatter.format(widget.cart.discountAmount)}'),
+                                          if (widget.cart.taxAmount > 0)
+                                            _buildHeaderStat('Pajak', CurrencyFormatter.format(widget.cart.taxAmount)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Order Items List Card
+                              Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        Text(
+                                          'Rincian Pesanan',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFF0F172A),
+                                          ),
+                                        ),
+                                        if (widget.cart.selectedCustomer != null)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFEFF6FF),
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Row(
+                                              children: [
+                                                const Icon(Icons.person_rounded, size: 12, color: Color(0xFF2563EB)),
+                                                const SizedBox(width: 4),
+                                                Text(
+                                                  widget.cart.selectedCustomer!.name,
+                                                  style: GoogleFonts.poppins(
+                                                    fontSize: 10.5,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: const Color(0xFF2563EB),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                    const Divider(height: 20, color: Color(0xFFF1F5F9)),
+                                    ListView.separated(
+                                      shrinkWrap: true,
+                                      physics: const NeverScrollableScrollPhysics(),
+                                      itemCount: widget.cart.items.length,
+                                      separatorBuilder: (_, __) => const Divider(height: 16, color: Color(0xFFF8FAFC)),
+                                      itemBuilder: (context, idx) {
+                                        final item = widget.cart.items[idx];
+                                        return Row(
+                                          children: [
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    item.product.name,
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 12.5,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: const Color(0xFF0F172A),
+                                                    ),
+                                                    maxLines: 1,
+                                                    overflow: TextOverflow.ellipsis,
+                                                  ),
+                                                  Text(
+                                                    '${item.quantity.toString().replaceAll(RegExp(r'\.?0+$'), '')} ${item.unit.name} × ${CurrencyFormatter.format(item.price)}',
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 11,
+                                                      color: const Color(0xFF64748B),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                            Text(
+                                              CurrencyFormatter.format(item.subtotal),
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 12.5,
+                                                fontWeight: FontWeight.w700,
+                                                color: const Color(0xFF0F172A),
+                                              ),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+
+                      // ── RIGHT COLUMN: Payment Method & Input Form (Flex: 55) ──
+                      Expanded(
+                        flex: 55,
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Metode Pembayaran Label
+                              _buildSectionLabel('Pilih Metode Pembayaran', Icons.payment_rounded),
+                              const SizedBox(height: 8),
+                              _buildPaymentMethodGrid(),
+                              const SizedBox(height: 16),
+
+                              // Detail input pembayaran
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 200),
+                                child: _paymentMethod == 'cash'
+                                    ? Column(
+                                        key: const ValueKey('cash_section_tablet'),
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          _buildSectionLabel('Detail Tunai', Icons.payments_outlined),
+                                          const SizedBox(height: 6),
+                                          _buildCashPaymentCard(),
+                                          const SizedBox(height: 16),
+                                        ],
+                                      )
+                                    : _buildNonCashInfo(),
+                              ),
+
+                              // Poin Pelanggan
+                              if (_pointsSettings['enabled'] == 1 && widget.cart.selectedCustomer != null) ...[
+                                _buildPointsCard(),
+                                const SizedBox(height: 16),
+                              ],
+
+                              // Catatan Transaksi
+                              _buildSectionLabel('Catatan Transaksi', Icons.edit_note_rounded),
+                              const SizedBox(height: 6),
+                              _buildNotesCard(),
+                              const SizedBox(height: 20),
+
+                              // Action Button on Tablet
+                              _buildCheckoutButtonInline(),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-
-            // ── Action Button ────────────────────────────────────────
-            _buildCheckoutButton(),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -1104,53 +1422,58 @@ class _PaymentPageState extends State<PaymentPage>
               top: BorderSide(color: Color(0xFFE2E8F0), width: 1),
             ),
           ),
-          child: BlocBuilder<SalesCubit, SalesState>(
-            builder: (context, state) {
-              final isLoading = state is SalesLoading;
-              return SizedBox(
-                height: 50,
-                child: FilledButton(
-                  onPressed: isLoading ? null : _checkout,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF0F172A),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
-                  child: Center(
-                    child: isLoading
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                              strokeWidth: 2.0,
-                            ),
-                          )
-                        : Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.check_circle_rounded, size: 20),
-                              const SizedBox(width: 8),
-                              Text(
-                                'KONFIRMASI PEMBAYARAN',
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 13.5,
-                                  letterSpacing: 0.3,
-                                ),
-                              ),
-                            ],
-                          ),
-                  ),
-                ),
-              );
-            },
-          ),
+          child: _buildCheckoutButtonInline(),
         ),
       ),
+    );
+  }
+
+  Widget _buildCheckoutButtonInline() {
+    return BlocBuilder<SalesCubit, SalesState>(
+      builder: (context, state) {
+        final isLoading = state is SalesLoading;
+        return SizedBox(
+          height: 50,
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: isLoading ? null : _checkout,
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFF0F172A),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+              ),
+            ),
+            child: Center(
+              child: isLoading
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2.0,
+                      ),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.check_circle_rounded, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'KONFIRMASI PEMBAYARAN',
+                          style: GoogleFonts.poppins(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13.5,
+                            letterSpacing: 0.3,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+        );
+      },
     );
   }
 

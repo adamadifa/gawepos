@@ -113,29 +113,45 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
                 // --- TOP ACTIONS BAR ---
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Back/Close button
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
-                        onPressed: _finish,
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 600),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Back/Close button
+                          IconButton(
+                            icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
+                            onPressed: _finish,
+                          ),
+                          Text(
+                            'Bukti Pembayaran',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          // Print button
+                          FilledButton.icon(
+                            onPressed: _printReceipt,
+                            icon: const Icon(Icons.print_rounded, size: 16),
+                            label: Text(
+                              'Cetak',
+                              style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 12),
+                            ),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: Colors.white.withValues(alpha: 0.15),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            ),
+                          ),
+                        ],
                       ),
-                      Text(
-                        'Bukti Pembayaran',
-                        style: GoogleFonts.poppins(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      // Print button
-                      IconButton(
-                        icon: const Icon(Icons.print_rounded, color: Colors.white, size: 22),
-                        onPressed: _printReceipt,
-                        tooltip: 'Cetak Struk',
-                      ),
-                    ],
+                    ),
                   ),
                 ),
 
@@ -151,10 +167,13 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
                             opacity: _fadeAnimation.value,
                             child: Transform.translate(
                               offset: Offset(0, _slideAnimation.value),
-                              child: Stack(
-                                clipBehavior: Clip.none,
-                                alignment: Alignment.topCenter,
-                                children: [
+                              child: Center(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: 480),
+                                  child: Stack(
+                                    clipBehavior: Clip.none,
+                                    alignment: Alignment.topCenter,
+                                    children: [
                                   // The Ticket Card
                                   ClipPath(
                                     clipper: TicketClipper(),
@@ -344,30 +363,63 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
                                 ],
                               ),
                             ),
-                          );
-                        },
+                          ),
+                        ),
+                      );
+                    },
                       ),
                     ),
                   ),
                 ),
 
-                // --- FOOTER BUTTON ---
+                // --- FOOTER BUTTONS ---
                 Padding(
-                  padding: const EdgeInsets.all(24.0),
-                  child: ElevatedButton(
-                    onPressed: _finish,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: themeColor,
-                      minimumSize: const Size.fromHeight(48),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 480),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _printReceipt,
+                              icon: const Icon(Icons.print_rounded, size: 18),
+                              label: Text(
+                                'Cetak Struk',
+                                style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.white,
+                                side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _finish,
+                              icon: const Icon(Icons.add_shopping_cart_rounded, size: 18),
+                              label: Text(
+                                'Transaksi Baru',
+                                style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: themeColor,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    child: Text(
-                      'Transaksi Baru',
-                      style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),

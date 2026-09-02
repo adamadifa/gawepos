@@ -201,18 +201,21 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                     .toList();
                 final cart = context.read<CartCubit>().state;
 
-                return Container(
-                  padding: EdgeInsets.only(
-                      bottom: MediaQuery.of(ctx).viewInsets.bottom),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(20)),
-                  ),
-                  child: SafeArea(
-                    top: false,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 540),
+                    child: Container(
+                      padding: EdgeInsets.only(
+                          bottom: MediaQuery.of(ctx).viewInsets.bottom),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(20)),
+                      ),
+                      child: SafeArea(
+                        top: false,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
                       children: [
                         const SizedBox(height: 8),
                         Container(
@@ -383,8 +386,10 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                       ],
                     ),
                   ),
-                );
-              },
+                ),
+              ),
+            );
+          },
             );
           },
         );
@@ -417,16 +422,19 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                     .hasMatch(emailText);
             final isValid = isNameValid && isEmailValid;
 
-            return Container(
-              margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-              padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(ctx).viewInsets.bottom),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: SafeArea(
-                top: false,
+            return Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 500),
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                  padding: EdgeInsets.only(
+                      bottom: MediaQuery.of(ctx).viewInsets.bottom),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: SafeArea(
+                    top: false,
                 child: SingleChildScrollView(
                   child: Padding(
                     padding: const EdgeInsets.all(20),
@@ -551,8 +559,10 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                   ),
                 ),
               ),
-            );
-          },
+            ),
+          ),
+        );
+      },
         );
       },
     );
@@ -827,6 +837,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
   // TOP BAR — Clean Executive Header
   // ═════════════════════════════════════════════════
   Widget _buildTopBar(User? user) {
+    final bool isTablet = MediaQuery.of(context).size.width > 720;
     return Container(
       color: Colors.white,
       child: SafeArea(
@@ -834,7 +845,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(6, 6, 12, 10),
+              padding: EdgeInsets.fromLTRB(isTablet ? 12 : 6, 6, isTablet ? 16 : 12, 10),
               child: Row(
                 children: [
                   IconButton(
@@ -847,18 +858,54 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        'Kasir POS',
-                        style: GoogleFonts.poppins(
-                          color: const Color(0xFF0F172A),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.2,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            'Kasir POS',
+                            style: GoogleFonts.poppins(
+                              color: const Color(0xFF0F172A),
+                              fontSize: isTablet ? 17 : 16,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.2,
+                            ),
+                          ),
+                          if (isTablet) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF059669).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF059669),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'ONLINE',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 9.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF059669),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       if (user != null)
                         Text(
-                          'Kasir: ${user.name}',
+                          'Kasir: ${user.name} (${user.role.toUpperCase()})',
                           style: GoogleFonts.poppins(
                             color: const Color(0xFF64748B),
                             fontSize: 11,
@@ -874,6 +921,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                       return _buildTopBarAction(
                         icon: Icons.pause_circle_outline_rounded,
                         tooltip: 'Transaksi Ditahan',
+                        label: isTablet ? 'Ditahan' : null,
                         onTap: () => _openHeldOrders(user),
                       );
                     },
@@ -881,11 +929,13 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                   _buildTopBarAction(
                     icon: Icons.qr_code_scanner_rounded,
                     tooltip: 'Scan Barcode',
+                    label: isTablet ? 'Scan' : null,
                     onTap: _showBarcodeScanner,
                   ),
                   _buildTopBarAction(
                     icon: Icons.history_rounded,
                     tooltip: 'Riwayat Transaksi',
+                    label: isTablet ? 'Riwayat' : null,
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -896,6 +946,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                   _buildTopBarAction(
                     icon: Icons.discount_outlined,
                     tooltip: 'Diskon Global',
+                    label: isTablet ? 'Diskon' : null,
                     onTap: _showGlobalDiscountDialog,
                   ),
                 ],
@@ -912,6 +963,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
     required IconData icon,
     required String tooltip,
     required VoidCallback onTap,
+    String? label,
   }) {
     return Padding(
       padding: const EdgeInsets.only(left: 6),
@@ -922,8 +974,27 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
           borderRadius: BorderRadius.circular(10),
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.all(8),
-            child: Icon(icon, color: const Color(0xFF334155), size: 19),
+            padding: EdgeInsets.symmetric(
+              horizontal: label != null ? 10 : 8,
+              vertical: 8,
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: const Color(0xFF334155), size: 18),
+                if (label != null) ...[
+                  const SizedBox(width: 5),
+                  Text(
+                    label,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: const Color(0xFF334155),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       ),
@@ -1050,15 +1121,15 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Expanded(
-          flex: 6,
+          flex: 62,
           child: _buildCatalogPanel(),
         ),
         Container(
           width: 1,
-          color: AppConstants.borderLightColor,
+          color: const Color(0xFFE2E8F0),
         ),
         Expanded(
-          flex: 4,
+          flex: 38,
           child: Container(
             color: Colors.white,
             child: _buildCartPanel(user, session),
@@ -1091,6 +1162,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
 
     return BlocBuilder<CartCubit, CartState>(
       builder: (context, cartState) {
+        final bool isTablet = MediaQuery.of(context).size.width > 720;
         return Column(
           children: [
             // ── Search Bar ──
@@ -1100,10 +1172,11 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 10,
+                  color: Colors.black.withValues(alpha: 0.02),
+                  blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
               ],
@@ -1112,13 +1185,13 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
               controller: _searchController,
               onChanged: (val) =>
                   setState(() => _searchQuery = val.toLowerCase()),
-              style: GoogleFonts.poppins(fontSize: 14),
+              style: GoogleFonts.poppins(fontSize: 13.5),
               decoration: InputDecoration(
-                hintText: 'Cari produk atau scan barcode...',
+                hintText: 'Cari nama produk, SKU, atau scan barcode...',
                 hintStyle: GoogleFonts.poppins(
-                    color: AppConstants.textLightColor, fontSize: 13),
+                    color: const Color(0xFF94A3B8), fontSize: 12.5),
                 prefixIcon: const Icon(Icons.search_rounded,
-                    color: AppConstants.textLightColor, size: 20),
+                    color: Color(0xFF64748B), size: 20),
                 suffixIcon: _searchQuery.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.close_rounded, size: 18),
@@ -1158,7 +1231,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
           },
         ),
 
-        // ── Products Grid ──
+        // ── Products Grid (Responsive Columns for Mobile vs Tablet) ──
         Expanded(
           child: filtered.isEmpty
               ? Center(
@@ -1176,24 +1249,45 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                     ],
                   ),
                 )
-              : GridView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                    childAspectRatio: 0.82,
-                  ),
-                  itemCount: filtered.length,
-                  itemBuilder: (context, index) {
-                    final item = filtered[index];
-                    return _buildProductCard(item, cartState);
-                  },
-                ),
+              : isTablet
+                  ? LayoutBuilder(
+                      builder: (context, constraints) {
+                        final int crossAxisCount = constraints.maxWidth > 780 ? 5 : 4;
+                        final double childAspectRatio = constraints.maxWidth > 780 ? 0.76 : 0.74;
+
+                        return GridView.builder(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: crossAxisCount,
+                            crossAxisSpacing: 8,
+                            mainAxisSpacing: 8,
+                            childAspectRatio: childAspectRatio,
+                          ),
+                          itemCount: filtered.length,
+                          itemBuilder: (context, index) {
+                            final item = filtered[index];
+                            return _buildProductCard(item, cartState, isTablet: true);
+                          },
+                        );
+                      },
+                    )
+                  : GridView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 10,
+                        mainAxisSpacing: 10,
+                        childAspectRatio: 0.82,
+                      ),
+                      itemCount: filtered.length,
+                      itemBuilder: (context, index) {
+                        final item = filtered[index];
+                        return _buildProductCard(item, cartState, isTablet: false);
+                      },
+                    ),
         ),
         
-        // ── Bottom Summary ──
+        // ── Bottom Summary on Mobile ──
         if (cartState.items.isNotEmpty && MediaQuery.of(context).size.width <= 720)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -1300,7 +1394,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
     );
   }
 
-  Widget _buildProductCard(Map<String, dynamic> item, CartState cartState) {
+  Widget _buildProductCard(Map<String, dynamic> item, CartState cartState, {bool isTablet = false}) {
     final Product prod = item['product'];
     final List<ProductUnit> units = List<ProductUnit>.from(item['units'] ?? []);
     final List<ProductPrice> prices =
@@ -1325,7 +1419,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
         prod.imagePath!.isNotEmpty &&
         File(prod.imagePath!).existsSync()) {
       imageWidget = ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(isTablet ? 13 : 14)),
         child: Image.file(
           File(prod.imagePath!),
           width: double.infinity,
@@ -1336,13 +1430,13 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
     } else {
       imageWidget = Container(
         decoration: BoxDecoration(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(isTablet ? 13 : 14)),
           color: const Color(0xFFF1F5F9),
         ),
         child: Center(
           child: Icon(
             Icons.inventory_2_outlined,
-            size: 32,
+            size: isTablet ? 26 : 32,
             color: const Color(0xFF94A3B8),
           ),
         ),
@@ -1370,7 +1464,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(isTablet ? 14 : 16),
           border: Border.all(
             color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFE2E8F0),
             width: isSelected ? 1.5 : 1,
@@ -1378,7 +1472,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 8,
+              blurRadius: isTablet ? 6 : 8,
               offset: const Offset(0, 2),
             ),
           ],
@@ -1388,7 +1482,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
           children: [
             // Product image / icon
             Expanded(
-              flex: 3,
+              flex: isTablet ? 5 : 3,
               child: Stack(
                 children: [
                   Positioned.fill(child: imageWidget),
@@ -1397,19 +1491,19 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                       child: Container(
                         decoration: BoxDecoration(
                           color: const Color(0xFF0F172A).withValues(alpha: 0.25),
-                          borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(isTablet ? 13 : 14)),
                         ),
                         child: Center(
                           child: Container(
-                            padding: const EdgeInsets.all(5),
+                            padding: EdgeInsets.all(isTablet ? 4 : 5),
                             decoration: const BoxDecoration(
                               color: Color(0xFF0F172A),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.check_rounded,
                               color: Colors.white,
-                              size: 18,
+                              size: isTablet ? 16 : 18,
                             ),
                           ),
                         ),
@@ -1417,14 +1511,14 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                     ),
                   // Price badge
                   Positioned(
-                    bottom: 6,
-                    right: 6,
+                    bottom: isTablet ? 4 : 6,
+                    right: isTablet ? 4 : 6,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 3),
+                      padding: EdgeInsets.symmetric(
+                          horizontal: isTablet ? 6 : 7, vertical: isTablet ? 2 : 3),
                       decoration: BoxDecoration(
                         color: const Color(0xFF0F172A),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(isTablet ? 5 : 6),
                       ),
                       child: Text(
                         minPrice == maxPrice
@@ -1432,7 +1526,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                             : '${CurrencyFormatter.format(minPrice)} - ${CurrencyFormatter.format(maxPrice)}',
                         style: GoogleFonts.poppins(
                           color: Colors.white,
-                          fontSize: 9.5,
+                          fontSize: isTablet ? 9 : 9.5,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
@@ -1443,9 +1537,11 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
             ),
             // Product info
             Expanded(
-              flex: 2,
+              flex: isTablet ? 4 : 2,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
+                padding: isTablet
+                    ? const EdgeInsets.fromLTRB(8, 6, 8, 6)
+                    : const EdgeInsets.fromLTRB(10, 8, 10, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -1456,12 +1552,12 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                       overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.poppins(
                         fontWeight: FontWeight.w600,
-                        fontSize: 12,
+                        fontSize: isTablet ? 11.5 : 12,
                         color: const Color(0xFF0F172A),
-                        height: 1.25,
+                        height: isTablet ? 1.2 : 1.25,
                       ),
                     ),
-                    const SizedBox(height: 3),
+                    SizedBox(height: isTablet ? 2 : 3),
                     if (brandName != null || categoryName != null)
                       Text(
                         [
@@ -1581,14 +1677,17 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
 
           final totalQty = unitStates.fold<double>(0.0, (sum, u) => sum + u.qty);
 
-          return Container(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: SafeArea(
-              child: SingleChildScrollView(
+          return Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 540),
+              child: Container(
+                padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: SafeArea(
+                  child: SingleChildScrollView(
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -1856,15 +1955,17 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                         ),
                       ),
                     ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          );
-        },
-      ),
-    );
-  }
+          ),
+        );
+      },
+    ),
+  );
+}
 
   // ═════════════════════════════════════════════════
   // CART PANEL
@@ -2287,10 +2388,11 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                 color: AppConstants.warningColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(10),
                   onTap: () async {
                     if (user == null) return;
-                    
+                    final cartCubit = context.read<CartCubit>();
+                    final messenger = ScaffoldMessenger.of(context);
+                    final salesRepo = getIt<SalesRepository>();
                     final noteController = TextEditingController();
                     final confirmed = await showDialog<bool>(
                       context: context,
@@ -2357,17 +2459,15 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                       ),
                     );
 
-                    if (confirmed == true) {
+                    if (confirmed == true && mounted) {
                       final timestamp = DateTime.now().microsecondsSinceEpoch.toString().substring(8);
                       final note = noteController.text.trim();
                       final ref = note.isNotEmpty
                           ? "$note (HLD-$timestamp)"
                           : "HLD-$timestamp";
 
-                      final cartCubit = context.read<CartCubit>();
-                      final messenger = ScaffoldMessenger.of(context);
                       await cartCubit.holdCart(
-                          user.id, ref, getIt<SalesRepository>());
+                          user.id, ref, salesRepo);
                       messenger.showSnackBar(
                         SnackBar(
                           content: Text('Transaksi ditahan • $ref'),

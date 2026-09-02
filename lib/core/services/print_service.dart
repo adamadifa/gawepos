@@ -71,13 +71,19 @@ class PrintService {
     if (!connected) return false;
 
     try {
+      final paperSizeStr = await _salesRepository.getSetting('printer_paper_size') ?? '58';
+      final paperSize = paperSizeStr == '80' ? PaperSize.mm80 : PaperSize.mm58;
       final profile = await CapabilityProfile.load();
-      final generator = Generator(PaperSize.mm58, profile);
+      final generator = Generator(paperSize, profile);
       List<int> bytes = [];
 
-      bytes += generator.text("TEST KONEKSI PRINTER", styles: const PosStyles(align: PosAlign.center, bold: true));
-      bytes += generator.text(deviceName, styles: const PosStyles(align: PosAlign.center));
-      bytes += generator.text(macAddress, styles: const PosStyles(align: PosAlign.center));
+      bytes += generator.text("=== TEST KONEKSI PRINTER ===", styles: const PosStyles(align: PosAlign.center, bold: true));
+      bytes += generator.text("GawePOS - Kasir UMKM", styles: const PosStyles(align: PosAlign.center));
+      bytes += generator.text("Printer: $deviceName", styles: const PosStyles(align: PosAlign.center));
+      bytes += generator.text("MAC: $macAddress", styles: const PosStyles(align: PosAlign.center));
+      bytes += generator.text("Format Kertas: ${paperSizeStr}mm", styles: const PosStyles(align: PosAlign.center));
+      bytes += generator.text("--------------------------------", styles: const PosStyles(align: PosAlign.center));
+      bytes += generator.text("Printer berhasil terhubung dan siap digunakan!", styles: const PosStyles(align: PosAlign.center));
       bytes += generator.feed(2);
       bytes += generator.cut();
 
@@ -111,37 +117,45 @@ class PrintService {
     final int pointsEarned = details['pointsEarned'] as int? ?? 0;
     final int pointsRedeemed = details['pointsRedeemed'] as int? ?? 0;
 
-    // 4. Ambil setting detail toko
+    // 4. Ambil setting detail toko & printer
     final shopName = await _salesRepository.getSetting('shop_name') ?? 'Toko POS Mobile';
     final shopPhone = await _salesRepository.getSetting('shop_phone') ?? '';
     final shopAddress = await _salesRepository.getSetting('shop_address') ?? '';
     final receiptHeader = await _salesRepository.getSetting('receipt_header') ?? 'TERIMA KASIH TELAH BERBELANJA';
     final receiptFooter = await _salesRepository.getSetting('receipt_footer') ?? '';
     final shopLogoPath = await _salesRepository.getSetting('shop_logo') ?? '';
+    final paperSizeStr = await _salesRepository.getSetting('printer_paper_size') ?? '58';
+    final paperSize = paperSizeStr == '80' ? PaperSize.mm80 : PaperSize.mm58;
+    final printLogoStr = await _salesRepository.getSetting('printer_print_logo') ?? '1';
+    final printBarcodeStr = await _salesRepository.getSetting('printer_print_barcode') ?? '1';
+    final duplicateStr = await _salesRepository.getSetting('printer_duplicate') ?? '0';
+    final int printCount = duplicateStr == '1' ? 2 : 1;
 
     try {
       final profile = await CapabilityProfile.load();
-      final generator = Generator(PaperSize.mm58, profile);
+      final generator = Generator(paperSize, profile);
       List<int> bytes = [];
 
-      // --- LOGO TOKO ---
-      if (shopLogoPath.isNotEmpty) {
-        final logoFile = File(shopLogoPath);
-        if (await logoFile.exists()) {
-          try {
-            final bytesLogo = await logoFile.readAsBytes();
-            final imgDecoded = img.decodeImage(bytesLogo);
-            if (imgDecoded != null) {
-              // Resize image agar pas dengan lebar struk 58mm (misalnya lebar maksimal 180-200 pixel)
-              final resizedImg = img.copyResize(imgDecoded, width: 180);
-              bytes += generator.imageRaster(resizedImg, align: PosAlign.center);
-              bytes += generator.feed(1);
-            }
-          } catch (_) {
-            // Abaikan jika pemrosesan gambar gagal agar struk tetap tercetak
+      for (int copy = 0; copy < printCount; copy++) {
+        if (copy > 0) {
+          bytes += generator.text("=== SALINAN KASIR / ARSIP ===", styles: const PosStyles(align: PosAlign.center, bold: true));
+        }
+
+        // --- LOGO TOKO ---
+        if (printLogoStr == '1' && shopLogoPath.isNotEmpty) {
+          final logoFile = File(shopLogoPath);
+          if (await logoFile.exists()) {
+            try {
+              final bytesLogo = await logoFile.readAsBytes();
+              final imgDecoded = img.decodeImage(bytesLogo);
+              if (imgDecoded != null) {
+                final resizedImg = img.copyResize(imgDecoded, width: 180);
+                bytes += generator.imageRaster(resizedImg, align: PosAlign.center);
+                bytes += generator.feed(1);
+              }
+            } catch (_) {}
           }
         }
-      }
 
       // --- HEADER ---
       bytes += generator.text(shopName, styles: const PosStyles(align: PosAlign.center, bold: true, height: PosTextSize.size2, width: PosTextSize.size2));
@@ -163,11 +177,27 @@ class PrintService {
       if (order.notes != null && order.notes!.isNotEmpty) {
         bytes += generator.text("Ket  : ${order.notes}");
       }
-      bytes += generator.feed(1);
-      // Barcode transaksi
-      try {
-        bytes += generator.barcode(Barcode.code128(order.referenceNo.split('')));
-      } catch (_) {}
+      // Barcode / QR Code transaksi (Aman dari Wide Error di printer 58mm & 80mm)
+      if (printBarcodeStr == '1') {
+        try {
+          bytes += generator.feed(1);
+          bytes += generator.qrcode(
+            order.referenceNo,
+            size: paperSize == PaperSize.mm80 ? QRSize.size4 : QRSize.size3,
+            align: PosAlign.center,
+          );
+          bytes += generator.feed(1);
+        } catch (_) {
+          try {
+            bytes += generator.barcode(
+              Barcode.code128(order.referenceNo.split('')),
+              width: 1,
+              height: 35,
+              align: PosAlign.center,
+            );
+          } catch (_) {}
+        }
+      }
       bytes += generator.text("--------------------------------", styles: const PosStyles(align: PosAlign.center));
 
       // --- ITEMS ---
@@ -263,8 +293,9 @@ class PrintService {
         bytes += generator.text(receiptFooter, styles: const PosStyles(align: PosAlign.center));
       }
 
-      bytes += generator.feed(3);
-      bytes += generator.cut();
+        bytes += generator.feed(2);
+        bytes += generator.cut();
+      }
 
       await _bluetooth.writeBytes(Uint8List.fromList(bytes));
       return true;

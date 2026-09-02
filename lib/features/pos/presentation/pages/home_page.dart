@@ -152,12 +152,15 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final authCubit = context.read<AuthCubit>();
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final bool isTablet = screenWidth > 720;
 
     final List<Map<String, dynamic>> menus = [
       {
         'key': 'pos',
         'icon': Icons.point_of_sale_rounded,
         'title': 'POS Kasir',
+        'subtitle': 'Transaksi penjualan',
         'color': const Color(0xFF2563EB),
         'bg': const Color(0xFFEFF6FF),
         'onTap': () {
@@ -175,6 +178,7 @@ class _HomePageState extends State<HomePage> {
         'key': 'owner_dashboard',
         'icon': Icons.space_dashboard_rounded,
         'title': 'Dashboard',
+        'subtitle': 'Analisis performa',
         'color': const Color(0xFF4F46E5), // Indigo
         'bg': const Color(0xFFEEF2FF),
         'onTap': () => Navigator.push(
@@ -186,6 +190,7 @@ class _HomePageState extends State<HomePage> {
         'key': 'products',
         'icon': Icons.inventory_2_rounded,
         'title': 'Produk',
+        'subtitle': 'Katalog & stok',
         'color': const Color(0xFF059669), // Emerald
         'bg': const Color(0xFFECFDF5),
         'onTap': () => Navigator.push(
@@ -197,6 +202,7 @@ class _HomePageState extends State<HomePage> {
         'key': 'reports',
         'icon': Icons.analytics_rounded,
         'title': 'Laporan',
+        'subtitle': 'Laporan keuangan',
         'color': const Color(0xFFDB2777), // Pink
         'bg': const Color(0xFFFDF2F8),
         'onTap': () => Navigator.push(
@@ -208,6 +214,7 @@ class _HomePageState extends State<HomePage> {
         'key': 'expenses',
         'icon': Icons.payments_rounded,
         'title': 'Biaya',
+        'subtitle': 'Pengeluaran kasir',
         'color': const Color(0xFFD97706), // Amber
         'bg': const Color(0xFFFFFBEB),
         'onTap': () => Navigator.push(
@@ -219,6 +226,7 @@ class _HomePageState extends State<HomePage> {
         'key': 'restock',
         'icon': Icons.local_shipping_rounded,
         'title': 'Restok',
+        'subtitle': 'Pembelian supplier',
         'color': const Color(0xFF0D9488), // Teal
         'bg': const Color(0xFFF0FDFA),
         'onTap': () => Navigator.push(
@@ -230,6 +238,7 @@ class _HomePageState extends State<HomePage> {
         'key': 'opname',
         'icon': Icons.assessment_rounded,
         'title': 'Opname',
+        'subtitle': 'Penyesuaian stok',
         'color': const Color(0xFF0284C7), // Sky
         'bg': const Color(0xFFF0F9FF),
         'onTap': () => Navigator.push(
@@ -241,6 +250,7 @@ class _HomePageState extends State<HomePage> {
         'key': 'history',
         'icon': Icons.query_stats_rounded,
         'title': 'Riwayat',
+        'subtitle': 'Histori transaksi',
         'color': const Color(0xFF7C3AED), // Violet
         'bg': const Color(0xFFF5F3FF),
         'onTap': () => Navigator.push(
@@ -252,6 +262,7 @@ class _HomePageState extends State<HomePage> {
         'key': 'debts_receivables',
         'icon': Icons.account_balance_wallet_rounded,
         'title': 'Hutang Piutang',
+        'subtitle': 'Bon & kewajiban',
         'color': const Color(0xFFEA580C), // Orange
         'bg': const Color(0xFFFFF7ED),
         'onTap': () => Navigator.push(
@@ -263,6 +274,7 @@ class _HomePageState extends State<HomePage> {
         'key': 'contacts',
         'icon': Icons.people_alt_rounded,
         'title': 'Kontak',
+        'subtitle': 'Pelanggan & supplier',
         'color': const Color(0xFF475569), // Slate
         'bg': const Color(0xFFF1F5F9),
         'onTap': () => Navigator.push(
@@ -274,6 +286,7 @@ class _HomePageState extends State<HomePage> {
         'key': 'returns',
         'icon': Icons.assignment_return_rounded,
         'title': 'Retur',
+        'subtitle': 'Pengembalian barang',
         'color': const Color(0xFFE11D48), // Rose
         'bg': const Color(0xFFFFF1F2),
         'onTap': () => Navigator.push(
@@ -292,7 +305,10 @@ class _HomePageState extends State<HomePage> {
           children: [
             // ── TOP EXECUTIVE APP BAR ──────────────────────
             Container(
-              padding: const EdgeInsets.fromLTRB(18, 12, 14, 12),
+              padding: EdgeInsets.symmetric(
+                horizontal: isTablet ? 24 : 18,
+                vertical: 12,
+              ),
               color: Colors.white,
               child: Row(
                 children: [
@@ -302,17 +318,59 @@ class _HomePageState extends State<HomePage> {
                     height: 32,
                     fit: BoxFit.contain,
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'GawePOS',
-                    style: GoogleFonts.poppins(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: const Color(0xFF0F172A),
-                      letterSpacing: -0.3,
-                    ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'GawePOS',
+                        style: GoogleFonts.poppins(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF0F172A),
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      if (isTablet)
+                        Text(
+                          'Sistem Kasir & Manajemen Toko UMKM',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10.5,
+                            color: const Color(0xFF64748B),
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                    ],
                   ),
                   const Spacer(),
+
+                  // Live Clock Badge on Tablet (in Header)
+                  if (isTablet) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.access_time_rounded, size: 14, color: Color(0xFF64748B)),
+                          const SizedBox(width: 6),
+                          Text(
+                            '$_currentDate • $_currentTime',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF0F172A),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+
                   // Settings button
                   IconButton(
                     icon: const Icon(Icons.settings_outlined, color: Color(0xFF475569), size: 22),
@@ -352,7 +410,7 @@ class _HomePageState extends State<HomePage> {
             ),
             Container(height: 1, color: const Color(0xFFE2E8F0)),
 
-            // ── SCROLLABLE BODY ───────────────────────────
+            // ── SCROLLABLE BODY (ADAPTIVE MOBILE / TABLET) ─
             Expanded(
               child: RefreshIndicator(
                 color: const Color(0xFF0F172A),
@@ -362,158 +420,17 @@ class _HomePageState extends State<HomePage> {
                 },
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // User greeting strip
-                      Row(
-                        children: [
-                          Container(
-                            width: 38,
-                            height: 38,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF0F172A),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Center(
-                              child: Text(
-                                widget.user.name[0].toUpperCase(),
-                                style: GoogleFonts.poppins(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.user.name,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: const Color(0xFF0F172A),
-                                  ),
-                                ),
-                                Text(
-                                  widget.user.role.toUpperCase(),
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w600,
-                                    color: const Color(0xFF64748B),
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          // Live Clock Badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFFE2E8F0)),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.access_time_rounded, size: 12, color: Color(0xFF64748B)),
-                                const SizedBox(width: 5),
-                                Text(
-                                  _currentTime,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: const Color(0xFF0F172A),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 14),
-
-                      // Stat card shift (Slate Glassmorphism Modern)
-                      widget.session == null
-                          ? _buildOpenShiftPromptCard()
-                          : FutureBuilder<Map<String, dynamic>?>(
-                              future: context.read<AuthCubit>().getActiveSessionDetails(),
-                              builder: (context, snapshot) {
-                                final details = snapshot.data;
-                                return _buildStatCard(details, widget.session!.openingCash);
-                              },
-                            ),
-
-                      const SizedBox(height: 20),
-
-                      // Section title: Menu Aplikasi
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Menu & Operasional',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF0F172A),
-                            ),
-                          ),
-                          Text(
-                            '${allowedMenus.length} Layanan',
-                            style: GoogleFonts.poppins(
-                              fontSize: 11,
-                              color: const Color(0xFF94A3B8),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Menu Grid Bento Style
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 4,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 14,
-                          childAspectRatio: 0.78,
-                        ),
-                        itemCount: allowedMenus.length,
-                        itemBuilder: (context, index) {
-                          final m = allowedMenus[index];
-                          return _buildMenuCard(
-                            icon: m['icon'] as IconData,
-                            title: m['title'] as String,
-                            color: m['color'] as Color,
-                            bgColor: m['bg'] as Color? ?? (m['color'] as Color).withValues(alpha: 0.1),
-                            onTap: m['onTap'] as VoidCallback,
-                          );
-                        },
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      // Close Shift Card
-                      if (widget.session != null) ...[
-                        FutureBuilder<double>(
-                          future: context.read<AuthCubit>().getExpectedCashAmount(),
-                          builder: (context, snapshot) {
-                            final expected = snapshot.data ?? widget.session!.openingCash;
-                            return _buildCloseShiftCard(context, expected);
-                          },
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                    ],
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isTablet ? 24 : 16,
+                    vertical: isTablet ? 20 : 14,
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1200),
+                      child: isTablet
+                          ? _buildTabletDashboardLayout(allowedMenus)
+                          : _buildMobileDashboardLayout(allowedMenus),
+                    ),
                   ),
                 ),
               ),
@@ -524,8 +441,363 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  /// Modern Slate/Emerald Shift Card
-  Widget _buildStatCard(Map<String, dynamic>? details, double openingCash) {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 📱 MOBILE DASHBOARD LAYOUT (< 720px)
+  // ═══════════════════════════════════════════════════════════════════════════
+  Widget _buildMobileDashboardLayout(List<Map<String, dynamic>> allowedMenus) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // User greeting strip
+        _buildUserGreetingStrip(isTablet: false),
+        const SizedBox(height: 14),
+
+        // Stat card shift (Slate Glassmorphism Modern)
+        widget.session == null
+            ? _buildOpenShiftPromptCard()
+            : FutureBuilder<Map<String, dynamic>?>(
+                future: context.read<AuthCubit>().getActiveSessionDetails(),
+                builder: (context, snapshot) {
+                  final details = snapshot.data;
+                  return _buildStatCard(details, widget.session!.openingCash, isTablet: false);
+                },
+              ),
+
+        const SizedBox(height: 20),
+
+        // Section title: Menu Aplikasi
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Menu & Operasional',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            Text(
+              '${allowedMenus.length} Layanan',
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                color: const Color(0xFF94A3B8),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Menu Grid Bento Style (Mobile 4 columns)
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 4,
+            crossAxisSpacing: 10,
+            mainAxisSpacing: 14,
+            childAspectRatio: 0.78,
+          ),
+          itemCount: allowedMenus.length,
+          itemBuilder: (context, index) {
+            final m = allowedMenus[index];
+            return _buildMenuCard(
+              icon: m['icon'] as IconData,
+              title: m['title'] as String,
+              color: m['color'] as Color,
+              bgColor: m['bg'] as Color? ?? (m['color'] as Color).withValues(alpha: 0.1),
+              onTap: m['onTap'] as VoidCallback,
+            );
+          },
+        ),
+
+        const SizedBox(height: 20),
+
+        // Close Shift Card
+        if (widget.session != null) ...[
+          FutureBuilder<double>(
+            future: context.read<AuthCubit>().getExpectedCashAmount(),
+            builder: (context, snapshot) {
+              final expected = snapshot.data ?? widget.session!.openingCash;
+              return _buildCloseShiftCard(context, expected);
+            },
+          ),
+          const SizedBox(height: 24),
+        ],
+      ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 📟 TABLET DUAL-COLUMN BENTO DASHBOARD LAYOUT (>= 720px)
+  // ═══════════════════════════════════════════════════════════════════════════
+  Widget _buildTabletDashboardLayout(List<Map<String, dynamic>> allowedMenus) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Top Greeting on Tablet
+        _buildUserGreetingStrip(isTablet: true),
+        const SizedBox(height: 12),
+
+        // Dual Panel Layout
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ─── LEFT PANEL: Active Shift & Cash Reconciliation (Flex: 38) ───
+            Expanded(
+              flex: 38,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  widget.session == null
+                      ? _buildOpenShiftPromptCard()
+                      : FutureBuilder<Map<String, dynamic>?>(
+                          future: context.read<AuthCubit>().getActiveSessionDetails(),
+                          builder: (context, snapshot) {
+                            final details = snapshot.data;
+                            return _buildStatCard(details, widget.session!.openingCash, isTablet: true);
+                          },
+                        ),
+                  if (widget.session != null) ...[
+                    const SizedBox(height: 10),
+                    FutureBuilder<double>(
+                      future: context.read<AuthCubit>().getExpectedCashAmount(),
+                      builder: (context, snapshot) {
+                        final expected = snapshot.data ?? widget.session!.openingCash;
+                        return _buildCloseShiftCard(context, expected);
+                      },
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(width: 14),
+
+            // ─── RIGHT PANEL: Operational Services Bento Grid (Flex: 62) ────
+            Expanded(
+              flex: 62,
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 3.5,
+                              height: 15,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0F172A),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const SizedBox(width: 7),
+                            Text(
+                              'Menu & Operasional Kasir',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF0F172A),
+                              ),
+                            ),
+                          ],
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '${allowedMenus.length} Modul Aktif',
+                            style: GoogleFonts.poppins(
+                              fontSize: 10.5,
+                              color: const Color(0xFF64748B),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Divider(height: 18, color: Color(0xFFF1F5F9)),
+
+                    // Bento Grid for Tablet (3 columns with compact cards)
+                    GridView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 8,
+                        childAspectRatio: 2.35,
+                      ),
+                      itemCount: allowedMenus.length,
+                      itemBuilder: (context, index) {
+                        final m = allowedMenus[index];
+                        return _buildTabletBentoCard(
+                          icon: m['icon'] as IconData,
+                          title: m['title'] as String,
+                          subtitle: m['subtitle'] as String? ?? '',
+                          color: m['color'] as Color,
+                          bgColor: m['bg'] as Color? ?? (m['color'] as Color).withValues(alpha: 0.1),
+                          onTap: m['onTap'] as VoidCallback,
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SHARED WIDGETS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  Widget _buildUserGreetingStrip({required bool isTablet}) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: isTablet ? 14 : 14,
+        vertical: isTablet ? 10 : 10,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: isTablet ? 36 : 38,
+            height: isTablet ? 36 : 38,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F172A),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Center(
+              child: Text(
+                widget.user.name[0].toUpperCase(),
+                style: GoogleFonts.poppins(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: isTablet ? 15 : 16,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      'Selamat Bertugas, ',
+                      style: GoogleFonts.poppins(
+                        fontSize: isTablet ? 12.5 : 13,
+                        color: const Color(0xFF64748B),
+                      ),
+                    ),
+                    Text(
+                      widget.user.name,
+                      style: GoogleFonts.poppins(
+                        fontSize: isTablet ? 13.5 : 14,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF0F172A),
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: widget.user.role == 'admin'
+                            ? const Color(0xFF1A56DB).withValues(alpha: 0.1)
+                            : const Color(0xFF059669).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        widget.user.role.toUpperCase(),
+                        style: GoogleFonts.poppins(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          color: widget.user.role == 'admin' ? const Color(0xFF1A56DB) : const Color(0xFF059669),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      widget.session != null ? 'Shift Terbuka' : 'Shift Kasir Belum Terbuka',
+                      style: GoogleFonts.poppins(fontSize: 10.5, color: const Color(0xFF64748B)),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          // Live Clock on Mobile
+          if (!isTablet)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.access_time_rounded, size: 12, color: Color(0xFF64748B)),
+                  const SizedBox(width: 5),
+                  Text(
+                    _currentTime,
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF0F172A),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  /// Modern Slate/Emerald Shift Card (Compact for Tablet)
+  Widget _buildStatCard(Map<String, dynamic>? details, double openingCash, {required bool isTablet}) {
     final double expected = details?['expectedCash'] ?? openingCash;
     final Map<String, dynamic> paymentDetails = details?['paymentDetails'] ?? {
       'cash': 0.0,
@@ -539,23 +811,25 @@ class _HomePageState extends State<HomePage> {
       'debts': 0.0,
       'supplierDebts': 0.0,
       'expenses': 0.0,
+      'salesReturns': 0.0,
+      'purchaseReturns': 0.0,
     };
 
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF0F172A), // Executive Deep Slate
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(isTablet ? 16 : 20),
         border: Border.all(color: const Color(0xFF334155).withValues(alpha: 0.6)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.25),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.2),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(18),
+        padding: EdgeInsets.all(isTablet ? 14 : 18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -565,18 +839,18 @@ class _HomePageState extends State<HomePage> {
                 Row(
                   children: [
                     Container(
-                      width: 8,
-                      height: 8,
+                      width: 7,
+                      height: 7,
                       decoration: const BoxDecoration(
                         shape: BoxShape.circle,
                         color: Color(0xFF10B981), // Emerald Pulse
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Text(
                       'SHIFT KASIR AKTIF',
                       style: GoogleFonts.poppins(
-                        fontSize: 10,
+                        fontSize: 9.5,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0.8,
                         color: Colors.white.withValues(alpha: 0.9),
@@ -587,74 +861,74 @@ class _HomePageState extends State<HomePage> {
                 Text(
                   _currentDate,
                   style: GoogleFonts.poppins(
-                    fontSize: 10.5,
+                    fontSize: 10,
                     color: Colors.white.withValues(alpha: 0.6),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 14),
+            SizedBox(height: isTablet ? 8 : 14),
             Text(
               'Kas Laci Teoretis',
               style: GoogleFonts.poppins(
-                fontSize: 11,
+                fontSize: 10.5,
                 color: Colors.white.withValues(alpha: 0.65),
               ),
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 1),
             Text(
               CurrencyFormatter.format(expected),
               style: GoogleFonts.poppins(
-                fontSize: 26,
+                fontSize: isTablet ? 24 : 26,
                 fontWeight: FontWeight.w800,
                 color: Colors.white,
                 letterSpacing: -0.5,
               ),
             ),
-            const SizedBox(height: 14),
+            SizedBox(height: isTablet ? 10 : 14),
             Container(height: 1, color: Colors.white.withValues(alpha: 0.08)),
-            const SizedBox(height: 12),
+            SizedBox(height: isTablet ? 8 : 12),
 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Row(
                   children: [
-                    Icon(Icons.login_rounded, size: 13, color: Colors.white.withValues(alpha: 0.6)),
-                    const SizedBox(width: 5),
+                    Icon(Icons.login_rounded, size: 12, color: Colors.white.withValues(alpha: 0.6)),
+                    const SizedBox(width: 4),
                     Text(
                       'Buka: ${widget.session!.openTime.toString().substring(11, 16)}',
-                      style: GoogleFonts.poppins(fontSize: 11, color: Colors.white.withValues(alpha: 0.8)),
+                      style: GoogleFonts.poppins(fontSize: 10.5, color: Colors.white.withValues(alpha: 0.8)),
                     ),
                   ],
                 ),
                 Row(
                   children: [
-                    Icon(Icons.monetization_on_outlined, size: 13, color: Colors.white.withValues(alpha: 0.6)),
-                    const SizedBox(width: 5),
+                    Icon(Icons.monetization_on_outlined, size: 12, color: Colors.white.withValues(alpha: 0.6)),
+                    const SizedBox(width: 4),
                     Text(
                       'Modal: ${CurrencyFormatter.format(widget.session!.openingCash)}',
-                      style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.9)),
+                      style: GoogleFonts.poppins(fontSize: 10.5, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.9)),
                     ),
                   ],
                 ),
               ],
             ),
 
-            const SizedBox(height: 10),
+            SizedBox(height: isTablet ? 8 : 12),
             InkWell(
               onTap: () => setState(() => _showShiftDetails = !_showShiftDetails),
               borderRadius: BorderRadius.circular(8),
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
+                padding: const EdgeInsets.symmetric(vertical: 2),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       _showShiftDetails ? 'Sembunyikan Rincian Kas' : 'Lihat Rincian Kas Laci',
                       style: GoogleFonts.poppins(
-                        fontSize: 11,
+                        fontSize: 10.5,
                         fontWeight: FontWeight.w600,
                         color: const Color(0xFF60A5FA),
                       ),
@@ -662,7 +936,7 @@ class _HomePageState extends State<HomePage> {
                     Icon(
                       _showShiftDetails ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
                       color: const Color(0xFF60A5FA),
-                      size: 16,
+                      size: 15,
                     ),
                   ],
                 ),
@@ -670,29 +944,31 @@ class _HomePageState extends State<HomePage> {
             ),
 
             if (_showShiftDetails) ...[
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Container(height: 1, color: Colors.white.withValues(alpha: 0.08)),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Text(
                 'Metode Pembayaran Masuk:',
-                style: GoogleFonts.poppins(fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.white.withValues(alpha: 0.9)),
+                style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white.withValues(alpha: 0.9)),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 3),
               _buildStatDetailRow('Tunai (Cash)', paymentDetails['cash'] ?? 0.0),
               _buildStatDetailRow('QRIS', paymentDetails['qris'] ?? 0.0),
               _buildStatDetailRow('EDC / Kartu', paymentDetails['card'] ?? 0.0),
               _buildStatDetailRow('Transfer Bank', paymentDetails['transfer'] ?? 0.0),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Text(
                 'Arus Fisik Laci:',
-                style: GoogleFonts.poppins(fontSize: 10.5, fontWeight: FontWeight.w700, color: Colors.white.withValues(alpha: 0.9)),
+                style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w700, color: Colors.white.withValues(alpha: 0.9)),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 3),
               _buildStatDetailRow('Modal Awal (+)', cashSources['opening'] ?? 0.0),
               _buildStatDetailRow('Penjualan Tunai (+)', cashSources['sales'] ?? 0.0),
               _buildStatDetailRow('Penerimaan Piutang (+)', cashSources['debts'] ?? 0.0),
               _buildStatDetailRow('Pengeluaran Toko (-)', cashSources['expenses'] ?? 0.0, isNegative: true),
               _buildStatDetailRow('Bayar Hutang Supplier (-)', cashSources['supplierDebts'] ?? 0.0, isNegative: true),
+              _buildStatDetailRow('Retur Penjualan Tunai (-)', cashSources['salesReturns'] ?? 0.0, isNegative: true),
+              _buildStatDetailRow('Retur Pembelian Tunai (+)', cashSources['purchaseReturns'] ?? 0.0),
             ],
           ],
         ),
@@ -709,75 +985,77 @@ class _HomePageState extends State<HomePage> {
         children: [
           Text(
             label,
-            style: GoogleFonts.poppins(fontSize: 10.5, color: Colors.white.withValues(alpha: 0.7)),
+            style: GoogleFonts.poppins(fontSize: 10, color: Colors.white.withValues(alpha: 0.7)),
           ),
           Text(
             isNegative && amount > 0 ? '- $formatted' : formatted,
-            style: GoogleFonts.poppins(fontSize: 10.5, fontWeight: FontWeight.w600, color: Colors.white),
+            style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w600, color: Colors.white),
           ),
         ],
       ),
     );
   }
 
-  /// Close shift card modern
+  /// Close shift card modern & compact
   Widget _buildCloseShiftCard(BuildContext context, double expected) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: const Color(0xFFFECDD3)), // Rose 200
         boxShadow: [
           BoxShadow(
-            color: Colors.red.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.red.withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
               color: const Color(0xFFFFF1F2),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.lock_clock_rounded, color: Color(0xFFE11D48), size: 22),
+            child: const Icon(Icons.lock_clock_rounded, color: Color(0xFFE11D48), size: 18),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Sesi Kasir Masih Berjalan',
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: const Color(0xFF0F172A), fontSize: 13),
+                  style: GoogleFonts.poppins(fontWeight: FontWeight.w700, color: const Color(0xFF0F172A), fontSize: 11.5),
                 ),
                 Text(
                   'Tutup shift untuk serah terima kas.',
-                  style: GoogleFonts.poppins(color: const Color(0xFF64748B), fontSize: 11),
+                  style: GoogleFonts.poppins(color: const Color(0xFF64748B), fontSize: 10),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
           FilledButton(
             onPressed: () => _showCloseShiftDialog(context, expected),
             style: FilledButton.styleFrom(
               backgroundColor: const Color(0xFFE11D48),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
             ),
-            child: Text('Tutup Shift', style: GoogleFonts.poppins(fontSize: 11.5, fontWeight: FontWeight.w700)),
+            child: Text('Tutup Shift', style: GoogleFonts.poppins(fontSize: 10.5, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
     );
   }
 
-  /// Menu card ala fintech launcher
+  /// Menu card ala fintech launcher (Mobile)
   Widget _buildMenuCard({
     required IconData icon,
     required String title,
@@ -833,6 +1111,80 @@ class _HomePageState extends State<HomePage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  /// Modern Tablet Bento Card with icon, title & subtitle (Compact & Sleek)
+  Widget _buildTabletBentoCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required Color bgColor,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: bgColor,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Center(
+                child: Icon(icon, color: color, size: 18),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                      color: const Color(0xFF0F172A),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.poppins(
+                      fontSize: 9.5,
+                      color: const Color(0xFF64748B),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, size: 15, color: Color(0xFF94A3B8)),
+          ],
+        ),
       ),
     );
   }

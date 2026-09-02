@@ -72,8 +72,8 @@ class _ReturnFormPageState extends State<ReturnFormPage> {
       double total = 0.0;
       for (var item in _loadedItems) {
         final double qty = item['quantityToReturn'] ?? 0.0;
-        final double pr = _isSales 
-            ? (item['orderItem'] as OrderItem).price 
+        final double pr = _isSales
+            ? (item['orderItem'] as OrderItem).price
             : (item['purchaseItem'] as PurchaseItem).costPrice;
         total += (qty * pr);
       }
@@ -85,20 +85,25 @@ class _ReturnFormPageState extends State<ReturnFormPage> {
     final ref = _refController.text.trim();
     if (ref.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Masukkan nomor referensi transaksi terlebih dahulu.')),
+        SnackBar(
+          content: Text('Masukkan nomor referensi transaksi terlebih dahulu.', style: GoogleFonts.poppins()),
+          backgroundColor: AppConstants.errorColor,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
     context.read<ReturnCubit>().searchOriginalTransaction(ref, _isSales);
   }
 
-  // Method to fetch product units when selecting in general return
   Future<void> _addGeneralProductItem(Product product) async {
-    // Check if product already added
     final exists = _generalSelectedItems.any((item) => (item['product'] as Product).id == product.id);
     if (exists) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Produk sudah ada di daftar, silakan sesuaikan kuantitas.')),
+        SnackBar(
+          content: Text('Produk sudah ada di daftar, silakan sesuaikan jumlah.', style: GoogleFonts.poppins()),
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
@@ -111,13 +116,18 @@ class _ReturnFormPageState extends State<ReturnFormPage> {
     final List<ProductUnit> productUnits = rows.map((r) => r.readTable(_db.productUnits)).toList();
 
     if (productUnits.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Produk ini tidak memiliki unit satuan.')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Produk ini tidak memiliki unit satuan.', style: GoogleFonts.poppins()),
+            backgroundColor: AppConstants.errorColor,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
       return;
     }
 
-    // Default price from prices table
     final priceRow = await (_db.select(_db.productPrices)
           ..where((tbl) => tbl.productId.equals(product.id) & tbl.unitId.equals(productUnits.first.id))
           ..limit(1))
@@ -144,56 +154,52 @@ class _ReturnFormPageState extends State<ReturnFormPage> {
       builder: (ctx) {
         bool scanned = false;
         return Container(
-          height: MediaQuery.of(ctx).size.height * 0.7,
+          height: MediaQuery.of(ctx).size.height * 0.65,
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: Column(
             children: [
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Container(
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey[300],
+                  color: const Color(0xFFCBD5E1),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(20, 16, 16, 12),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppConstants.primaryColor.withValues(alpha: 0.1),
+                        color: const Color(0xFF0F172A).withValues(alpha: 0.08),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(Icons.qr_code_scanner_rounded,
-                          color: AppConstants.primaryColor, size: 20),
+                      child: const Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF0F172A), size: 20),
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      'Scan Barcode Invoice / Transaksi',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      'Pindai Barcode Transaksi',
+                      style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)),
                     ),
                     const Spacer(),
                     IconButton(
-                      icon: const Icon(Icons.close_rounded),
+                      icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
                       onPressed: () => Navigator.pop(ctx),
                     ),
                   ],
                 ),
               ),
               Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
                     child: MobileScanner(
                       onDetect: (capture) {
                         if (scanned) return;
@@ -210,7 +216,7 @@ class _ReturnFormPageState extends State<ReturnFormPage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
             ],
           ),
         );
@@ -230,9 +236,10 @@ class _ReturnFormPageState extends State<ReturnFormPage> {
     final session = authCubit.currentSession;
     if (session == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Gagal menyimpan. Anda harus membuka shift sesi kasir terlebih dahulu di Homepage.'),
+        SnackBar(
+          content: Text('Gagal menyimpan. Anda harus membuka shift sesi kasir terlebih dahulu.', style: GoogleFonts.poppins()),
           backgroundColor: AppConstants.errorColor,
+          behavior: SnackBarBehavior.floating,
         ),
       );
       return;
@@ -242,17 +249,19 @@ class _ReturnFormPageState extends State<ReturnFormPage> {
       if (_selectedContact == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_isSales ? 'Silakan pilih pelanggan.' : 'Silakan pilih supplier.'),
+            content: Text(_isSales ? 'Silakan pilih pelanggan.' : 'Silakan pilih supplier.', style: GoogleFonts.poppins()),
             backgroundColor: AppConstants.errorColor,
+            behavior: SnackBarBehavior.floating,
           ),
         );
         return;
       }
       if (_generalSelectedItems.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Silakan tambahkan barang yang diretur.'),
+          SnackBar(
+            content: Text('Silakan tambahkan barang yang diretur.', style: GoogleFonts.poppins()),
             backgroundColor: AppConstants.errorColor,
+            behavior: SnackBarBehavior.floating,
           ),
         );
         return;
@@ -294,12 +303,12 @@ class _ReturnFormPageState extends State<ReturnFormPage> {
         );
       }
     } else {
-      // Retur berdasarkan transaksi
       if (_loadedTransaction == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Cari dan muat transaksi asal terlebih dahulu.'),
+          SnackBar(
+            content: Text('Cari dan muat transaksi asal terlebih dahulu.', style: GoogleFonts.poppins()),
             backgroundColor: AppConstants.errorColor,
+            behavior: SnackBarBehavior.floating,
           ),
         );
         return;
@@ -308,9 +317,10 @@ class _ReturnFormPageState extends State<ReturnFormPage> {
       final itemsToReturn = _loadedItems.where((e) => (e['quantityToReturn'] as double) > 0).toList();
       if (itemsToReturn.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Masukkan kuantitas retur minimal 1 unit pada produk.'),
+          SnackBar(
+            content: Text('Tentukan kuantitas retur minimal 1 unit pada salah satu produk.', style: GoogleFonts.poppins()),
             backgroundColor: AppConstants.errorColor,
+            behavior: SnackBarBehavior.floating,
           ),
         );
         return;
@@ -366,28 +376,70 @@ class _ReturnFormPageState extends State<ReturnFormPage> {
 
   @override
   Widget build(BuildContext context) {
+    final bool hasItems = _isGeneralReturn ? _generalSelectedItems.isNotEmpty : _loadedTransaction != null;
+
     return Scaffold(
-      backgroundColor: AppConstants.backgroundColor,
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: Text(
-          'Tambah Transaksi Retur',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16, color: Colors.white),
+        scrolledUnderElevation: 0,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        foregroundColor: const Color(0xFF0F172A),
+        iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Buat Transaksi Retur',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w700,
+                fontSize: 17,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+            Text(
+              'Pengembalian barang penjualan kasir / pembelian',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w400,
+                fontSize: 11,
+                color: const Color(0xFF64748B),
+              ),
+            ),
+          ],
         ),
-        centerTitle: true,
-        backgroundColor: AppConstants.primaryColor,
-        foregroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: BlocListener<ReturnCubit, ReturnState>(
         listener: (context, state) {
           if (state is ReturnSuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: AppConstants.successColor),
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(state.message, style: GoogleFonts.poppins(fontSize: 12.5))),
+                  ],
+                ),
+                backgroundColor: AppConstants.successColor,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
             );
             Navigator.pop(context);
           } else if (state is ReturnError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: AppConstants.errorColor),
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(state.message, style: GoogleFonts.poppins(fontSize: 12.5))),
+                  ],
+                ),
+                backgroundColor: AppConstants.errorColor,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
             );
           } else if (state is ReturnTransactionDetailsLoaded) {
             setState(() {
@@ -402,30 +454,33 @@ class _ReturnFormPageState extends State<ReturnFormPage> {
         },
         child: Form(
           key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.all(16),
+          child: Column(
             children: [
-              // 1. Switcher Jenis Retur
-              _buildTypeSwitcher(),
-              const SizedBox(height: 16),
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                  children: [
+                    // 1. Selector Jenis Retur (Penjualan vs Pembelian)
+                    _buildTypeSelector(),
+                    const SizedBox(height: 14),
 
-              // 2. Switcher Mode Retur (Berdasarkan Transaksi vs Retur Umum)
-              _buildModeSwitcher(),
-              const SizedBox(height: 16),
+                    // 2. Selector Mode Retur (Invoice vs Umum)
+                    _buildModeSelector(),
+                    const SizedBox(height: 16),
 
-              // 3. Section Dinamis
-              _isGeneralReturn ? _buildGeneralReturnSection() : _buildTransactionReturnSection(),
+                    // 3. Konten Dinamis
+                    _isGeneralReturn ? _buildGeneralReturnSection() : _buildTransactionReturnSection(),
 
-              const SizedBox(height: 20),
+                    if (hasItems) ...[
+                      const SizedBox(height: 16),
+                      _buildRefundConfigCard(),
+                    ],
+                  ],
+                ),
+              ),
 
-              // 4. Notes dan Pilihan Metode Refund
-              if (_isGeneralReturn 
-                  ? _generalSelectedItems.isNotEmpty 
-                  : _loadedTransaction != null) ...[
-                _buildRefundConfigCard(),
-                const SizedBox(height: 20),
-                _buildSaveButton(),
-              ]
+              // Sticky Bottom Action Bar
+              if (hasItems) _buildStickyBottomBar(),
             ],
           ),
         ),
@@ -433,132 +488,222 @@ class _ReturnFormPageState extends State<ReturnFormPage> {
     );
   }
 
-  Widget _buildTypeSwitcher() {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-        side: const BorderSide(color: AppConstants.borderLightColor),
+  Widget _buildTypeSelector() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(color: const Color(0xFF0F172A).withValues(alpha: 0.02), blurRadius: 6, offset: const Offset(0, 2)),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        child: Row(
-          children: [
-            Text('Jenis Retur:', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13)),
-            const Spacer(),
-            ChoiceChip(
-              label: const Text('Penjualan'),
-              selected: _isSales,
-              onSelected: (val) {
-                if (val) {
-                  setState(() {
-                    _isSales = true;
-                    _loadedTransaction = null;
-                    _generalSelectedItems.clear();
-                    _selectedContact = null;
-                    _notesController.clear();
-                    _refController.clear();
-                  });
-                  context.read<ReturnCubit>().resetState();
-                }
-              },
-            ),
-            const SizedBox(width: 8),
-            ChoiceChip(
-              label: const Text('Pembelian'),
-              selected: !_isSales,
-              onSelected: (val) {
-                if (val) {
-                  setState(() {
-                    _isSales = false;
-                    _loadedTransaction = null;
-                    _generalSelectedItems.clear();
-                    _selectedContact = null;
-                    _notesController.clear();
-                    _refController.clear();
-                  });
-                  context.read<ReturnCubit>().resetState();
-                }
-              },
-            ),
-          ],
-        ),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 3.5,
+                height: 14,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Jenis Retur',
+                style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: () {
+                    setState(() {
+                      _isSales = true;
+                      _loadedTransaction = null;
+                      _generalSelectedItems.clear();
+                      _selectedContact = null;
+                      _notesController.clear();
+                      _refController.clear();
+                    });
+                    context.read<ReturnCubit>().resetState();
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: _isSales ? const Color(0xFFDC2626).withValues(alpha: 0.08) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: _isSales ? const Color(0xFFDC2626) : const Color(0xFFE2E8F0),
+                        width: _isSales ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.assignment_return_rounded,
+                          size: 18,
+                          color: _isSales ? const Color(0xFFDC2626) : const Color(0xFF64748B),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Retur Penjualan',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: _isSales ? FontWeight.w700 : FontWeight.w500,
+                            color: _isSales ? const Color(0xFFDC2626) : const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: InkWell(
+                  onTap: () {
+                    setState(() {
+                      _isSales = false;
+                      _loadedTransaction = null;
+                      _generalSelectedItems.clear();
+                      _selectedContact = null;
+                      _notesController.clear();
+                      _refController.clear();
+                    });
+                    context.read<ReturnCubit>().resetState();
+                  },
+                  borderRadius: BorderRadius.circular(10),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: !_isSales ? const Color(0xFF0D9488).withValues(alpha: 0.08) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: !_isSales ? const Color(0xFF0D9488) : const Color(0xFFE2E8F0),
+                        width: !_isSales ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.local_shipping_rounded,
+                          size: 18,
+                          color: !_isSales ? const Color(0xFF0D9488) : const Color(0xFF64748B),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Retur Pembelian',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: !_isSales ? FontWeight.w700 : FontWeight.w500,
+                            color: !_isSales ? const Color(0xFF0D9488) : const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildModeSwitcher() {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-        side: const BorderSide(color: AppConstants.borderLightColor),
+  Widget _buildModeSelector() {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(4),
-        child: Row(
-          children: [
-            Expanded(
-              child: InkWell(
-                onTap: () {
-                  setState(() {
-                    _isGeneralReturn = false;
-                    _generalSelectedItems.clear();
-                    _selectedContact = null;
-                  });
-                  context.read<ReturnCubit>().resetState();
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: !_isGeneralReturn ? AppConstants.primaryColor : Colors.transparent,
-                    borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                  ),
-                  child: Center(
-                    child: Text(
-                      'Dari Transaksi Asal',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: !_isGeneralReturn ? Colors.white : AppConstants.textDarkColor,
-                      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: InkWell(
+              onTap: () {
+                setState(() {
+                  _isGeneralReturn = false;
+                  _generalSelectedItems.clear();
+                  _selectedContact = null;
+                });
+                context.read<ReturnCubit>().resetState();
+              },
+              borderRadius: BorderRadius.circular(10),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: !_isGeneralReturn ? const Color(0xFF0F172A) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: !_isGeneralReturn
+                      ? [BoxShadow(color: const Color(0xFF0F172A).withValues(alpha: 0.15), blurRadius: 4, offset: const Offset(0, 2))]
+                      : null,
+                ),
+                child: Center(
+                  child: Text(
+                    'Dari Invoice Asal',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: !_isGeneralReturn ? FontWeight.w700 : FontWeight.w500,
+                      color: !_isGeneralReturn ? Colors.white : const Color(0xFF64748B),
                     ),
                   ),
                 ),
               ),
             ),
-            Expanded(
-              child: InkWell(
-                onTap: () {
-                  setState(() {
-                    _isGeneralReturn = true;
-                    _loadedTransaction = null;
-                    _loadedItems.clear();
-                    _loadedContact = null;
-                  });
-                  context.read<ReturnCubit>().resetState();
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: _isGeneralReturn ? AppConstants.primaryColor : Colors.transparent,
-                    borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                  ),
-                  child: Center(
-                    child: Text(
-                      'Retur Umum (Bebas)',
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: _isGeneralReturn ? Colors.white : AppConstants.textDarkColor,
-                      ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: InkWell(
+              onTap: () {
+                setState(() {
+                  _isGeneralReturn = true;
+                  _loadedTransaction = null;
+                  _loadedItems.clear();
+                  _loadedContact = null;
+                });
+                context.read<ReturnCubit>().resetState();
+              },
+              borderRadius: BorderRadius.circular(10),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 150),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                decoration: BoxDecoration(
+                  color: _isGeneralReturn ? const Color(0xFF0F172A) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: _isGeneralReturn
+                      ? [BoxShadow(color: const Color(0xFF0F172A).withValues(alpha: 0.15), blurRadius: 4, offset: const Offset(0, 2))]
+                      : null,
+                ),
+                child: Center(
+                  child: Text(
+                    'Retur Bebas (Manual)',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: _isGeneralReturn ? FontWeight.w700 : FontWeight.w500,
+                      color: _isGeneralReturn ? Colors.white : const Color(0xFF64748B),
                     ),
                   ),
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -567,54 +712,72 @@ class _ReturnFormPageState extends State<ReturnFormPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-            side: const BorderSide(color: AppConstants.borderLightColor),
+        // Search Box Card
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(color: const Color(0xFF0F172A).withValues(alpha: 0.02), blurRadius: 6, offset: const Offset(0, 2)),
+            ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _isSales ? 'Nomor Referensi Penjualan' : 'Nomor Referensi Pembelian',
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _refController,
-                        decoration: InputDecoration(
-                          hintText: _isSales ? 'e.g. TRX-20260607-0001' : 'e.g. PUR-20260607-0001',
-                          hintStyle: const TextStyle(fontSize: 12, color: AppConstants.textLightColor),
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.qr_code_scanner_rounded, color: AppConstants.primaryColor),
-                            onPressed: _showBarcodeScanner,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _isSales ? 'Nomor Referensi Penjualan' : 'Nomor Referensi Pembelian (PO)',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 12.5, color: const Color(0xFF0F172A)),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _refController,
+                      style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A)),
+                      decoration: InputDecoration(
+                        hintText: _isSales ? 'Contoh: TRX-20260607-0001' : 'Contoh: PUR-20260607-0001',
+                        hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF94A3B8)),
+                        prefixIcon: const Icon(Icons.receipt_long_rounded, size: 18, color: Color(0xFF64748B)),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.qr_code_scanner_rounded, color: Color(0xFF0F172A), size: 20),
+                          tooltip: 'Pindai Barcode',
+                          onPressed: _showBarcodeScanner,
                         ),
-                        onSubmitted: (val) => _searchRef(),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                        filled: true,
+                        fillColor: const Color(0xFFF8FAFC),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5)),
                       ),
+                      onSubmitted: (val) => _searchRef(),
                     ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: _searchRef,
-                      child: const Text('CARI'),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: _searchRef,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F172A),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                  ],
-                ),
-              ],
-            ),
+                    child: Text('CARI', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 12.5)),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
+
         if (_loadedTransaction != null) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           _buildLoadedTransactionDetailsCard(),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           _buildLoadedItemsCard(),
         ],
       ],
@@ -622,138 +785,163 @@ class _ReturnFormPageState extends State<ReturnFormPage> {
   }
 
   Widget _buildLoadedTransactionDetailsCard() {
-    final nowStr = DateFormat('dd MMM yyyy, HH:mm').format(_isSales 
-        ? (_loadedTransaction as Order).createdAt 
+    final nowStr = DateFormat('dd MMM yyyy, HH:mm').format(_isSales
+        ? (_loadedTransaction as Order).createdAt
         : (_loadedTransaction as Purchase).createdAt);
 
     final String ref = _isSales ? (_loadedTransaction as Order).referenceNo : (_loadedTransaction as Purchase).referenceNo;
     final double grandTotal = _isSales ? (_loadedTransaction as Order).grandTotal : (_loadedTransaction as Purchase).grandTotal;
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-        side: const BorderSide(color: AppConstants.borderLightColor),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(color: const Color(0xFF0F172A).withValues(alpha: 0.02), blurRadius: 6, offset: const Offset(0, 2)),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Ringkasan Transaksi Asal', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13)),
-            const Divider(height: 20),
-            _buildMetaRow('No. Invoice', ref),
-            _buildMetaRow('Tanggal', nowStr),
-            _buildMetaRow(_isSales ? 'Pelanggan' : 'Supplier', _loadedContact?.name ?? (_isSales ? 'Pelanggan Umum' : 'Supplier')),
-            _buildMetaRow('Total Belanja', CurrencyFormatter.format(grandTotal)),
-          ],
-        ),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Ringkasan Transaksi Asal',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13, color: const Color(0xFF0F172A)),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF059669).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text('Ditemukan', style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w700, color: const Color(0xFF059669))),
+              ),
+            ],
+          ),
+          const Divider(height: 18, color: Color(0xFFF1F5F9)),
+          _buildMetaRow('No. Invoice', ref),
+          _buildMetaRow('Tanggal', nowStr),
+          _buildMetaRow(_isSales ? 'Pelanggan' : 'Supplier', _loadedContact?.name ?? (_isSales ? 'Pelanggan Umum' : 'Supplier')),
+          _buildMetaRow('Total Belanja', CurrencyFormatter.format(grandTotal)),
+        ],
       ),
     );
   }
 
   Widget _buildLoadedItemsCard() {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-        side: const BorderSide(color: AppConstants.borderLightColor),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(color: const Color(0xFF0F172A).withValues(alpha: 0.02), blurRadius: 6, offset: const Offset(0, 2)),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Sesuaikan Barang yang Diretur', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13)),
-            const SizedBox(height: 12),
-            ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _loadedItems.length,
-              separatorBuilder: (context, index) => const Divider(height: 20),
-              itemBuilder: (context, index) {
-                final item = _loadedItems[index];
-                final Product? product = item['product'];
-                final ProductUnit? unit = item['unit'];
-                final double origQty = _isSales 
-                    ? (item['orderItem'] as OrderItem).quantity 
-                    : (item['purchaseItem'] as PurchaseItem).quantity;
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Tentukan Kuantitas Barang yang Diretur',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13, color: const Color(0xFF0F172A)),
+          ),
+          const Divider(height: 20, color: Color(0xFFF1F5F9)),
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _loadedItems.length,
+            separatorBuilder: (context, index) => const Divider(height: 20, color: Color(0xFFF1F5F9)),
+            itemBuilder: (context, index) {
+              final item = _loadedItems[index];
+              final Product? product = item['product'];
+              final ProductUnit? unit = item['unit'];
+              final double origQty = _isSales
+                  ? (item['orderItem'] as OrderItem).quantity
+                  : (item['purchaseItem'] as PurchaseItem).quantity;
 
-                final double price = _isSales 
-                    ? (item['orderItem'] as OrderItem).price 
-                    : (item['purchaseItem'] as PurchaseItem).costPrice;
+              final double price = _isSales
+                  ? (item['orderItem'] as OrderItem).price
+                  : (item['purchaseItem'] as PurchaseItem).costPrice;
 
-                final double alreadyReturned = item['alreadyReturnedQty'] ?? 0.0;
-                final double maxQty = (origQty - alreadyReturned).clamp(0.0, double.infinity);
+              final double alreadyReturned = item['alreadyReturnedQty'] ?? 0.0;
+              final double maxQty = (origQty - alreadyReturned).clamp(0.0, double.infinity);
+              final double currentReturnVal = item['quantityToReturn'] ?? 0.0;
 
-                final double currentReturnVal = item['quantityToReturn'] ?? 0.0;
+              final String productName = product?.name ?? 'Produk ID: ${_isSales ? (item['orderItem'] as OrderItem).productId : (item['purchaseItem'] as PurchaseItem).productId}';
+              final String unitName = unit?.name ?? 'Satuan';
 
-                final String productName = product?.name ?? 'Produk Terhapus (ID: ${_isSales ? (item['orderItem'] as OrderItem).productId : (item['purchaseItem'] as PurchaseItem).productId})';
-                final String unitName = unit?.name ?? 'Satuan';
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      productName,
-                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.bold, color: AppConstants.textDarkColor),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Beli: ${origQty.toString().replaceAll(RegExp(r'\.0$'), '')} $unitName | Sudah Retur: ${alreadyReturned.toString().replaceAll(RegExp(r'\.0$'), '')} $unitName | Max Retur: ${maxQty.toString().replaceAll(RegExp(r'\.0$'), '')} $unitName',
-                      style: GoogleFonts.poppins(fontSize: 10, color: AppConstants.textLightColor),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Harga Unit: ${CurrencyFormatter.format(price)}',
-                          style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: AppConstants.textDarkColor),
-                        ),
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.remove_circle_outline, color: AppConstants.primaryColor),
-                              onPressed: maxQty <= 0 ? null : () {
-                                if (currentReturnVal > 0) {
-                                  setState(() {
-                                    item['quantityToReturn'] = currentReturnVal - 1.0;
-                                  });
-                                }
-                              },
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    productName,
+                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    'Beli: ${origQty.toString().replaceAll(RegExp(r'\.0$'), '')} $unitName • Sudah Retur: ${alreadyReturned.toString().replaceAll(RegExp(r'\.0$'), '')} • Max Retur: ${maxQty.toString().replaceAll(RegExp(r'\.0$'), '')} $unitName',
+                    style: GoogleFonts.poppins(fontSize: 10.5, color: const Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Harga: ${CurrencyFormatter.format(price)}',
+                        style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
+                      ),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.remove_circle_outline, color: Color(0xFF0F172A), size: 22),
+                            onPressed: maxQty <= 0
+                                ? null
+                                : () {
+                                    if (currentReturnVal > 0) {
+                                      setState(() {
+                                        item['quantityToReturn'] = currentReturnVal - 1.0;
+                                      });
+                                    }
+                                  },
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                              borderRadius: BorderRadius.circular(8),
                             ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: AppConstants.borderLightColor),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: Text(
-                                currentReturnVal.toString().replaceAll(RegExp(r'\.0$'), ''),
-                                style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.bold),
-                              ),
+                            child: Text(
+                              currentReturnVal.toString().replaceAll(RegExp(r'\.0$'), ''),
+                              style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)),
                             ),
-                            IconButton(
-                              icon: const Icon(Icons.add_circle_outline, color: AppConstants.primaryColor),
-                              onPressed: maxQty <= 0 ? null : () {
-                                if (currentReturnVal < maxQty) {
-                                  setState(() {
-                                    item['quantityToReturn'] = currentReturnVal + 1.0;
-                                  });
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ],
-                );
-              },
-            ),
-          ],
-        ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.add_circle_outline, color: Color(0xFF0F172A), size: 22),
+                            onPressed: maxQty <= 0
+                                ? null
+                                : () {
+                                    if (currentReturnVal < maxQty) {
+                                      setState(() {
+                                        item['quantityToReturn'] = currentReturnVal + 1.0;
+                                      });
+                                    }
+                                  },
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -763,205 +951,233 @@ class _ReturnFormPageState extends State<ReturnFormPage> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Pemilihan Kontak (Customer/Supplier)
-        Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-            side: const BorderSide(color: AppConstants.borderLightColor),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(color: const Color(0xFF0F172A).withValues(alpha: 0.02), blurRadius: 6, offset: const Offset(0, 2)),
+            ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _isSales ? 'Pilih Pelanggan' : 'Pilih Supplier / Pemasok',
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13),
-                ),
-                const SizedBox(height: 8),
-                InkWell(
-                  onTap: _isSales ? _showCustomerSearchDialog : _showSupplierSearchDialog,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: AppConstants.borderLightColor),
-                      borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _selectedContact?.name ?? (_isSales ? 'Pilih Pelanggan...' : 'Pilih Supplier...'),
-                          style: GoogleFonts.poppins(
-                            fontSize: 12,
-                            color: _selectedContact != null ? AppConstants.textDarkColor : AppConstants.textLightColor,
-                          ),
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _isSales ? 'Pilih Pelanggan' : 'Pilih Supplier / Pemasok',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 12.5, color: const Color(0xFF0F172A)),
+              ),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: _isSales ? _showCustomerSearchDialog : _showSupplierSearchDialog,
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        _selectedContact?.name ?? (_isSales ? 'Pilih Pelanggan...' : 'Pilih Supplier...'),
+                        style: GoogleFonts.poppins(
+                          fontSize: 12.5,
+                          fontWeight: _selectedContact != null ? FontWeight.w600 : FontWeight.normal,
+                          color: _selectedContact != null ? const Color(0xFF0F172A) : const Color(0xFF94A3B8),
                         ),
-                        const Icon(Icons.arrow_drop_down_rounded, color: AppConstants.textLightColor),
+                      ),
+                      const Icon(Icons.arrow_drop_down_rounded, color: Color(0xFF64748B)),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
+        // Tambah Barang Retur
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(color: const Color(0xFF0F172A).withValues(alpha: 0.02), blurRadius: 6, offset: const Offset(0, 2)),
+            ],
+          ),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Daftar Barang Retur',
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13, color: const Color(0xFF0F172A)),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: _showProductSearchDialog,
+                    icon: const Icon(Icons.add_rounded, size: 16),
+                    label: Text('TAMBAH BARANG', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 11.5)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F172A),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                  ),
+                ],
+              ),
+              const Divider(height: 20, color: Color(0xFFF1F5F9)),
+              if (_generalSelectedItems.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Column(
+                      children: [
+                        const Icon(Icons.inventory_2_outlined, size: 36, color: Color(0xFF94A3B8)),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Belum ada barang yang ditambahkan.',
+                          style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF64748B)),
+                        ),
                       ],
                     ),
                   ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
+                )
+              else
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _generalSelectedItems.length,
+                  separatorBuilder: (context, index) => const Divider(height: 20, color: Color(0xFFF1F5F9)),
+                  itemBuilder: (context, index) {
+                    final item = _generalSelectedItems[index];
+                    final Product product = item['product'];
+                    final List<ProductUnit> units = item['units'];
+                    final ProductUnit selectedUnit = item['selectedUnit'];
+                    final double qty = item['quantity'] ?? 0.0;
+                    final double price = item['price'] ?? 0.0;
 
-        // Tambah Barang Retur
-        Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-            side: const BorderSide(color: AppConstants.borderLightColor),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Daftar Barang Retur', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13)),
-                    ElevatedButton.icon(
-                      onPressed: _showProductSearchDialog,
-                      icon: const Icon(Icons.add, size: 16, color: Colors.white),
-                      label: const Text('BARANG'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      ),
-                    ),
-                  ],
-                ),
-                const Divider(height: 24),
-                if (_generalSelectedItems.isEmpty)
-                  Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 20),
-                      child: Text(
-                        'Belum ada barang ditambahkan.',
-                        style: GoogleFonts.poppins(fontSize: 12, color: AppConstants.textLightColor),
-                      ),
-                    ),
-                  )
-                else
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _generalSelectedItems.length,
-                    separatorBuilder: (context, index) => const Divider(height: 24),
-                    itemBuilder: (context, index) {
-                      final item = _generalSelectedItems[index];
-                      final Product product = item['product'];
-                      final List<ProductUnit> units = item['units'];
-                      final ProductUnit selectedUnit = item['selectedUnit'];
-                      final double qty = item['quantity'] ?? 0.0;
-                      final double price = item['price'] ?? 0.0;
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  product.name,
-                                  style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.bold, color: AppConstants.textDarkColor),
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                product.name,
+                                style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFDC2626), size: 18),
+                              onPressed: () {
+                                setState(() {
+                                  _generalSelectedItems.removeAt(index);
+                                });
+                              },
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            // Dropdown Satuan
+                            Container(
+                              width: 95,
+                              padding: const EdgeInsets.symmetric(horizontal: 8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<ProductUnit>(
+                                  value: selectedUnit,
+                                  isExpanded: true,
+                                  items: units.map((u) => DropdownMenuItem<ProductUnit>(
+                                    value: u,
+                                    child: Text(u.name, style: GoogleFonts.poppins(fontSize: 11.5)),
+                                  )).toList(),
+                                  onChanged: (val) async {
+                                    if (val != null) {
+                                      final priceRow = await (_db.select(_db.productPrices)
+                                            ..where((tbl) => tbl.productId.equals(product.id) & tbl.unitId.equals(val.id))
+                                            ..limit(1))
+                                          .getSingleOrNull();
+                                      setState(() {
+                                        item['selectedUnit'] = val;
+                                        item['price'] = _isSales ? (priceRow?.price ?? 0.0) : 0.0;
+                                      });
+                                    }
+                                  },
                                 ),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.delete_outline_rounded, color: AppConstants.errorColor, size: 18),
-                                onPressed: () {
+                            ),
+                            const SizedBox(width: 8),
+                            // Qty Input
+                            Expanded(
+                              flex: 2,
+                              child: TextFormField(
+                                initialValue: qty.toString().replaceAll(RegExp(r'\.0$'), ''),
+                                style: GoogleFonts.poppins(fontSize: 12),
+                                decoration: InputDecoration(
+                                  labelText: 'Qty',
+                                  labelStyle: GoogleFonts.poppins(fontSize: 11),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  filled: true,
+                                  fillColor: const Color(0xFFF8FAFC),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                                ),
+                                keyboardType: TextInputType.number,
+                                onChanged: (val) {
                                   setState(() {
-                                    _generalSelectedItems.removeAt(index);
+                                    item['quantity'] = double.tryParse(val) ?? 0.0;
                                   });
                                 },
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              // Dropdown Satuan
-                              Container(
-                                width: 100,
-                                padding: const EdgeInsets.symmetric(horizontal: 8),
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: AppConstants.borderLightColor),
-                                  borderRadius: BorderRadius.circular(4),
+                            ),
+                            const SizedBox(width: 8),
+                            // Price Input
+                            Expanded(
+                              flex: 3,
+                              child: TextFormField(
+                                key: ValueKey('${product.id}_${selectedUnit.id}_price'),
+                                initialValue: price.toStringAsFixed(0),
+                                style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
+                                decoration: InputDecoration(
+                                  labelText: _isSales ? 'Harga Jual' : 'Harga Modal',
+                                  labelStyle: GoogleFonts.poppins(fontSize: 11),
+                                  prefixText: 'Rp ',
+                                  prefixStyle: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                                  filled: true,
+                                  fillColor: const Color(0xFFF8FAFC),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
                                 ),
-                                child: DropdownButtonHideUnderline(
-                                  child: DropdownButton<ProductUnit>(
-                                    value: selectedUnit,
-                                    isExpanded: true,
-                                    items: units.map((u) => DropdownMenuItem<ProductUnit>(
-                                      value: u,
-                                      child: Text(u.name, style: const TextStyle(fontSize: 11)),
-                                    )).toList(),
-                                    onChanged: (val) async {
-                                      if (val != null) {
-                                        // Cari harga unit baru
-                                        final priceRow = await (_db.select(_db.productPrices)
-                                              ..where((tbl) => tbl.productId.equals(product.id) & tbl.unitId.equals(val.id))
-                                              ..limit(1))
-                                            .getSingleOrNull();
-                                        setState(() {
-                                          item['selectedUnit'] = val;
-                                          item['price'] = _isSales ? (priceRow?.price ?? 0.0) : 0.0;
-                                        });
-                                      }
-                                    },
-                                  ),
-                                ),
+                                keyboardType: TextInputType.number,
+                                onChanged: (val) {
+                                  setState(() {
+                                    item['price'] = double.tryParse(val) ?? 0.0;
+                                  });
+                                },
                               ),
-                              const SizedBox(width: 8),
-                              // Qty Input
-                              Expanded(
-                                flex: 2,
-                                child: TextFormField(
-                                  initialValue: qty.toString().replaceAll(RegExp(r'\.0$'), ''),
-                                  decoration: const InputDecoration(
-                                    labelText: 'Qty',
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                  onChanged: (val) {
-                                    setState(() {
-                                      item['quantity'] = double.tryParse(val) ?? 0.0;
-                                    });
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              // Price Input
-                              Expanded(
-                                flex: 3,
-                                child: TextFormField(
-                                  key: ValueKey('${product.id}_${selectedUnit.id}_price'),
-                                  initialValue: price.toStringAsFixed(0),
-                                  decoration: InputDecoration(
-                                    labelText: _isSales ? 'Harga Jual' : 'Harga Modal',
-                                    prefixText: 'Rp ',
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  ),
-                                  keyboardType: TextInputType.number,
-                                  onChanged: (val) {
-                                    setState(() {
-                                      item['price'] = double.tryParse(val) ?? 0.0;
-                                    });
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-              ],
-            ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                ),
+            ],
           ),
         ),
       ],
@@ -969,123 +1185,205 @@ class _ReturnFormPageState extends State<ReturnFormPage> {
   }
 
   Widget _buildRefundConfigCard() {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-        side: const BorderSide(color: AppConstants.borderLightColor),
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(color: const Color(0xFF0F172A).withValues(alpha: 0.02), blurRadius: 6, offset: const Offset(0, 2)),
+        ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text('Konfigurasi Pengembalian (Refund)', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13)),
-            const Divider(height: 20),
-            Text(
-              'Metode Refund:',
-              style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.bold),
-            ),
-            Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: 8,
-              runSpacing: 0,
-              children: [
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Radio<String>(
-                      value: 'cash',
-                      groupValue: _refundMethod,
-                      onChanged: (val) {
-                        if (val != null) setState(() => _refundMethod = val);
-                      },
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Konfigurasi Pengembalian (Refund)',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13, color: const Color(0xFF0F172A)),
+          ),
+          const Divider(height: 20, color: Color(0xFFF1F5F9)),
+          Text(
+            'Metode Pengembalian:',
+            style: GoogleFonts.poppins(fontSize: 11.5, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              Expanded(
+                child: InkWell(
+                  onTap: () => setState(() => _refundMethod = 'cash'),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: _refundMethod == 'cash' ? const Color(0xFF059669).withValues(alpha: 0.08) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: _refundMethod == 'cash' ? const Color(0xFF059669) : const Color(0xFFE2E8F0),
+                        width: _refundMethod == 'cash' ? 1.5 : 1,
+                      ),
                     ),
-                    Text('Uang Tunai (Cash)', style: GoogleFonts.poppins(fontSize: 12)),
-                  ],
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Radio<String>(
-                      value: 'debt_reduction',
-                      groupValue: _refundMethod,
-                      onChanged: (val) {
-                        if (val != null) setState(() => _refundMethod = val);
-                      },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.payments_rounded, size: 16, color: _refundMethod == 'cash' ? const Color(0xFF059669) : const Color(0xFF64748B)),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Uang Tunai (Cash)',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11.5,
+                            fontWeight: _refundMethod == 'cash' ? FontWeight.w700 : FontWeight.w500,
+                            color: _refundMethod == 'cash' ? const Color(0xFF059669) : const Color(0xFF64748B),
+                          ),
+                        ),
+                      ],
                     ),
-                    Text(_isSales ? 'Potong Piutang (Bon)' : 'Potong Hutang', style: GoogleFonts.poppins(fontSize: 12)),
-                  ],
+                  ),
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: 'Alasan Retur / Catatan',
-                hintText: 'e.g. Barang cacat produksi / Salah ukuran',
-                hintStyle: TextStyle(fontSize: 11, color: AppConstants.textLightColor),
               ),
-              maxLines: 2,
+              const SizedBox(width: 8),
+              Expanded(
+                child: InkWell(
+                  onTap: () => setState(() => _refundMethod = 'debt_reduction'),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: _refundMethod == 'debt_reduction' ? const Color(0xFF1A56DB).withValues(alpha: 0.08) : const Color(0xFFF8FAFC),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                        color: _refundMethod == 'debt_reduction' ? const Color(0xFF1A56DB) : const Color(0xFFE2E8F0),
+                        width: _refundMethod == 'debt_reduction' ? 1.5 : 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.receipt_rounded, size: 16, color: _refundMethod == 'debt_reduction' ? const Color(0xFF1A56DB) : const Color(0xFF64748B)),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            _isSales ? 'Potong Piutang' : 'Potong Hutang',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11.5,
+                              fontWeight: _refundMethod == 'debt_reduction' ? FontWeight.w700 : FontWeight.w500,
+                              color: _refundMethod == 'debt_reduction' ? const Color(0xFF1A56DB) : const Color(0xFF64748B),
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          Text(
+            'Alasan Retur / Catatan',
+            style: GoogleFonts.poppins(fontSize: 11.5, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+          ),
+          const SizedBox(height: 6),
+          TextField(
+            controller: _notesController,
+            style: GoogleFonts.poppins(fontSize: 12.5),
+            decoration: InputDecoration(
+              hintText: 'Contoh: Barang cacat pabrik / salah varian ukuran',
+              hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF94A3B8)),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              filled: true,
+              fillColor: const Color(0xFFF8FAFC),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5)),
             ),
-          ],
-        ),
+            maxLines: 2,
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildSaveButton() {
+  Widget _buildStickyBottomBar() {
     final double totalRefund = _totalRefundAmount;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: const Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -3),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Row(
           children: [
-            Text(
-              'Total Refund:',
-              style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Total Refund Pengembalian',
+                    style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
+                  ),
+                  Text(
+                    CurrencyFormatter.format(totalRefund),
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                      color: _isSales ? const Color(0xFFDC2626) : const Color(0xFF0D9488),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            Text(
-              CurrencyFormatter.format(totalRefund),
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
-                color: _isSales ? AppConstants.errorColor : AppConstants.successColor,
+            const SizedBox(width: 14),
+            ElevatedButton(
+              onPressed: _saveReturn,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0F172A),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text(
+                'SIMPAN RETUR',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        ElevatedButton(
-          onPressed: _saveReturn,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: _isSales ? AppConstants.errorColor : AppConstants.successColor,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-          ),
-          child: Text(
-            'SIMPAN RETUR',
-            style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
   Widget _buildMetaRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 120,
-            child: Text(label, style: GoogleFonts.poppins(fontSize: 12, color: AppConstants.textLightColor)),
+            width: 110,
+            child: Text(label, style: GoogleFonts.poppins(fontSize: 11.5, color: const Color(0xFF64748B))),
           ),
+          const Text(': ', style: TextStyle(fontSize: 11.5, color: Color(0xFF64748B))),
           Expanded(
-            child: Text(value, style: GoogleFonts.poppins(fontSize: 12, color: AppConstants.textDarkColor, fontWeight: FontWeight.w600)),
+            child: Text(
+              value,
+              style: GoogleFonts.poppins(fontSize: 11.5, color: const Color(0xFF0F172A), fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -1093,63 +1391,85 @@ class _ReturnFormPageState extends State<ReturnFormPage> {
   }
 
   void _showCustomerSearchDialog() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
         String searchQuery = '';
         return StatefulBuilder(
-          builder: (ctx, setStateDialog) {
-            return AlertDialog(
-              title: Text('Pilih Pelanggan', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16)),
-              content: SizedBox(
-                width: double.maxFinite,
-                height: 350,
-                child: Column(
-                  children: [
-                    TextField(
-                      decoration: const InputDecoration(
-                        hintText: 'Cari Pelanggan...',
-                        hintStyle: TextStyle(fontSize: 12),
-                        prefixIcon: Icon(Icons.search, size: 18),
-                      ),
-                      onChanged: (val) {
-                        setStateDialog(() => searchQuery = val.toLowerCase());
+          builder: (ctx, setStateSheet) {
+            return Container(
+              height: MediaQuery.of(ctx).size.height * 0.7,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(2)),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text('Pilih Pelanggan', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16)),
+                  const SizedBox(height: 10),
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Cari nama atau telepon...',
+                      prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    ),
+                    onChanged: (val) => setStateSheet(() => searchQuery = val.toLowerCase()),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: BlocBuilder<CustomerCubit, CustomerState>(
+                      builder: (context, state) {
+                        if (state is CustomerLoading) {
+                          return const Center(child: CircularProgressIndicator(color: Color(0xFF0F172A)));
+                        }
+                        if (state is CustomerLoaded) {
+                          final list = state.customers.where((c) => c.name.toLowerCase().contains(searchQuery)).toList();
+                          if (list.isEmpty) {
+                            return Center(child: Text('Pelanggan tidak ditemukan.', style: GoogleFonts.poppins(color: const Color(0xFF64748B))));
+                          }
+                          return ListView.separated(
+                            itemCount: list.length,
+                            separatorBuilder: (c, i) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                            itemBuilder: (context, idx) {
+                              final customer = list[idx];
+                              return ListTile(
+                                leading: CircleAvatar(
+                                  radius: 16,
+                                  backgroundColor: const Color(0xFF1A56DB).withValues(alpha: 0.1),
+                                  child: Text(customer.name.isNotEmpty ? customer.name[0].toUpperCase() : 'P', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF1A56DB))),
+                                ),
+                                title: Text(customer.name, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
+                                subtitle: Text(customer.phone ?? '-', style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B))),
+                                onTap: () {
+                                  setState(() {
+                                    _selectedContact = customer;
+                                  });
+                                  Navigator.pop(ctx);
+                                },
+                              );
+                            },
+                          );
+                        }
+                        return const SizedBox.shrink();
                       },
                     ),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: BlocBuilder<CustomerCubit, CustomerState>(
-                        builder: (context, state) {
-                          if (state is CustomerLoading) {
-                            return const Center(child: CircularProgressIndicator());
-                          }
-                          if (state is CustomerLoaded) {
-                            final list = state.customers.where((c) => c.name.toLowerCase().contains(searchQuery)).toList();
-                            if (list.isEmpty) {
-                              return const Center(child: Text('Pelanggan tidak ditemukan.'));
-                            }
-                            return ListView.builder(
-                              itemCount: list.length,
-                              itemBuilder: (context, idx) {
-                                final customer = list[idx];
-                                return ListTile(
-                                  title: Text(customer.name, style: const TextStyle(fontSize: 13)),
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedContact = customer;
-                                    });
-                                    Navigator.pop(ctx);
-                                  },
-                                );
-                              },
-                            );
-                          }
-                          return const Center(child: Text('Gagal memuat pelanggan.'));
-                        },
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             );
           },
@@ -1159,63 +1479,85 @@ class _ReturnFormPageState extends State<ReturnFormPage> {
   }
 
   void _showSupplierSearchDialog() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
         String searchQuery = '';
         return StatefulBuilder(
-          builder: (ctx, setStateDialog) {
-            return AlertDialog(
-              title: Text('Pilih Supplier', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16)),
-              content: SizedBox(
-                width: double.maxFinite,
-                height: 350,
-                child: Column(
-                  children: [
-                    TextField(
-                      decoration: const InputDecoration(
-                        hintText: 'Cari Supplier...',
-                        hintStyle: TextStyle(fontSize: 12),
-                        prefixIcon: Icon(Icons.search, size: 18),
-                      ),
-                      onChanged: (val) {
-                        setStateDialog(() => searchQuery = val.toLowerCase());
+          builder: (ctx, setStateSheet) {
+            return Container(
+              height: MediaQuery.of(ctx).size.height * 0.7,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(2)),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text('Pilih Supplier / Pemasok', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16)),
+                  const SizedBox(height: 10),
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Cari supplier...',
+                      prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    ),
+                    onChanged: (val) => setStateSheet(() => searchQuery = val.toLowerCase()),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: BlocBuilder<SupplierCubit, SupplierState>(
+                      builder: (context, state) {
+                        if (state is SupplierLoading) {
+                          return const Center(child: CircularProgressIndicator(color: Color(0xFF0F172A)));
+                        }
+                        if (state is SupplierLoaded) {
+                          final list = state.suppliers.where((s) => s.name.toLowerCase().contains(searchQuery)).toList();
+                          if (list.isEmpty) {
+                            return Center(child: Text('Supplier tidak ditemukan.', style: GoogleFonts.poppins(color: const Color(0xFF64748B))));
+                          }
+                          return ListView.separated(
+                            itemCount: list.length,
+                            separatorBuilder: (c, i) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                            itemBuilder: (context, idx) {
+                              final supplier = list[idx];
+                              return ListTile(
+                                leading: CircleAvatar(
+                                  radius: 16,
+                                  backgroundColor: const Color(0xFF0D9488).withValues(alpha: 0.1),
+                                  child: Text(supplier.name.isNotEmpty ? supplier.name[0].toUpperCase() : 'S', style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF0D9488))),
+                                ),
+                                title: Text(supplier.name, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
+                                subtitle: Text(supplier.phone ?? '-', style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B))),
+                                onTap: () {
+                                  setState(() {
+                                    _selectedContact = supplier;
+                                  });
+                                  Navigator.pop(ctx);
+                                },
+                              );
+                            },
+                          );
+                        }
+                        return const SizedBox.shrink();
                       },
                     ),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: BlocBuilder<SupplierCubit, SupplierState>(
-                        builder: (context, state) {
-                          if (state is SupplierLoading) {
-                            return const Center(child: CircularProgressIndicator());
-                          }
-                          if (state is SupplierLoaded) {
-                            final list = state.suppliers.where((s) => s.name.toLowerCase().contains(searchQuery)).toList();
-                            if (list.isEmpty) {
-                              return const Center(child: Text('Supplier tidak ditemukan.'));
-                            }
-                            return ListView.builder(
-                              itemCount: list.length,
-                              itemBuilder: (context, idx) {
-                                final supplier = list[idx];
-                                return ListTile(
-                                  title: Text(supplier.name, style: const TextStyle(fontSize: 13)),
-                                  onTap: () {
-                                    setState(() {
-                                      _selectedContact = supplier;
-                                    });
-                                    Navigator.pop(ctx);
-                                  },
-                                );
-                              },
-                            );
-                          }
-                          return const Center(child: Text('Gagal memuat supplier.'));
-                        },
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             );
           },
@@ -1225,66 +1567,90 @@ class _ReturnFormPageState extends State<ReturnFormPage> {
   }
 
   void _showProductSearchDialog() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
         String searchQuery = '';
         return StatefulBuilder(
-          builder: (ctx, setStateDialog) {
-            return AlertDialog(
-              title: Text('Pilih Produk', style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16)),
-              content: SizedBox(
-                width: double.maxFinite,
-                height: 350,
-                child: Column(
-                  children: [
-                    TextField(
-                      decoration: const InputDecoration(
-                        hintText: 'Cari Produk...',
-                        hintStyle: TextStyle(fontSize: 12),
-                        prefixIcon: Icon(Icons.search, size: 18),
-                      ),
-                      onChanged: (val) {
-                        setStateDialog(() => searchQuery = val.toLowerCase());
+          builder: (ctx, setStateSheet) {
+            return Container(
+              height: MediaQuery.of(ctx).size.height * 0.75,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(color: const Color(0xFFCBD5E1), borderRadius: BorderRadius.circular(2)),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text('Pilih Produk untuk Diretur', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16)),
+                  const SizedBox(height: 10),
+                  TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Cari nama produk / barcode...',
+                      prefixIcon: const Icon(Icons.search_rounded, size: 18),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      filled: true,
+                      fillColor: const Color(0xFFF8FAFC),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
+                    ),
+                    onChanged: (val) => setStateSheet(() => searchQuery = val.toLowerCase()),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: BlocBuilder<ProductCubit, ProductState>(
+                      builder: (context, state) {
+                        if (state is ProductLoading) {
+                          return const Center(child: CircularProgressIndicator(color: Color(0xFF0F172A)));
+                        }
+                        if (state is ProductLoaded) {
+                          final list = state.products.where((row) {
+                            final Product p = row['product'] as Product;
+                            return p.name.toLowerCase().contains(searchQuery) || (p.sku != null && p.sku!.toLowerCase().contains(searchQuery));
+                          }).toList();
+                          if (list.isEmpty) {
+                            return Center(child: Text('Produk tidak ditemukan.', style: GoogleFonts.poppins(color: const Color(0xFF64748B))));
+                          }
+                          return ListView.separated(
+                            itemCount: list.length,
+                            separatorBuilder: (c, i) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                            itemBuilder: (context, idx) {
+                              final row = list[idx];
+                              final Product product = row['product'] as Product;
+                              return ListTile(
+                                leading: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(Icons.inventory_2_rounded, size: 20, color: Color(0xFF0F172A)),
+                                ),
+                                title: Text(product.name, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
+                                subtitle: Text(product.sku ?? 'Tanpa Barcode', style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B))),
+                                onTap: () {
+                                  _addGeneralProductItem(product);
+                                  Navigator.pop(ctx);
+                                },
+                              );
+                            },
+                          );
+                        }
+                        return const SizedBox.shrink();
                       },
                     ),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: BlocBuilder<ProductCubit, ProductState>(
-                        builder: (context, state) {
-                          if (state is ProductLoading) {
-                            return const Center(child: CircularProgressIndicator());
-                          }
-                          if (state is ProductLoaded) {
-                            final list = state.products.where((row) {
-                              final Product p = row['product'] as Product;
-                              return p.name.toLowerCase().contains(searchQuery);
-                            }).toList();
-                            if (list.isEmpty) {
-                              return const Center(child: Text('Produk tidak ditemukan.'));
-                            }
-                            return ListView.builder(
-                              itemCount: list.length,
-                              itemBuilder: (context, idx) {
-                                final row = list[idx];
-                                final Product product = row['product'] as Product;
-                                return ListTile(
-                                  title: Text(product.name, style: const TextStyle(fontSize: 13)),
-                                  subtitle: Text(product.sku ?? '', style: const TextStyle(fontSize: 11)),
-                                  onTap: () {
-                                    _addGeneralProductItem(product);
-                                    Navigator.pop(ctx);
-                                  },
-                                );
-                              },
-                            );
-                          }
-                          return const Center(child: Text('Gagal memuat produk.'));
-                        },
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             );
           },

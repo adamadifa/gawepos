@@ -314,212 +314,426 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
     final double profitMargin = grossSales > 0 ? (netProfit / grossSales) * 100 : 0.0;
     final double avgTicket = transactionCount > 0 ? grossSales / transactionCount : 0.0;
 
+    final bool isTablet = MediaQuery.of(context).size.width > 720;
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 12),
-
-          // ═══════════════════════════════════════
-          //  1. PERIOD SELECTOR (Modern Pill Segment)
-          // ═══════════════════════════════════════
-          _buildPeriodSection(),
-
-          const SizedBox(height: 16),
-
-          // ═══════════════════════════════════════
-          //  2. EXECUTIVE FINANCIAL HERO CARD
-          // ═══════════════════════════════════════
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _buildExecutiveHeroCard(
-              netProfit: netProfit,
-              grossSales: grossSales,
-              profitMargin: profitMargin,
-              transactionCount: transactionCount,
-              avgTicket: avgTicket,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // ═══════════════════════════════════════
-          //  3. KEY METRICS BENTO GRID (2x2)
-          // ═══════════════════════════════════════
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _buildMetricsGrid(
-              grossSales: grossSales,
-              hpp: hpp,
-              grossProfit: grossProfit,
-              expenses: expenses,
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // ═══════════════════════════════════════
-          //  4. SALES VELOCITY / TREND CHART
-          // ═══════════════════════════════════════
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _buildTrendChartCard(trend),
-          ),
-
-          const SizedBox(height: 20),
-
-          // ═══════════════════════════════════════
-          //  5. FINANCIAL BREAKDOWN VISUALIZER (Arus Kas)
-          // ═══════════════════════════════════════
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _buildFinancialFlowCard(
-              grossSales: grossSales,
-              hpp: hpp,
-              grossProfit: grossProfit,
-              expenses: expenses,
-              netProfit: netProfit,
-            ),
-          ),
-
-          const SizedBox(height: 20),
-
-          // ═══════════════════════════════════════
-          //  6. TOP SELLING PRODUCTS
-          // ═══════════════════════════════════════
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _buildTopPerformersCard(bestSellers),
-          ),
-
-          const SizedBox(height: 16),
-
-          // ═══════════════════════════════════════
-          //  7. INVENTORY SENTINEL (Stok Menipis)
-          // ═══════════════════════════════════════
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _buildInventoryAlertCard(lowStock),
-          ),
-
-          const SizedBox(height: 20),
-
-          // ═══════════════════════════════════════
-          //  8. QUICK ACCESS BAR
-          // ═══════════════════════════════════════
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: _buildQuickShortcuts(),
-          ),
-
-          const SizedBox(height: 36),
-        ],
+      padding: EdgeInsets.symmetric(
+        horizontal: isTablet ? 24 : 16,
+        vertical: isTablet ? 16 : 12,
       ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1200),
+          child: isTablet
+              ? _buildTabletDashboardLayout(
+                  grossSales: grossSales,
+                  netProfit: netProfit,
+                  grossProfit: grossProfit,
+                  expenses: expenses,
+                  hpp: hpp,
+                  transactionCount: transactionCount,
+                  profitMargin: profitMargin,
+                  avgTicket: avgTicket,
+                  trend: trend,
+                  bestSellers: bestSellers,
+                  lowStock: lowStock,
+                )
+              : _buildMobileDashboardLayout(
+                  grossSales: grossSales,
+                  netProfit: netProfit,
+                  grossProfit: grossProfit,
+                  expenses: expenses,
+                  hpp: hpp,
+                  transactionCount: transactionCount,
+                  profitMargin: profitMargin,
+                  avgTicket: avgTicket,
+                  trend: trend,
+                  bestSellers: bestSellers,
+                  lowStock: lowStock,
+                ),
+        ),
+      ),
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 📱 MOBILE DASHBOARD LAYOUT (<= 720px)
+  // ═══════════════════════════════════════════════════════════════════════════
+  Widget _buildMobileDashboardLayout({
+    required double grossSales,
+    required double netProfit,
+    required double grossProfit,
+    required double expenses,
+    required double hpp,
+    required int transactionCount,
+    required double profitMargin,
+    required double avgTicket,
+    required List<Map<String, dynamic>> trend,
+    required List<Map<String, dynamic>> bestSellers,
+    required List<Map<String, dynamic>> lowStock,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // 1. PERIOD SELECTOR
+        _buildPeriodSection(isTablet: false),
+        const SizedBox(height: 16),
+
+        // 2. EXECUTIVE FINANCIAL HERO CARD
+        _buildExecutiveHeroCard(
+          netProfit: netProfit,
+          grossSales: grossSales,
+          profitMargin: profitMargin,
+          transactionCount: transactionCount,
+          avgTicket: avgTicket,
+        ),
+        const SizedBox(height: 16),
+
+        // 3. KEY METRICS BENTO GRID (2x2)
+        _buildMetricsGrid(
+          grossSales: grossSales,
+          hpp: hpp,
+          grossProfit: grossProfit,
+          expenses: expenses,
+        ),
+        const SizedBox(height: 20),
+
+        // 4. SALES VELOCITY / TREND CHART
+        _buildTrendChartCard(trend),
+        const SizedBox(height: 20),
+
+        // 5. FINANCIAL BREAKDOWN VISUALIZER (Arus Kas)
+        _buildFinancialFlowCard(
+          grossSales: grossSales,
+          hpp: hpp,
+          grossProfit: grossProfit,
+          expenses: expenses,
+          netProfit: netProfit,
+        ),
+        const SizedBox(height: 20),
+
+        // 6. TOP SELLING PRODUCTS
+        _buildTopPerformersCard(bestSellers),
+        const SizedBox(height: 16),
+
+        // 7. INVENTORY SENTINEL (Stok Menipis)
+        _buildInventoryAlertCard(lowStock),
+        const SizedBox(height: 20),
+
+        // 8. QUICK ACCESS BAR
+        _buildQuickShortcuts(),
+        const SizedBox(height: 36),
+      ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // 📟 TABLET DASHBOARD LAYOUT (> 720px)
+  // ═══════════════════════════════════════════════════════════════════════════
+  Widget _buildTabletDashboardLayout({
+    required double grossSales,
+    required double netProfit,
+    required double grossProfit,
+    required double expenses,
+    required double hpp,
+    required int transactionCount,
+    required double profitMargin,
+    required double avgTicket,
+    required List<Map<String, dynamic>> trend,
+    required List<Map<String, dynamic>> bestSellers,
+    required List<Map<String, dynamic>> lowStock,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // 1. Period Selector (Horizontal Bar on Tablet)
+        _buildPeriodSection(isTablet: true),
+        const SizedBox(height: 18),
+
+        // 2. Top Row: Financial Hero (flex 5) & 4 Key Metrics (flex 7)
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              flex: 5,
+              child: _buildExecutiveHeroCard(
+                netProfit: netProfit,
+                grossSales: grossSales,
+                profitMargin: profitMargin,
+                transactionCount: transactionCount,
+                avgTicket: avgTicket,
+                isTablet: true,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              flex: 7,
+              child: _buildMetricsGrid(
+                grossSales: grossSales,
+                hpp: hpp,
+                grossProfit: grossProfit,
+                expenses: expenses,
+                isTablet: true,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 18),
+
+        // 3. Middle Row: Sales Velocity Chart (50%) & Financial Flow / Arus Kas (50%)
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _buildTrendChartCard(trend, isTablet: true),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildFinancialFlowCard(
+                grossSales: grossSales,
+                hpp: hpp,
+                grossProfit: grossProfit,
+                expenses: expenses,
+                netProfit: netProfit,
+                isTablet: true,
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 18),
+
+        // 4. Bottom Row: Top Best Selling Products (50%) & Inventory Sentinel + Shortcuts (50%)
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _buildTopPerformersCard(bestSellers, isTablet: true),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildInventoryAlertCard(lowStock, isTablet: true),
+                  const SizedBox(height: 16),
+                  _buildQuickShortcuts(isTablet: true),
+                ],
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 32),
+      ],
     );
   }
 
   // ─────────────────────────────────────────
   //  PERIOD SELECTOR SECTION
   // ─────────────────────────────────────────
-  Widget _buildPeriodSection() {
+  Widget _buildPeriodSection({bool isTablet = false}) {
     final periods = ['Hari Ini', '7 Hari Terakhir', 'Bulan Ini'];
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    if (isTablet) {
+      return Row(
         children: [
           // Segmented Bar
-          Container(
-            padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE2E8F0),
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Row(
-              children: periods.map((range) {
-                final isSelected = _selectedRange == range;
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() => _selectedRange = range);
-                      _updateDateRange();
-                      _loadData();
-                    },
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        color: isSelected ? Colors.white : Colors.transparent,
-                        borderRadius: BorderRadius.circular(10),
-                        boxShadow: isSelected
-                            ? [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.06),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ]
-                            : null,
-                      ),
-                      child: Center(
-                        child: Text(
-                          range,
-                          style: GoogleFonts.poppins(
-                            fontSize: 11.5,
-                            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                            color: isSelected ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+          Expanded(
+            flex: 6,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: periods.map((range) {
+                  final isSelected = _selectedRange == range;
+                  return Expanded(
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() => _selectedRange = range);
+                        _updateDateRange();
+                        _loadData();
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        decoration: BoxDecoration(
+                          color: isSelected ? Colors.white : Colors.transparent,
+                          borderRadius: BorderRadius.circular(9),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.06),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ]
+                              : null,
+                        ),
+                        child: Center(
+                          child: Text(
+                            range,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                              color: isSelected ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+                            ),
                           ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              }).toList(),
+                  );
+                }).toList(),
+              ),
             ),
           ),
-          const SizedBox(height: 8),
-          // Custom Date Range Chip / Bar
-          InkWell(
-            onTap: () => _selectDateRange(context),
-            borderRadius: BorderRadius.circular(10),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.calendar_today_rounded, size: 14, color: Color(0xFF64748B)),
-                  const SizedBox(width: 8),
-                  Text(
-                    _dateRangeLabel,
-                    style: GoogleFonts.poppins(
-                      fontSize: 11.5,
-                      fontWeight: FontWeight.w600,
-                      color: const Color(0xFF334155),
+          const SizedBox(width: 12),
+          // Custom Date Range Picker Chip
+          Expanded(
+            flex: 4,
+            child: InkWell(
+              onTap: () => _selectDateRange(context),
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.calendar_today_rounded, size: 15, color: Color(0xFF64748B)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _dateRangeLabel,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF334155),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    _selectedRange == 'Pilih Tanggal' ? 'Kustom' : 'Ubah Rentang',
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppConstants.primaryColor,
+                    const SizedBox(width: 4),
+                    Text(
+                      _selectedRange == 'Pilih Tanggal' ? 'Kustom' : 'Ubah',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppConstants.primaryColor,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 2),
-                  const Icon(Icons.chevron_right_rounded, size: 16, color: AppConstants.primaryColor),
-                ],
+                    const SizedBox(width: 2),
+                    const Icon(Icons.chevron_right_rounded, size: 16, color: AppConstants.primaryColor),
+                  ],
+                ),
               ),
             ),
           ),
         ],
-      ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Segmented Bar
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: const Color(0xFFE2E8F0),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Row(
+            children: periods.map((range) {
+              final isSelected = _selectedRange == range;
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() => _selectedRange = range);
+                    _updateDateRange();
+                    _loadData();
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.white : Colors.transparent,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.06),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Center(
+                      child: Text(
+                        range,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11.5,
+                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected ? const Color(0xFF0F172A) : const Color(0xFF64748B),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Custom Date Range Chip / Bar
+        InkWell(
+          onTap: () => _selectDateRange(context),
+          borderRadius: BorderRadius.circular(10),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.calendar_today_rounded, size: 14, color: Color(0xFF64748B)),
+                const SizedBox(width: 8),
+                Text(
+                  _dateRangeLabel,
+                  style: GoogleFonts.poppins(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF334155),
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  _selectedRange == 'Pilih Tanggal' ? 'Kustom' : 'Ubah Rentang',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: AppConstants.primaryColor,
+                  ),
+                ),
+                const SizedBox(width: 2),
+                const Icon(Icons.chevron_right_rounded, size: 16, color: AppConstants.primaryColor),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -532,6 +746,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
     required double profitMargin,
     required int transactionCount,
     required double avgTicket,
+    bool isTablet = false,
   }) {
     final bool isPositive = netProfit >= 0;
 
@@ -546,7 +761,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
             Color(0xFF1E293B), // Slate 800
           ],
         ),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(isTablet ? 18 : 20),
         border: Border.all(color: const Color(0xFF334155).withValues(alpha: 0.6)),
         boxShadow: [
           BoxShadow(
@@ -572,9 +787,10 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(isTablet ? 18 : 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 // Top Header Row
                 Row(
@@ -650,7 +866,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                 Text(
                   (isPositive ? '' : '-') + CurrencyFormatter.format(netProfit.abs()),
                   style: GoogleFonts.poppins(
-                    fontSize: 28,
+                    fontSize: isTablet ? 26 : 28,
                     fontWeight: FontWeight.w700,
                     color: Colors.white,
                     letterSpacing: -0.5,
@@ -759,6 +975,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
     required double hpp,
     required double grossProfit,
     required double expenses,
+    bool isTablet = false,
   }) {
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -776,6 +993,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
               iconColor: const Color(0xFF2563EB), // Royal Blue
               bgColor: const Color(0xFFEFF6FF),
               subtitle: 'Penjualan riil belum potong HPP',
+              isTablet: isTablet,
             ),
             _buildBentoMetricCard(
               width: cardWidth,
@@ -789,6 +1007,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                 onTap: () => _showHppInfoDialog(context),
                 child: const Icon(Icons.info_outline_rounded, size: 15, color: Color(0xFFB45309)),
               ),
+              isTablet: isTablet,
             ),
             _buildBentoMetricCard(
               width: cardWidth,
@@ -798,6 +1017,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
               iconColor: const Color(0xFF7C3AED), // Purple
               bgColor: const Color(0xFFF5F3FF),
               subtitle: 'Omzet dikurangi modal HPP',
+              isTablet: isTablet,
             ),
             _buildBentoMetricCard(
               width: cardWidth,
@@ -807,6 +1027,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
               iconColor: const Color(0xFFDC2626), // Rose Red
               bgColor: const Color(0xFFFEF2F2),
               subtitle: 'Beban operasional & lain-lain',
+              isTablet: isTablet,
             ),
           ],
         );
@@ -823,10 +1044,11 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
     required Color bgColor,
     required String subtitle,
     Widget? trailing,
+    bool isTablet = false,
   }) {
     return Container(
       width: width,
-      padding: const EdgeInsets.all(14),
+      padding: EdgeInsets.all(isTablet ? 13 : 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -856,11 +1078,11 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
               if (trailing != null) trailing,
             ],
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: isTablet ? 8 : 12),
           Text(
             title,
             style: GoogleFonts.poppins(
-              fontSize: 11.5,
+              fontSize: isTablet ? 11 : 11.5,
               fontWeight: FontWeight.w500,
               color: const Color(0xFF64748B),
             ),
@@ -869,7 +1091,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
           Text(
             CurrencyFormatter.format(value),
             style: GoogleFonts.poppins(
-              fontSize: 14.5,
+              fontSize: isTablet ? 14 : 14.5,
               fontWeight: FontWeight.w700,
               color: const Color(0xFF0F172A),
               letterSpacing: -0.2,
@@ -895,17 +1117,17 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   // ─────────────────────────────────────────
   //  TREND CHART CARD
   // ─────────────────────────────────────────
-  Widget _buildTrendChartCard(List<Map<String, dynamic>> trend) {
+  Widget _buildTrendChartCard(List<Map<String, dynamic>> trend, {bool isTablet = false}) {
     double totalWeekSales = 0.0;
     for (var t in trend) {
       totalWeekSales += (t['amount'] as num?)?.toDouble() ?? 0.0;
     }
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: EdgeInsets.all(isTablet ? 16 : 18),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(isTablet ? 18 : 20),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
@@ -929,7 +1151,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                   Text(
                     'Tren Penjualan',
                     style: GoogleFonts.poppins(
-                      fontSize: 15,
+                      fontSize: 14.5,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF0F172A),
                     ),
@@ -938,7 +1160,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                   Text(
                     'Performa 7 Hari Terakhir',
                     style: GoogleFonts.poppins(
-                      fontSize: 11,
+                      fontSize: 10.5,
                       color: const Color(0xFF64748B),
                     ),
                   ),
@@ -962,7 +1184,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
             ],
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
 
           if (trend.isEmpty)
             SizedBox(
@@ -1116,16 +1338,17 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
     required double grossProfit,
     required double expenses,
     required double netProfit,
+    bool isTablet = false,
   }) {
     final double hppPercent = grossSales > 0 ? (hpp / grossSales).clamp(0.0, 1.0) : 0.0;
     final double expPercent = grossSales > 0 ? (expenses / grossSales).clamp(0.0, 1.0) : 0.0;
     final double profitPercent = grossSales > 0 ? (netProfit / grossSales).clamp(0.0, 1.0) : 0.0;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isTablet ? 16 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(isTablet ? 18 : 20),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
@@ -1144,7 +1367,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
               Text(
                 'Struktur Arus Kas',
                 style: GoogleFonts.poppins(
-                  fontSize: 15,
+                  fontSize: 14.5,
                   fontWeight: FontWeight.w700,
                   color: const Color(0xFF0F172A),
                 ),
@@ -1161,7 +1384,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                     Text(
                       'Laporan P&L',
                       style: GoogleFonts.poppins(
-                        fontSize: 11.5,
+                        fontSize: 11,
                         fontWeight: FontWeight.w600,
                         color: AppConstants.primaryColor,
                       ),
@@ -1173,14 +1396,14 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
           // Visual Proportion Segment Bar
           if (grossSales > 0) ...[
             ClipRRect(
               borderRadius: BorderRadius.circular(8),
               child: SizedBox(
-                height: 12,
+                height: 10,
                 child: Row(
                   children: [
                     if (hppPercent > 0)
@@ -1202,19 +1425,19 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                 ),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             // Legend
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _buildFlowLegend(label: 'HPP (${(hppPercent * 100).toStringAsFixed(0)}%)', color: const Color(0xFFF59E0B)),
                 _buildFlowLegend(label: 'Biaya (${(expPercent * 100).toStringAsFixed(0)}%)', color: const Color(0xFFEF4444)),
-                _buildFlowLegend(label: 'Net Margin (${(profitPercent * 100).toStringAsFixed(0)}%)', color: const Color(0xFF10B981)),
+                _buildFlowLegend(label: 'Net (${(profitPercent * 100).toStringAsFixed(0)}%)', color: const Color(0xFF10B981)),
               ],
             ),
-            const SizedBox(height: 16),
-            Container(height: 1, color: const Color(0xFFF1F5F9)),
             const SizedBox(height: 14),
+            Container(height: 1, color: const Color(0xFFF1F5F9)),
+            const SizedBox(height: 12),
           ],
 
           // Breakdown List Rows
@@ -1224,27 +1447,27 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
             color: const Color(0xFF0F172A),
             isBold: true,
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           _buildFlowRow(
             label: 'Harga Pokok Penjualan (HPP)',
             amount: -hpp,
             color: const Color(0xFFD97706),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           _buildFlowRow(
             label: 'Laba Kotor (Gross Profit)',
             amount: grossProfit,
             color: const Color(0xFF475569),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           _buildFlowRow(
             label: 'Biaya Operasional Toko',
             amount: -expenses,
             color: const Color(0xFFDC2626),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           Container(height: 1, color: const Color(0xFFE2E8F0)),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
           // Total Row
           Row(
@@ -1256,21 +1479,21 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                   Text(
                     'Laba Bersih Akhir',
                     style: GoogleFonts.poppins(
-                      fontSize: 13,
+                      fontSize: 12.5,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF0F172A),
                     ),
                   ),
                   Text(
                     'Setelah HPP & seluruh biaya',
-                    style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFF94A3B8)),
+                    style: GoogleFonts.poppins(fontSize: 9.5, color: const Color(0xFF94A3B8)),
                   ),
                 ],
               ),
               Text(
                 (netProfit >= 0 ? '+' : '') + CurrencyFormatter.format(netProfit),
                 style: GoogleFonts.poppins(
-                  fontSize: 16,
+                  fontSize: 15,
                   fontWeight: FontWeight.w800,
                   color: netProfit >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626),
                 ),
@@ -1286,11 +1509,11 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-        const SizedBox(width: 5),
+        Container(width: 7, height: 7, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+        const SizedBox(width: 4),
         Text(
           label,
-          style: GoogleFonts.poppins(fontSize: 10, fontWeight: FontWeight.w500, color: const Color(0xFF64748B)),
+          style: GoogleFonts.poppins(fontSize: 9.5, fontWeight: FontWeight.w500, color: const Color(0xFF64748B)),
         ),
       ],
     );
@@ -1309,7 +1532,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
         Text(
           label,
           style: GoogleFonts.poppins(
-            fontSize: 12.5,
+            fontSize: 11.5,
             fontWeight: isBold ? FontWeight.w600 : FontWeight.w400,
             color: const Color(0xFF475569),
           ),
@@ -1317,7 +1540,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
         Text(
           (isNegative ? '- ' : '') + CurrencyFormatter.format(amount.abs()),
           style: GoogleFonts.poppins(
-            fontSize: 12.5,
+            fontSize: 11.5,
             fontWeight: isBold ? FontWeight.w700 : FontWeight.w600,
             color: color,
           ),
@@ -1329,14 +1552,14 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   // ─────────────────────────────────────────
   //  TOP PERFORMERS (Best Sellers)
   // ─────────────────────────────────────────
-  Widget _buildTopPerformersCard(List<Map<String, dynamic>> bestSellers) {
+  Widget _buildTopPerformersCard(List<Map<String, dynamic>> bestSellers, {bool isTablet = false}) {
     final double maxQty = bestSellers.isNotEmpty ? (bestSellers.first['qty'] as num?)?.toDouble() ?? 1.0 : 1.0;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isTablet ? 16 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(isTablet ? 18 : 20),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
@@ -1366,7 +1589,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                   Text(
                     'Produk Terlaris',
                     style: GoogleFonts.poppins(
-                      fontSize: 15,
+                      fontSize: 14.5,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF0F172A),
                     ),
@@ -1375,11 +1598,11 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
               ),
               Text(
                 'Top 5 Barang',
-                style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
+                style: GoogleFonts.poppins(fontSize: 10.5, color: const Color(0xFF64748B)),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
           if (bestSellers.isEmpty)
             SizedBox(
@@ -1415,7 +1638,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                 }
 
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.only(bottom: 10),
                   child: Stack(
                     children: [
                       // Background progress fill
@@ -1432,12 +1655,12 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                         child: Row(
                           children: [
                             Container(
-                              width: 24,
-                              height: 24,
+                              width: 22,
+                              height: 22,
                               decoration: BoxDecoration(
                                 color: badgeBg,
                                 borderRadius: BorderRadius.circular(6),
@@ -1446,19 +1669,19 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                                 child: Text(
                                   '#${index + 1}',
                                   style: GoogleFonts.poppins(
-                                    fontSize: 10.5,
+                                    fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                     color: badgeText,
                                   ),
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 10),
+                            const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 item['name'] ?? '-',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 12.5,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   color: const Color(0xFF1E293B),
                                 ),
@@ -1467,15 +1690,15 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                               decoration: BoxDecoration(
                                 color: const Color(0xFFEFF6FF),
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(6),
                               ),
                               child: Text(
                                 '${CurrencyFormatter.formatQty(qty)} Terjual',
                                 style: GoogleFonts.poppins(
-                                  fontSize: 11,
+                                  fontSize: 10.5,
                                   fontWeight: FontWeight.w700,
                                   color: const Color(0xFF2563EB),
                                 ),
@@ -1497,12 +1720,12 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   // ─────────────────────────────────────────
   //  INVENTORY SENTINEL (Low Stock)
   // ─────────────────────────────────────────
-  Widget _buildInventoryAlertCard(List<Map<String, dynamic>> lowStock) {
+  Widget _buildInventoryAlertCard(List<Map<String, dynamic>> lowStock, {bool isTablet = false}) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isTablet ? 16 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(isTablet ? 18 : 20),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
@@ -1523,7 +1746,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFEE2E2),
+                      color: const Color(0xFFFEE2E8),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(Icons.warning_amber_rounded, size: 16, color: Color(0xFFDC2626)),
@@ -1532,7 +1755,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                   Text(
                     'Peringatan Stok Menipis',
                     style: GoogleFonts.poppins(
-                      fontSize: 15,
+                      fontSize: 14.5,
                       fontWeight: FontWeight.w700,
                       color: const Color(0xFF0F172A),
                     ),
@@ -1549,7 +1772,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                 child: Text(
                   'Cek Semua',
                   style: GoogleFonts.poppins(
-                    fontSize: 11.5,
+                    fontSize: 11,
                     fontWeight: FontWeight.w600,
                     color: AppConstants.primaryColor,
                   ),
@@ -1557,54 +1780,54 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
 
           if (lowStock.isEmpty)
             Container(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 14),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.check_circle_outline_rounded, size: 18, color: Color(0xFF059669)),
+                  const Icon(Icons.check_circle_outline_rounded, size: 16, color: Color(0xFF059669)),
                   const SizedBox(width: 8),
                   Text(
                     'Seluruh stok barang dalam kondisi aman',
-                    style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w500, color: const Color(0xFF059669)),
+                    style: GoogleFonts.poppins(fontSize: 11.5, fontWeight: FontWeight.w500, color: const Color(0xFF059669)),
                   ),
                 ],
               ),
             )
           else
             Column(
-              children: lowStock.take(5).map((item) {
+              children: lowStock.take(isTablet ? 4 : 5).map((item) {
                 final Product p = item['product'];
                 final ProductUnit u = item['unit'];
                 final double currentStock = (item['currentStock'] as num?)?.toDouble() ?? 0.0;
 
                 return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  margin: const EdgeInsets.only(bottom: 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFF1F2),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: const Color(0xFFFFE4E6)),
                   ),
                   child: Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(6),
+                        padding: const EdgeInsets.all(5),
                         decoration: const BoxDecoration(
                           color: Colors.white,
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(Icons.priority_high_rounded, size: 12, color: Color(0xFFE11D48)),
+                        child: const Icon(Icons.priority_high_rounded, size: 11, color: Color(0xFFE11D48)),
                       ),
-                      const SizedBox(width: 10),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           p.name,
                           style: GoogleFonts.poppins(
-                            fontSize: 12.5,
+                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: const Color(0xFF0F172A),
                           ),
@@ -1613,7 +1836,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                         decoration: BoxDecoration(
                           color: const Color(0xFFE11D48),
                           borderRadius: BorderRadius.circular(6),
@@ -1621,7 +1844,7 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                         child: Text(
                           'Sisa ${CurrencyFormatter.formatQty(currentStock)} ${u.name}',
                           style: GoogleFonts.poppins(
-                            fontSize: 10.5,
+                            fontSize: 10,
                             fontWeight: FontWeight.w700,
                             color: Colors.white,
                           ),
@@ -1640,12 +1863,12 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
   // ─────────────────────────────────────────
   //  QUICK ACCESS SHORTCUTS
   // ─────────────────────────────────────────
-  Widget _buildQuickShortcuts() {
+  Widget _buildQuickShortcuts({bool isTablet = false}) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(isTablet ? 14 : 16),
       decoration: BoxDecoration(
         color: const Color(0xFF0F172A),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(isTablet ? 18 : 20),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1656,15 +1879,15 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
               Text(
                 'Laporan Lengkap Toko',
                 style: GoogleFonts.poppins(
-                  fontSize: 13,
+                  fontSize: 12.5,
                   fontWeight: FontWeight.w700,
                   color: Colors.white,
                 ),
               ),
-              const Icon(Icons.arrow_forward_rounded, size: 16, color: Colors.white70),
+              const Icon(Icons.arrow_forward_rounded, size: 15, color: Colors.white70),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Row(
             children: [
               _buildShortcutButton(
@@ -1672,13 +1895,13 @@ class _OwnerDashboardPageState extends State<OwnerDashboardPage> {
                 icon: Icons.analytics_outlined,
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const PnlReportPage())),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               _buildShortcutButton(
                 title: 'Penjualan',
                 icon: Icons.receipt_long_outlined,
                 onTap: () => Navigator.push(context, MaterialPageRoute(builder: (c) => const SalesReportPage())),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               _buildShortcutButton(
                 title: 'Stok Barang',
                 icon: Icons.inventory_2_outlined,
