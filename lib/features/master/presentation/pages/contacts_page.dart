@@ -167,36 +167,105 @@ class _CustomerTabContent extends StatelessWidget {
               padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
               ),
               child: SafeArea(
                 top: false,
                 child: SingleChildScrollView(
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Handle bar
+                        Center(
+                          child: Container(
+                            width: 36,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFCBD5E1),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Header
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              customer == null ? 'Tambah Pelanggan' : 'Ubah Pelanggan',
-                              style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(Icons.person_rounded,
+                                      color: Color(0xFF0F172A), size: 18),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  customer == null ? 'Tambah Pelanggan' : 'Ubah Pelanggan',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF0F172A),
+                                  ),
+                                ),
+                              ],
                             ),
                             IconButton(
-                              icon: const Icon(Icons.close_rounded),
+                              visualDensity: VisualDensity.compact,
+                              icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B), size: 20),
                               onPressed: () => Navigator.pop(ctx),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 18),
+
+                        // Field: Nama Pelanggan
+                        Text(
+                          'Nama Pelanggan *',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF334155),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
                         TextFormField(
                           controller: _nameController,
+                          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
                           decoration: InputDecoration(
-                            labelText: 'Nama Pelanggan *',
-                            errorText: (hasInteractedName && !isNameValid) ? 'Nama wajib diisi' : null,
+                            hintText: 'Contoh: PT Sumber Makmur / Bpk. Budi',
+                            hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                            prefixIcon: const Icon(Icons.badge_outlined, size: 18, color: Color(0xFF64748B)),
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            errorText: (hasInteractedName && !isNameValid) ? 'Nama pelanggan wajib diisi' : null,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                            ),
                           ),
                           onChanged: (_) {
                             setModalState(() {
@@ -204,46 +273,138 @@ class _CustomerTabContent extends StatelessWidget {
                             });
                           },
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
+
+                        // Field: Nomor Telepon
+                        Text(
+                          'Nomor Telepon / WhatsApp',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF334155),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
                         TextField(
                           controller: _phoneController,
-                          decoration: const InputDecoration(
-                            labelText: 'Nomor Telepon',
-                          ),
                           keyboardType: TextInputType.phone,
+                          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
+                          decoration: InputDecoration(
+                            hintText: 'Contoh: 081234567890',
+                            hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                            prefixIcon: const Icon(Icons.phone_outlined, size: 18, color: Color(0xFF64748B)),
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
+
+                        // Field: Email
+                        Text(
+                          'Email (Opsional)',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF334155),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
                         TextFormField(
                           controller: _emailController,
-                          decoration: InputDecoration(
-                            labelText: 'Email',
-                            errorText: (hasInteractedEmail && !isEmailValid) ? 'Format email tidak valid' : null,
-                          ),
                           keyboardType: TextInputType.emailAddress,
+                          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
+                          decoration: InputDecoration(
+                            hintText: 'Contoh: pelanggan@gmail.com',
+                            hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                            prefixIcon: const Icon(Icons.email_outlined, size: 18, color: Color(0xFF64748B)),
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            errorText: (hasInteractedEmail && !isEmailValid) ? 'Format email tidak valid' : null,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                            ),
+                          ),
                           onChanged: (_) {
                             setModalState(() {
                               hasInteractedEmail = true;
                             });
                           },
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
+
+                        // Field: Alamat
+                        Text(
+                          'Alamat Lengkap (Opsional)',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF334155),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
                         TextField(
                           controller: _addressController,
-                          decoration: const InputDecoration(
-                            labelText: 'Alamat',
+                          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
+                          decoration: InputDecoration(
+                            hintText: 'Nama jalan, blok, RT/RW, kota...',
+                            hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                            prefixIcon: const Icon(Icons.location_on_outlined, size: 18, color: Color(0xFF64748B)),
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                            ),
                           ),
                           maxLines: 2,
                         ),
                         const SizedBox(height: 24),
+
+                        // Submit Button
                         SizedBox(
                           width: double.infinity,
                           height: 48,
-                          child: FilledButton(
+                          child: FilledButton.icon(
                             style: FilledButton.styleFrom(
                               backgroundColor: const Color(0xFF0F172A),
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              disabledBackgroundColor: const Color(0xFFE2E8F0),
+                              disabledForegroundColor: const Color(0xFF94A3B8),
                             ),
+                            icon: const Icon(Icons.check_rounded, size: 18),
                             onPressed: isValid
                                 ? () {
                                     final name = _nameController.text.trim();
@@ -270,9 +431,9 @@ class _CustomerTabContent extends StatelessWidget {
                                     Navigator.pop(ctx);
                                   }
                                 : null,
-                            child: Text(
+                            label: Text(
                               customer == null ? 'Simpan Pelanggan' : 'Perbarui Pelanggan',
-                              style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+                              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13),
                             ),
                           ),
                         ),
@@ -320,12 +481,57 @@ class _CustomerTabContent extends StatelessWidget {
     );
   }
 
+  void _showAppSnackbar(BuildContext context, String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: isError ? const Color(0xFFDC2626) : const Color(0xFF0F172A),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         Expanded(
-          child: BlocBuilder<CustomerCubit, CustomerState>(
+          child: BlocConsumer<CustomerCubit, CustomerState>(
+            listener: (context, state) {
+              if (state is CustomerSaved) {
+                _showAppSnackbar(
+                  context,
+                  state.isEdit
+                      ? 'Data pelanggan "${state.customerName}" berhasil diperbarui.'
+                      : 'Pelanggan "${state.customerName}" berhasil ditambahkan.',
+                );
+              } else if (state is CustomerDeleted) {
+                _showAppSnackbar(
+                  context,
+                  'Pelanggan "${state.customerName}" berhasil dihapus.',
+                );
+              } else if (state is CustomerError) {
+                _showAppSnackbar(context, state.message, isError: true);
+              }
+            },
             builder: (context, state) {
               if (state is CustomerLoading) {
                 return const Center(child: CircularProgressIndicator());
@@ -515,36 +721,105 @@ class _SupplierTabContent extends StatelessWidget {
               padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
               ),
               child: SafeArea(
                 top: false,
                 child: SingleChildScrollView(
                   child: Padding(
-                    padding: const EdgeInsets.all(20),
+                    padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Handle bar
+                        Center(
+                          child: Container(
+                            width: 36,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFCBD5E1),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+
+                        // Header
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text(
-                              supplier == null ? 'Tambah Pemasok' : 'Ubah Pemasok',
-                              style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold),
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF059669).withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(Icons.local_shipping_rounded,
+                                      color: Color(0xFF059669), size: 18),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  supplier == null ? 'Tambah Pemasok' : 'Ubah Pemasok',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF0F172A),
+                                  ),
+                                ),
+                              ],
                             ),
                             IconButton(
-                              icon: const Icon(Icons.close_rounded),
+                              visualDensity: VisualDensity.compact,
+                              icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B), size: 20),
                               onPressed: () => Navigator.pop(ctx),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 18),
+
+                        // Field: Nama Pemasok
+                        Text(
+                          'Nama Pemasok / Distributor *',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF334155),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
                         TextFormField(
                           controller: _nameController,
+                          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
                           decoration: InputDecoration(
-                            labelText: 'Nama Pemasok *',
-                            errorText: (hasInteractedName && !isNameValid) ? 'Nama wajib diisi' : null,
+                            hintText: 'Contoh: PT Pangan Sejahtera / CV Maju',
+                            hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                            prefixIcon: const Icon(Icons.storefront_outlined, size: 18, color: Color(0xFF64748B)),
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            errorText: (hasInteractedName && !isNameValid) ? 'Nama pemasok wajib diisi' : null,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                            ),
                           ),
                           onChanged: (_) {
                             setModalState(() {
@@ -552,46 +827,138 @@ class _SupplierTabContent extends StatelessWidget {
                             });
                           },
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
+
+                        // Field: Nomor Telepon
+                        Text(
+                          'Nomor Telepon / Sales',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF334155),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
                         TextField(
                           controller: _phoneController,
-                          decoration: const InputDecoration(
-                            labelText: 'Nomor Telepon',
-                          ),
                           keyboardType: TextInputType.phone,
+                          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
+                          decoration: InputDecoration(
+                            hintText: 'Contoh: 082112345678',
+                            hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                            prefixIcon: const Icon(Icons.phone_outlined, size: 18, color: Color(0xFF64748B)),
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
+
+                        // Field: Email
+                        Text(
+                          'Email (Opsional)',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF334155),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
                         TextFormField(
                           controller: _emailController,
-                          decoration: InputDecoration(
-                            labelText: 'Email',
-                            errorText: (hasInteractedEmail && !isEmailValid) ? 'Format email tidak valid' : null,
-                          ),
                           keyboardType: TextInputType.emailAddress,
+                          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
+                          decoration: InputDecoration(
+                            hintText: 'Contoh: sales@distributor.com',
+                            hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                            prefixIcon: const Icon(Icons.email_outlined, size: 18, color: Color(0xFF64748B)),
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            errorText: (hasInteractedEmail && !isEmailValid) ? 'Format email tidak valid' : null,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                            ),
+                          ),
                           onChanged: (_) {
                             setModalState(() {
                               hasInteractedEmail = true;
                             });
                           },
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
+
+                        // Field: Alamat
+                        Text(
+                          'Alamat Kantor / Gudang Pemasok',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF334155),
+                          ),
+                        ),
+                        const SizedBox(height: 6),
                         TextField(
                           controller: _addressController,
-                          decoration: const InputDecoration(
-                            labelText: 'Alamat',
+                          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
+                          decoration: InputDecoration(
+                            hintText: 'Kawasan industri, nama jalan, kota...',
+                            hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                            prefixIcon: const Icon(Icons.location_on_outlined, size: 18, color: Color(0xFF64748B)),
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                            ),
                           ),
                           maxLines: 2,
                         ),
                         const SizedBox(height: 24),
+
+                        // Submit Button
                         SizedBox(
                           width: double.infinity,
                           height: 48,
-                          child: FilledButton(
+                          child: FilledButton.icon(
                             style: FilledButton.styleFrom(
                               backgroundColor: const Color(0xFF0F172A),
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              disabledBackgroundColor: const Color(0xFFE2E8F0),
+                              disabledForegroundColor: const Color(0xFF94A3B8),
                             ),
+                            icon: const Icon(Icons.check_rounded, size: 18),
                             onPressed: isValid
                                 ? () {
                                     final name = _nameController.text.trim();
@@ -618,9 +985,9 @@ class _SupplierTabContent extends StatelessWidget {
                                     Navigator.pop(ctx);
                                   }
                                 : null,
-                            child: Text(
+                            label: Text(
                               supplier == null ? 'Simpan Pemasok' : 'Perbarui Pemasok',
-                              style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+                              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13),
                             ),
                           ),
                         ),
@@ -668,12 +1035,57 @@ class _SupplierTabContent extends StatelessWidget {
     );
   }
 
+  void _showAppSnackbar(BuildContext context, String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: isError ? const Color(0xFFDC2626) : const Color(0xFF0F172A),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         Expanded(
-          child: BlocBuilder<SupplierCubit, SupplierState>(
+          child: BlocConsumer<SupplierCubit, SupplierState>(
+            listener: (context, state) {
+              if (state is SupplierSaved) {
+                _showAppSnackbar(
+                  context,
+                  state.isEdit
+                      ? 'Data pemasok "${state.supplierName}" berhasil diperbarui.'
+                      : 'Pemasok "${state.supplierName}" berhasil ditambahkan.',
+                );
+              } else if (state is SupplierDeleted) {
+                _showAppSnackbar(
+                  context,
+                  'Pemasok "${state.supplierName}" berhasil dihapus.',
+                );
+              } else if (state is SupplierError) {
+                _showAppSnackbar(context, state.message, isError: true);
+              }
+            },
             builder: (context, state) {
               if (state is SupplierLoading) {
                 return const Center(child: CircularProgressIndicator());

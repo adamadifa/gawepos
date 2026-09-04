@@ -13,6 +13,8 @@ void main() {
       minStockAlert: 0,
       isActive: true,
       allowManualPrice: false,
+      isConsignment: false,
+      commissionRate: 0.0,
       createdAt: DateTime.now(),
     );
 
@@ -24,6 +26,8 @@ void main() {
       minStockAlert: 0,
       isActive: true,
       allowManualPrice: false,
+      isConsignment: false,
+      commissionRate: 0.0,
       createdAt: DateTime.now(),
     );
 
@@ -33,6 +37,7 @@ void main() {
       name: 'Pcs',
       conversionFactor: 1.0,
       isBase: true,
+      costPrice: 0.0,
     );
 
     test('should calculate subtotal correctly with item discounts', () {

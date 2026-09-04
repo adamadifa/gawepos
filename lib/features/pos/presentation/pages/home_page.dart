@@ -19,6 +19,7 @@ import '../../../reports/presentation/pages/reports_menu_page.dart';
 import '../../../reports/presentation/pages/owner_dashboard_page.dart';
 import '../../../master/presentation/pages/contacts_page.dart';
 import '../../../inventory/presentation/pages/returns_menu_page.dart';
+import '../../../consignment/presentation/pages/consignment_page.dart';
 
 class HomePage extends StatefulWidget {
   final User user;
@@ -292,6 +293,17 @@ class _HomePageState extends State<HomePage> {
         'onTap': () => Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const ReturnsMenuPage()),
+            ),
+      },
+      {
+        'key': 'consignment',
+        'icon': Icons.handshake_rounded,
+        'title': 'Konsinyasi',
+        'color': const Color(0xFF16A34A), // Emerald/Green
+        'bg': const Color(0xFFF0FDF4),
+        'onTap': () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ConsignmentPage()),
             ),
       },
     ];

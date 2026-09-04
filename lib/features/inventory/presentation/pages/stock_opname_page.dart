@@ -65,12 +65,48 @@ class _StockOpnamePageState extends State<StockOpnamePage> {
         listener: (context, state) {
           if (state is InventorySuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Berhasil memperbarui stok inventori.')),
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.check_circle_outline_rounded, color: Colors.white, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Hasil stok opname berhasil disimpan.',
+                        style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: const Color(0xFF0F172A),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                margin: const EdgeInsets.all(16),
+                duration: const Duration(seconds: 2),
+              ),
             );
           }
           if (state is InventoryError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: const Color(0xFFDC2626)),
+              SnackBar(
+                content: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        state.message,
+                        style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+                backgroundColor: const Color(0xFFDC2626),
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                margin: const EdgeInsets.all(16),
+                duration: const Duration(seconds: 2),
+              ),
             );
           }
         },
@@ -594,182 +630,352 @@ class _ProductAdjustmentDialogState extends State<_ProductAdjustmentDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Sesuaikan Stok (Opname)',
-                  style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 16),
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFCBD5E1),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close_rounded),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Text(
-              widget.product.name,
-              style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 15, color: AppConstants.textDarkColor),
-            ),
-            if (widget.product.sku != null)
-              Text(
-                'SKU: ${widget.product.sku}',
-                style: const TextStyle(fontSize: 11, color: AppConstants.textLightColor),
               ),
-            const Divider(height: 24),
-            ConstrainedBox(
-              constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.45,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    ..._sortedProductUnits.map((uMap) {
-                      final ProductUnit unit = uMap['unit'];
-                      final InventoryData? inv = uMap['inventory'];
-                      final double currentStock = inv?.quantity ?? 0.0;
-                      final double diff = _differences[unit.id] ?? 0.0;
+              const SizedBox(height: 14),
 
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Satuan: ${unit.name}',
-                                style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 12, color: AppConstants.textDarkColor),
-                              ),
-                              Text(
-                                'Stok Sistem: $currentStock',
-                                style: const TextStyle(fontSize: 11, color: AppConstants.textLightColor),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              Expanded(
-                                flex: 3,
-                                child: TextField(
-                                  controller: _controllers[unit.id],
-                                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                  decoration: const InputDecoration(
-                                    labelText: 'Stok Riil (Fisik) *',
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                  ),
-                                  onChanged: (val) {
-                                    final pStock = double.tryParse(val) ?? 0.0;
-                                    setState(() {
-                                      _physicalStocks[unit.id] = pStock;
-                                      _differences[unit.id] = pStock - currentStock;
-                                    });
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                flex: 2,
-                                child: InputDecorator(
-                                  decoration: const InputDecoration(
-                                    labelText: 'Selisih',
-                                    contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                  ),
-                                  child: Text(
-                                    '${diff > 0 ? "+" : ""}${diff.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '')}',
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: diff == 0
-                                          ? AppConstants.textDarkColor
-                                          : diff > 0
-                                              ? AppConstants.successColor
-                                              : AppConstants.errorColor,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                        ],
-                      );
-                    }),
-                    TextField(
-                      controller: _notesController,
-                      decoration: const InputDecoration(
-                        labelText: 'Alasan / Catatan Penyesuaian',
-                        contentPadding: EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.edit_note_rounded,
+                            color: Color(0xFF0F172A), size: 18),
                       ),
-                      maxLines: 2,
+                      const SizedBox(width: 10),
+                      Text(
+                        'Stok Opname Fisik',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B), size: 20),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+
+              // Info Box Produk
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.product.name,
+                      style: GoogleFonts.poppins(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
+                        color: const Color(0xFF0F172A),
+                      ),
                     ),
+                    if (widget.product.sku != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        'SKU: ${widget.product.sku}',
+                        style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
+                      ),
+                    ],
                   ],
                 ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('BATAL'),
-                  ),
+              const SizedBox(height: 16),
+
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.45,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      final List<Map<String, dynamic>> adjustments = [];
-                      for (var uMap in _sortedProductUnits) {
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ..._sortedProductUnits.map((uMap) {
                         final ProductUnit unit = uMap['unit'];
                         final InventoryData? inv = uMap['inventory'];
                         final double currentStock = inv?.quantity ?? 0.0;
-                        final double pStock = _physicalStocks[unit.id] ?? currentStock;
-                        final diff = pStock - currentStock;
+                        final double diff = _differences[unit.id] ?? 0.0;
 
-                        if (diff != 0) {
-                          adjustments.add({
-                            'unitId': unit.id,
-                            'theoreticalQty': currentStock,
-                            'physicalQty': pStock,
-                          });
-                        }
-                      }
-
-                      final notes = _notesController.text.trim();
-
-                      if (adjustments.isEmpty) {
-                        Navigator.pop(context);
-                        return;
-                      }
-
-                      widget.cubit.adjustStockMultiple(
-                        productId: widget.product.id,
-                        adjustments: adjustments,
-                        notes: notes.isEmpty ? null : notes,
-                      );
-                      Navigator.pop(context);
-                    },
-                    child: const Text('SIMPAN'),
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          unit.name,
+                                          style: GoogleFonts.poppins(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 11.5,
+                                            color: const Color(0xFF0F172A),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  Text(
+                                    'Stok Sistem: ${currentStock % 1 == 0 ? currentStock.toInt() : currentStock.toStringAsFixed(2)}',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Expanded(
+                                    flex: 3,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Stok Fisik / Riil *',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: const Color(0xFF334155),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        TextField(
+                                          controller: _controllers[unit.id],
+                                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                          style: GoogleFonts.poppins(fontSize: 13.5, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)),
+                                          decoration: InputDecoration(
+                                            filled: true,
+                                            fillColor: const Color(0xFFF8FAFC),
+                                            contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                            border: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(10),
+                                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(10),
+                                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(10),
+                                              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                                            ),
+                                          ),
+                                          onChanged: (val) {
+                                            final pStock = double.tryParse(val) ?? 0.0;
+                                            setState(() {
+                                              _physicalStocks[unit.id] = pStock;
+                                              _differences[unit.id] = pStock - currentStock;
+                                            });
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    flex: 2,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Selisih',
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: const Color(0xFF334155),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Container(
+                                          height: 44,
+                                          decoration: BoxDecoration(
+                                            color: diff == 0
+                                                ? const Color(0xFFF1F5F9)
+                                                : diff > 0
+                                                    ? const Color(0xFFECFDF5)
+                                                    : const Color(0xFFFEF2F2),
+                                            borderRadius: BorderRadius.circular(10),
+                                            border: Border.all(
+                                              color: diff == 0
+                                                  ? const Color(0xFFE2E8F0)
+                                                  : diff > 0
+                                                      ? const Color(0xFFA7F3D0)
+                                                      : const Color(0xFFFECACA),
+                                            ),
+                                          ),
+                                          alignment: Alignment.center,
+                                          child: Text(
+                                            '${diff > 0 ? "+" : ""}${diff.toStringAsFixed(2).replaceAll(RegExp(r'\.?0+$'), '')}',
+                                            style: GoogleFonts.poppins(
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w800,
+                                              color: diff == 0
+                                                  ? const Color(0xFF64748B)
+                                                  : diff > 0
+                                                      ? const Color(0xFF059669)
+                                                      : const Color(0xFFDC2626),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Alasan / Catatan Penyesuaian (Opsional)',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF334155),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      TextField(
+                        controller: _notesController,
+                        style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A)),
+                        decoration: InputDecoration(
+                          hintText: 'Contoh: Hasil stock opname akhir bulan...',
+                          hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                          prefixIcon: const Icon(Icons.notes_rounded, size: 18, color: Color(0xFF64748B)),
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                          ),
+                        ),
+                        maxLines: 2,
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          ],
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFF0F172A),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: const Icon(Icons.check_circle_outline_rounded, size: 18),
+                  onPressed: () {
+                    final List<Map<String, dynamic>> adjustments = [];
+                    for (var uMap in _sortedProductUnits) {
+                      final ProductUnit unit = uMap['unit'];
+                      final InventoryData? inv = uMap['inventory'];
+                      final double currentStock = inv?.quantity ?? 0.0;
+                      final double pStock = _physicalStocks[unit.id] ?? currentStock;
+                      final diff = pStock - currentStock;
+
+                      if (diff != 0) {
+                        adjustments.add({
+                          'unitId': unit.id,
+                          'theoreticalQty': currentStock,
+                          'physicalQty': pStock,
+                        });
+                      }
+                    }
+
+                    final notes = _notesController.text.trim();
+
+                    if (adjustments.isEmpty) {
+                      Navigator.pop(context);
+                      return;
+                    }
+
+                    widget.cubit.adjustStockMultiple(
+                      productId: widget.product.id,
+                      adjustments: adjustments,
+                      notes: notes.isEmpty ? null : notes,
+                    );
+                    Navigator.pop(context);
+                  },
+                  label: Text(
+                    'SIMPAN PERUBAHAN STOK',
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

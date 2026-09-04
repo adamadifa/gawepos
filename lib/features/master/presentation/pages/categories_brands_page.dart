@@ -151,35 +151,104 @@ class _CategoryTabContent extends StatelessWidget {
               padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
               ),
               child: SafeArea(
                 top: false,
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Handle bar
+                      Center(
+                        child: Container(
+                          width: 36,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFCBD5E1),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Header
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            category == null ? 'Tambah Kategori' : 'Ubah Kategori',
-                            style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.category_rounded,
+                                    color: Color(0xFF0F172A), size: 18),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                category == null ? 'Tambah Kategori' : 'Ubah Kategori',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF0F172A),
+                                ),
+                              ),
+                            ],
                           ),
                           IconButton(
-                            icon: const Icon(Icons.close_rounded),
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B), size: 20),
                             onPressed: () => Navigator.pop(ctx),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 18),
+
+                      // Field: Nama Kategori
+                      Text(
+                        'Nama Kategori',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF334155),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
                       TextFormField(
                         controller: _nameController,
+                        style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
                         decoration: InputDecoration(
-                          labelText: 'Nama Kategori *',
-                          errorText: (hasInteractedName && !isNameValid) ? 'Nama wajib diisi' : null,
+                          hintText: 'Contoh: Makanan, Minuman, Pakaian...',
+                          hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                          prefixIcon: const Icon(Icons.label_outline_rounded, size: 18, color: Color(0xFF64748B)),
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          errorText: (hasInteractedName && !isNameValid) ? 'Nama kategori wajib diisi' : null,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                          ),
                         ),
                         onChanged: (_) {
                           setModalState(() {
@@ -187,24 +256,58 @@ class _CategoryTabContent extends StatelessWidget {
                           });
                         },
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 14),
+
+                      // Field: Deskripsi
+                      Text(
+                        'Deskripsi (Opsional)',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF334155),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
                       TextField(
                         controller: _descController,
-                        decoration: const InputDecoration(
-                          labelText: 'Deskripsi',
+                        style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
+                        decoration: InputDecoration(
+                          hintText: 'Keterangan tambahan untuk kategori...',
+                          hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                          prefixIcon: const Icon(Icons.notes_rounded, size: 18, color: Color(0xFF64748B)),
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                          ),
                         ),
                         maxLines: 2,
                       ),
                       const SizedBox(height: 24),
+
+                      // Submit Button
                       SizedBox(
                         width: double.infinity,
                         height: 48,
-                        child: FilledButton(
+                        child: FilledButton.icon(
                           style: FilledButton.styleFrom(
                             backgroundColor: const Color(0xFF0F172A),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            disabledBackgroundColor: const Color(0xFFE2E8F0),
+                            disabledForegroundColor: const Color(0xFF94A3B8),
                           ),
+                          icon: const Icon(Icons.check_rounded, size: 18),
                           onPressed: isNameValid
                               ? () {
                                   final name = _nameController.text.trim();
@@ -223,9 +326,9 @@ class _CategoryTabContent extends StatelessWidget {
                                   Navigator.pop(ctx);
                                 }
                               : null,
-                          child: Text(
+                          label: Text(
                             category == null ? 'Simpan Kategori' : 'Perbarui Kategori',
-                            style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+                            style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13),
                           ),
                         ),
                       ),
@@ -272,13 +375,58 @@ class _CategoryTabContent extends StatelessWidget {
     );
   }
 
+  void _showAppSnackbar(BuildContext context, String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: isError ? const Color(0xFFDC2626) : const Color(0xFF0F172A),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         // Content Area
         Expanded(
-          child: BlocBuilder<CategoryCubit, CategoryState>(
+          child: BlocConsumer<CategoryCubit, CategoryState>(
+            listener: (context, state) {
+              if (state is CategorySaved) {
+                _showAppSnackbar(
+                  context,
+                  state.isEdit
+                      ? 'Kategori "${state.categoryName}" berhasil diperbarui.'
+                      : 'Kategori "${state.categoryName}" berhasil ditambahkan.',
+                );
+              } else if (state is CategoryDeleted) {
+                _showAppSnackbar(
+                  context,
+                  'Kategori "${state.categoryName}" berhasil dihapus.',
+                );
+              } else if (state is CategoryError) {
+                _showAppSnackbar(context, state.message, isError: true);
+              }
+            },
             builder: (context, state) {
               if (state is CategoryLoading) {
                 return const Center(child: CircularProgressIndicator());
@@ -435,35 +583,104 @@ class _BrandTabContent extends StatelessWidget {
               padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
               ),
               child: SafeArea(
                 top: false,
                 child: Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Handle bar
+                      Center(
+                        child: Container(
+                          width: 36,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFCBD5E1),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+
+                      // Header
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            brand == null ? 'Tambah Merek' : 'Ubah Merek',
-                            style: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.bold),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2563EB).withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: const Icon(Icons.stars_rounded,
+                                    color: Color(0xFF2563EB), size: 18),
+                              ),
+                              const SizedBox(width: 10),
+                              Text(
+                                brand == null ? 'Tambah Merek' : 'Ubah Merek',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF0F172A),
+                                ),
+                              ),
+                            ],
                           ),
                           IconButton(
-                            icon: const Icon(Icons.close_rounded),
+                            visualDensity: VisualDensity.compact,
+                            icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B), size: 20),
                             onPressed: () => Navigator.pop(ctx),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 18),
+
+                      // Field: Nama Merek
+                      Text(
+                        'Nama Merek (Brand)',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF334155),
+                        ),
+                      ),
+                      const SizedBox(height: 6),
                       TextFormField(
                         controller: _nameController,
+                        style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
                         decoration: InputDecoration(
-                          labelText: 'Nama Merek *',
-                          errorText: (hasInteractedName && !isNameValid) ? 'Nama wajib diisi' : null,
+                          hintText: 'Contoh: Indofood, Unilever, Samsung...',
+                          hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                          prefixIcon: const Icon(Icons.stars_outlined, size: 18, color: Color(0xFF64748B)),
+                          filled: true,
+                          fillColor: const Color(0xFFF8FAFC),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                          errorText: (hasInteractedName && !isNameValid) ? 'Nama merek wajib diisi' : null,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                          ),
                         ),
                         onChanged: (_) {
                           setModalState(() {
@@ -472,15 +689,20 @@ class _BrandTabContent extends StatelessWidget {
                         },
                       ),
                       const SizedBox(height: 24),
+
+                      // Submit Button
                       SizedBox(
                         width: double.infinity,
                         height: 48,
-                        child: FilledButton(
+                        child: FilledButton.icon(
                           style: FilledButton.styleFrom(
                             backgroundColor: const Color(0xFF0F172A),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            disabledBackgroundColor: const Color(0xFFE2E8F0),
+                            disabledForegroundColor: const Color(0xFF94A3B8),
                           ),
+                          icon: const Icon(Icons.check_rounded, size: 18),
                           onPressed: isNameValid
                               ? () {
                                   final name = _nameController.text.trim();
@@ -492,9 +714,9 @@ class _BrandTabContent extends StatelessWidget {
                                   Navigator.pop(ctx);
                                 }
                               : null,
-                          child: Text(
+                          label: Text(
                             brand == null ? 'Simpan Merek' : 'Perbarui Merek',
-                            style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+                            style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13),
                           ),
                         ),
                       ),
@@ -541,13 +763,58 @@ class _BrandTabContent extends StatelessWidget {
     );
   }
 
+  void _showAppSnackbar(BuildContext context, String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: isError ? const Color(0xFFDC2626) : const Color(0xFF0F172A),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         // Content Area
         Expanded(
-          child: BlocBuilder<BrandCubit, BrandState>(
+          child: BlocConsumer<BrandCubit, BrandState>(
+            listener: (context, state) {
+              if (state is BrandSaved) {
+                _showAppSnackbar(
+                  context,
+                  state.isEdit
+                      ? 'Merek "${state.brandName}" berhasil diperbarui.'
+                      : 'Merek "${state.brandName}" berhasil ditambahkan.',
+                );
+              } else if (state is BrandDeleted) {
+                _showAppSnackbar(
+                  context,
+                  'Merek "${state.brandName}" berhasil dihapus.',
+                );
+              } else if (state is BrandError) {
+                _showAppSnackbar(context, state.message, isError: true);
+              }
+            },
             builder: (context, state) {
               if (state is BrandLoading) {
                 return const Center(child: CircularProgressIndicator());

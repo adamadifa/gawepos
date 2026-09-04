@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import '../../../core/database/app_database.dart';
+import 'dummy_products_data.dart';
 
 class MasterRepository {
   final AppDatabase _db;
@@ -165,18 +166,28 @@ class MasterRepository {
     required List<ProductPricesCompanion> prices,
   }) async {
     return await _db.transaction(() async {
+      // 0. Pastikan setidaknya ada default PriceTier (misal: 'Harga Umum' id 1)
+      final existingTiers = await _db.select(_db.priceTiers).get();
+      int defaultTierId = 1;
+      if (existingTiers.isEmpty) {
+        defaultTierId = await _db.into(_db.priceTiers).insert(
+          PriceTiersCompanion.insert(name: 'Harga Umum'),
+        );
+      } else {
+        defaultTierId = existingTiers.first.id;
+      }
+
       // 1. Insert product
       final productId = await _db.into(_db.products).insert(product);
 
-      // 2. Insert units & map old/temp ids if necessary, or just insert them with the correct productId
+      // 2. Insert units & map old/temp ids
       final unitIdMap = <int, int>{}; // Temporary ID -> Database ID
       for (var unit in units) {
         final companion = unit.copyWith(
           productId: Value(productId),
+          id: const Value.absent(), // Biarkan SQLite auto-increment ID yang valid
         );
         final unitId = await _db.into(_db.productUnits).insert(companion);
-        // Kita berasumsi list unit diinput secara urut dan bisa di-map,
-        // namun untuk mempermudah pricing, kita map menggunakan id sementara yang dikirim UI
         if (unit.id.present) {
           unitIdMap[unit.id.value] = unitId;
         }
@@ -187,9 +198,15 @@ class MasterRepository {
         final tempUnitId = price.unitId.value;
         final realUnitId = unitIdMap[tempUnitId] ?? tempUnitId;
         
+        final tierIdToUse = price.priceTierId.present && price.priceTierId.value > 0
+            ? price.priceTierId.value
+            : defaultTierId;
+
         final companion = price.copyWith(
           productId: Value(productId),
           unitId: Value(realUnitId),
+          priceTierId: Value(tierIdToUse),
+          id: const Value.absent(),
         );
         await _db.into(_db.productPrices).insert(companion);
       }
@@ -279,96 +296,200 @@ class MasterRepository {
     return await (_db.delete(_db.products)..where((tbl) => tbl.id.equals(id))).go();
   }
 
-  // Seed data dummy master
-  Future<void> seedDummyData() async {
-    await _db.transaction(() async {
-      // 1. Insert Categories
-      final catIdMakanan = await _db.into(_db.categories).insert(
-        CategoriesCompanion.insert(name: 'Makanan', description: const Value('Aneka makanan instan & snack')),
+  // Seed data dummy master (100 Produk Terkategori Lengkap dengan Foto & Satuan)
+  Future<int> seedDummyData({void Function(int current, int total)? onProgress}) async {
+    // 0. Pastikan PriceTier default 'Harga Umum' dan 'Harga Grosir' ada
+    final existingTiers = await _db.select(_db.priceTiers).get();
+    int defaultTierId = 1;
+    if (existingTiers.isEmpty) {
+      defaultTierId = await _db.into(_db.priceTiers).insert(
+        PriceTiersCompanion.insert(name: 'Harga Umum'),
       );
-      final catIdMinuman = await _db.into(_db.categories).insert(
-        CategoriesCompanion.insert(name: 'Minuman', description: const Value('Minuman bersoda & air mineral')),
+      await _db.into(_db.priceTiers).insert(
+        PriceTiersCompanion.insert(name: 'Harga Grosir'),
       );
-      await _db.into(_db.categories).insert(
-        CategoriesCompanion.insert(name: 'Kebutuhan Harian', description: const Value('Peralatan mandi & pembersih rumah')),
-      );
+    } else {
+      defaultTierId = existingTiers.first.id;
+    }
 
-      // 2. Insert Brands
-      final brandIdIndofood = await _db.into(_db.brands).insert(
-        BrandsCompanion.insert(name: 'Indofood'),
-      );
-      final brandIdCoke = await _db.into(_db.brands).insert(
-        BrandsCompanion.insert(name: 'Coca-Cola'),
-      );
-      await _db.into(_db.brands).insert(
-        BrandsCompanion.insert(name: 'Unilever'),
-      );
+    // 1. Kategori Mapping Cache
+    final categoryMap = <String, int>{};
+    final categoriesList = await _db.select(_db.categories).get();
+    for (var c in categoriesList) {
+      categoryMap[c.name] = c.id;
+    }
 
-      // 3. Insert Customers
+    // 2. Brand Mapping Cache
+    final brandMap = <String, int>{};
+    final brandsList = await _db.select(_db.brands).get();
+    for (var b in brandsList) {
+      brandMap[b.name] = b.id;
+    }
+
+    // 3. Insert Customers & Suppliers jika belum ada
+    final existingCustomers = await _db.select(_db.customers).get();
+    if (existingCustomers.isEmpty) {
       await _db.into(_db.customers).insert(
-        CustomersCompanion.insert(name: 'Budi Santoso', phone: const Value('081234567890'), address: const Value('Jl. Merdeka No. 12')),
+        CustomersCompanion.insert(name: 'Budi Santoso (Member VIP)', phone: const Value('081234567890'), address: const Value('Jl. Merdeka No. 12')),
       );
       await _db.into(_db.customers).insert(
-        CustomersCompanion.insert(name: 'Siti Aminah', phone: const Value('089876543210'), address: const Value('Ruko Harmony Blok C')),
+        CustomersCompanion.insert(name: 'Siti Aminah (Grosir)', phone: const Value('089876543210'), address: const Value('Ruko Harmony Blok C')),
       );
+      await _db.into(_db.customers).insert(
+        CustomersCompanion.insert(name: 'Warung Bu Joko', phone: const Value('085712349999'), address: const Value('Jl. Pasar Baru No. 45')),
+      );
+    }
 
-      // 4. Insert Suppliers
+    final existingSuppliers = await _db.select(_db.suppliers).get();
+    if (existingSuppliers.isEmpty) {
       await _db.into(_db.suppliers).insert(
         SuppliersCompanion.insert(name: 'PT Indomarco Adi Prima', phone: const Value('021-5551234'), address: const Value('Kawasan Industri Pulogadung')),
       );
       await _db.into(_db.suppliers).insert(
-        SuppliersCompanion.insert(name: 'CV Makmur Sejahtera', phone: const Value('031-7778889'), address: const Value('Raya Dupak, Surabaya')),
+        SuppliersCompanion.insert(name: 'CV Makmur Sejahtera Distributor', phone: const Value('031-7778889'), address: const Value('Raya Dupak, Surabaya')),
+      );
+      await _db.into(_db.suppliers).insert(
+        SuppliersCompanion.insert(name: 'PT Unilever Trading Indonesia', phone: const Value('021-8889999'), address: const Value('BSD City, Tangerang')),
+      );
+    }
+
+    int insertedCount = 0;
+    final totalItems = DummyDataGenerator.raw100Products.length;
+
+    // Loop 100 produk dan insert bertahap
+    for (int i = 0; i < totalItems; i++) {
+      final item = DummyDataGenerator.raw100Products[i];
+
+      // Dapatkan atau buat Kategori
+      int? catId = categoryMap[item.category];
+      if (catId == null) {
+        catId = await _db.into(_db.categories).insert(
+          CategoriesCompanion.insert(name: item.category),
+        );
+        categoryMap[item.category] = catId;
+      }
+
+      // Dapatkan atau buat Brand
+      int? brandId = brandMap[item.brand];
+      if (brandId == null) {
+        brandId = await _db.into(_db.brands).insert(
+          BrandsCompanion.insert(name: item.brand),
+        );
+        brandMap[item.brand] = brandId;
+      }
+
+      // Generate Image PNG lokal untuk produk
+      final imagePath = await DummyDataGenerator.generateProductImage(
+        name: item.name,
+        category: item.category,
+        color: item.badgeColor,
+        shortCode: item.shortCode,
       );
 
-      // 5. Insert Product 1: Indomie Goreng
-      final p1Id = await _db.into(_db.products).insert(
-        ProductsCompanion.insert(
-          name: 'Indomie Goreng',
-          sku: const Value('IND-GOR-01'),
-          barcode: const Value('89686011118'),
-          categoryId: Value(catIdMakanan),
-          brandId: Value(brandIdIndofood),
-          isStockManaged: const Value(true),
-          minStockAlert: const Value(10),
-        ),
-      );
-      final u1BaseId = await _db.into(_db.productUnits).insert(
-        ProductUnitsCompanion.insert(productId: p1Id, name: 'Pcs', conversionFactor: const Value(1.0), isBase: const Value(true)),
-      );
-      final u1SubId = await _db.into(_db.productUnits).insert(
-        ProductUnitsCompanion.insert(productId: p1Id, name: 'Dus', conversionFactor: const Value(40.0), isBase: const Value(false)),
-      );
-      // Quantity breaks for Pcs
-      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p1Id, unitId: u1BaseId, priceTierId: 1, price: const Value(3500.0), minQty: const Value(1)));
-      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p1Id, unitId: u1BaseId, priceTierId: 1, price: const Value(3300.0), minQty: const Value(10)));
-      // Quantity breaks for Dus
-      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p1Id, unitId: u1SubId, priceTierId: 1, price: const Value(130000.0), minQty: const Value(1)));
-      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p1Id, unitId: u1SubId, priceTierId: 1, price: const Value(125000.0), minQty: const Value(5)));
+      // Cek apakah produk dengan barcode/SKU ini sudah ada untuk mencegah duplikat
+      final existingProd = await (_db.select(_db.products)
+            ..where((tbl) => tbl.barcode.equals(item.barcode) | tbl.sku.equals(item.sku)))
+          .getSingleOrNull();
 
-      // 6. Insert Product 2: Coca-Cola
-      final p2Id = await _db.into(_db.products).insert(
-        ProductsCompanion.insert(
-          name: 'Coca-Cola Can 330ml',
-          sku: const Value('COKE-CAN-01'),
-          barcode: const Value('8886001300224'),
-          categoryId: Value(catIdMinuman),
-          brandId: Value(brandIdCoke),
-          isStockManaged: const Value(true),
-          minStockAlert: const Value(12),
-        ),
-      );
-      final u2BaseId = await _db.into(_db.productUnits).insert(
-        ProductUnitsCompanion.insert(productId: p2Id, name: 'Can', conversionFactor: const Value(1.0), isBase: const Value(true)),
-      );
-      final u2SubId = await _db.into(_db.productUnits).insert(
-        ProductUnitsCompanion.insert(productId: p2Id, name: 'Pack', conversionFactor: const Value(6.0), isBase: const Value(false)),
-      );
-      // Quantity breaks for Can
-      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p2Id, unitId: u2BaseId, priceTierId: 1, price: const Value(6500.0), minQty: const Value(1)));
-      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p2Id, unitId: u2BaseId, priceTierId: 1, price: const Value(6000.0), minQty: const Value(12)));
-      // Quantity breaks for Pack
-      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p2Id, unitId: u2SubId, priceTierId: 1, price: const Value(37000.0), minQty: const Value(1)));
-      await _db.into(_db.productPrices).insert(ProductPricesCompanion.insert(productId: p2Id, unitId: u2SubId, priceTierId: 1, price: const Value(34000.0), minQty: const Value(3)));
-    });
+      if (existingProd != null) {
+        // Jika sudah ada, update gambar jika belum ada
+        if (existingProd.imagePath == null && imagePath != null) {
+          await (_db.update(_db.products)..where((tbl) => tbl.id.equals(existingProd.id)))
+              .write(ProductsCompanion(imagePath: Value(imagePath)));
+        }
+        insertedCount++;
+        onProgress?.call(i + 1, totalItems);
+        continue;
+      }
+
+      // Insert Produk Baru beserta Satuan dan Harga dalam transaksi
+      await _db.transaction(() async {
+        final prodId = await _db.into(_db.products).insert(
+          ProductsCompanion.insert(
+            name: item.name,
+            sku: Value(item.sku),
+            barcode: Value(item.barcode),
+            categoryId: Value(catId),
+            brandId: Value(brandId),
+            imagePath: Value(imagePath),
+            productType: const Value('goods'),
+            isStockManaged: const Value(true),
+            minStockAlert: Value(item.minStock),
+            allowManualPrice: const Value(false),
+            isActive: const Value(true),
+          ),
+        );
+
+        // Insert Satuan Dasar
+        final unitBaseId = await _db.into(_db.productUnits).insert(
+          ProductUnitsCompanion.insert(
+            productId: prodId,
+            name: item.unitBase,
+            conversionFactor: const Value(1.0),
+            isBase: const Value(true),
+          ),
+        );
+
+        // Insert Harga Satuan Dasar (Eceran & Grosir min 10)
+        await _db.into(_db.productPrices).insert(
+          ProductPricesCompanion.insert(
+            productId: prodId,
+            unitId: unitBaseId,
+            priceTierId: defaultTierId,
+            price: Value(item.sellPrice),
+            minQty: const Value(1),
+          ),
+        );
+
+        if (item.grosirPrice > 0 && item.grosirPrice < item.sellPrice) {
+          await _db.into(_db.productPrices).insert(
+            ProductPricesCompanion.insert(
+              productId: prodId,
+              unitId: unitBaseId,
+              priceTierId: defaultTierId,
+              price: Value(item.grosirPrice),
+              minQty: const Value(5),
+            ),
+          );
+        }
+
+        // Insert Satuan Turunan jika ada (misal: Dus, Slop, Karton, Rim)
+        if (item.unitSub != null && item.conversion > 1) {
+          final unitSubId = await _db.into(_db.productUnits).insert(
+            ProductUnitsCompanion.insert(
+              productId: prodId,
+              name: item.unitSub!,
+              conversionFactor: Value(item.conversion),
+              isBase: const Value(false),
+            ),
+          );
+
+          final subPrice = item.grosirSubPrice > 0 ? item.grosirSubPrice : (item.sellPrice * item.conversion * 0.95);
+          await _db.into(_db.productPrices).insert(
+            ProductPricesCompanion.insert(
+              productId: prodId,
+              unitId: unitSubId,
+              priceTierId: defaultTierId,
+              price: Value(subPrice),
+              minQty: const Value(1),
+            ),
+          );
+        }
+
+        // Inisialisasi stok awal inventori (50 unit)
+        await _db.into(_db.inventory).insert(
+          InventoryCompanion.insert(
+            productId: prodId,
+            unitId: unitBaseId,
+            quantity: const Value(50.0),
+          ),
+        );
+      });
+
+      insertedCount++;
+      onProgress?.call(i + 1, totalItems);
+    }
+
+    return insertedCount;
   }
 }

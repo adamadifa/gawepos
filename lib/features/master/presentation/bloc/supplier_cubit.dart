@@ -10,6 +10,15 @@ class SupplierLoaded extends SupplierState {
   final List<Supplier> suppliers;
   SupplierLoaded(this.suppliers);
 }
+class SupplierSaved extends SupplierState {
+  final String supplierName;
+  final bool isEdit;
+  SupplierSaved({required this.supplierName, this.isEdit = false});
+}
+class SupplierDeleted extends SupplierState {
+  final String supplierName;
+  SupplierDeleted({required this.supplierName});
+}
 class SupplierError extends SupplierState {
   final String message;
   SupplierError(this.message);
@@ -45,6 +54,7 @@ class SupplierCubit extends Cubit<SupplierState> {
           address: Value(address),
         ),
       );
+      emit(SupplierSaved(supplierName: name, isEdit: false));
       await loadSuppliers();
     } catch (e) {
       emit(SupplierError('Gagal menambah pemasok: $e'));
@@ -67,15 +77,17 @@ class SupplierCubit extends Cubit<SupplierState> {
           address: Value(address),
         ),
       );
+      emit(SupplierSaved(supplierName: name, isEdit: true));
       await loadSuppliers();
     } catch (e) {
       emit(SupplierError('Gagal mengubah pemasok: $e'));
     }
   }
 
-  Future<void> deleteSupplier(int id) async {
+  Future<void> deleteSupplier(int id, {String supplierName = ''}) async {
     try {
       await _repository.deleteSupplier(id);
+      emit(SupplierDeleted(supplierName: supplierName));
       await loadSuppliers();
     } catch (e) {
       emit(SupplierError('Gagal menghapus pemasok: $e'));

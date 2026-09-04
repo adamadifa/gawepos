@@ -9,6 +9,15 @@ class BrandLoaded extends BrandState {
   final List<Brand> brands;
   BrandLoaded(this.brands);
 }
+class BrandSaved extends BrandState {
+  final String brandName;
+  final bool isEdit;
+  BrandSaved({required this.brandName, this.isEdit = false});
+}
+class BrandDeleted extends BrandState {
+  final String brandName;
+  BrandDeleted({required this.brandName});
+}
 class BrandError extends BrandState {
   final String message;
   BrandError(this.message);
@@ -34,6 +43,7 @@ class BrandCubit extends Cubit<BrandState> {
       await _repository.insertBrand(
         BrandsCompanion.insert(name: name),
       );
+      emit(BrandSaved(brandName: name, isEdit: false));
       await loadBrands();
     } catch (e) {
       emit(BrandError('Gagal menambah merek: $e'));
@@ -45,15 +55,17 @@ class BrandCubit extends Cubit<BrandState> {
       await _repository.updateBrand(
         brand.copyWith(name: name),
       );
+      emit(BrandSaved(brandName: name, isEdit: true));
       await loadBrands();
     } catch (e) {
       emit(BrandError('Gagal mengubah merek: $e'));
     }
   }
 
-  Future<void> deleteBrand(int id) async {
+  Future<void> deleteBrand(int id, {String brandName = ''}) async {
     try {
       await _repository.deleteBrand(id);
+      emit(BrandDeleted(brandName: brandName));
       await loadBrands();
     } catch (e) {
       emit(BrandError('Gagal menghapus merek: $e'));

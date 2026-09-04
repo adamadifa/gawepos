@@ -10,6 +10,15 @@ class CategoryLoaded extends CategoryState {
   final List<Category> categories;
   CategoryLoaded(this.categories);
 }
+class CategorySaved extends CategoryState {
+  final String categoryName;
+  final bool isEdit;
+  CategorySaved({required this.categoryName, this.isEdit = false});
+}
+class CategoryDeleted extends CategoryState {
+  final String categoryName;
+  CategoryDeleted({required this.categoryName});
+}
 class CategoryError extends CategoryState {
   final String message;
   CategoryError(this.message);
@@ -38,6 +47,7 @@ class CategoryCubit extends Cubit<CategoryState> {
           description: Value(description),
         ),
       );
+      emit(CategorySaved(categoryName: name, isEdit: false));
       await loadCategories();
     } catch (e) {
       emit(CategoryError('Gagal menambah kategori: $e'));
@@ -52,15 +62,17 @@ class CategoryCubit extends Cubit<CategoryState> {
           description: Value(description),
         ),
       );
+      emit(CategorySaved(categoryName: name, isEdit: true));
       await loadCategories();
     } catch (e) {
       emit(CategoryError('Gagal mengubah kategori: $e'));
     }
   }
 
-  Future<void> deleteCategory(int id) async {
+  Future<void> deleteCategory(int id, {String categoryName = ''}) async {
     try {
       await _repository.deleteCategory(id);
+      emit(CategoryDeleted(categoryName: categoryName));
       await loadCategories();
     } catch (e) {
       emit(CategoryError('Gagal menghapus kategori: $e'));

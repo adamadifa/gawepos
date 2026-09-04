@@ -25,6 +25,8 @@ import '../../features/reports/data/reports_repository.dart';
 import '../../features/reports/presentation/bloc/reports_cubit.dart';
 import '../../features/inventory/data/return_repository.dart';
 import '../../features/inventory/presentation/bloc/return_cubit.dart';
+import '../../features/consignment/data/consignment_repository.dart';
+import '../../features/consignment/presentation/bloc/consignment_cubit.dart';
 
 final getIt = GetIt.instance;
 
@@ -55,6 +57,7 @@ Future<void> setupLocator() async {
   getIt.registerLazySingleton<PurchaseRepository>(() => PurchaseRepository(getIt<AppDatabase>()));
   getIt.registerLazySingleton<ReportsRepository>(() => ReportsRepository(getIt<AppDatabase>()));
   getIt.registerLazySingleton<ReturnRepository>(() => ReturnRepository(getIt<AppDatabase>()));
+  getIt.registerLazySingleton<ConsignmentRepository>(() => ConsignmentRepository(getIt<AppDatabase>()));
 
   // Register AuthCubit
   getIt.registerFactory<AuthCubit>(() => AuthCubit(getIt<AuthRepository>()));
@@ -73,6 +76,9 @@ Future<void> setupLocator() async {
   // Register Inventory Cubit
   getIt.registerFactory<InventoryCubit>(() => InventoryCubit(getIt<InventoryRepository>()));
   getIt.registerFactory<ReturnCubit>(() => ReturnCubit(getIt<ReturnRepository>()));
+
+  // Register Consignment Cubit
+  getIt.registerFactory<ConsignmentCubit>(() => ConsignmentCubit(getIt<ConsignmentRepository>()));
 
   // Register Expenses & Purchase Cubits
   getIt.registerFactory<ExpensesCubit>(() => ExpensesCubit(getIt<ExpensesRepository>()));

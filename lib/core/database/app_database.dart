@@ -60,6 +60,11 @@ class Products extends Table {
   IntColumn get minStockAlert => integer().withDefault(const Constant(0))();
   BoolColumn get isActive => boolean().withDefault(const Constant(true))();
   BoolColumn get allowManualPrice => boolean().withDefault(const Constant(false))();
+  // Konsinyasi / Titip Jual
+  BoolColumn get isConsignment => boolean().withDefault(const Constant(false))();
+  IntColumn get supplierId => integer().nullable().references(Suppliers, #id, onDelete: KeyAction.setNull)();
+  TextColumn get consignmentType => text().nullable()(); // 'fixed_cost' (harga setor tetap) / 'commission_percent' (bagi hasil persentase)
+  RealColumn get commissionRate => real().withDefault(const Constant(0.0))(); // Nilai komisi toko (%) atau nominal harga setor
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -70,6 +75,7 @@ class ProductUnits extends Table {
   IntColumn get productId => integer().references(Products, #id, onDelete: KeyAction.cascade)();
   TextColumn get name => text().withLength(min: 1, max: 50)();
   RealColumn get conversionFactor => real().withDefault(const Constant(1.0))();
+  RealColumn get costPrice => real().withDefault(const Constant(0.0))(); // Harga Beli / Modal Dasar
   BoolColumn get isBase => boolean().withDefault(const Constant(false))();
 }
 
@@ -369,6 +375,40 @@ class PointTransactions extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+// 27. Penyelesaian Konsinyasi (Consignment Settlements)
+@TableIndex(name: 'consignment_settlements_supplier_idx', columns: {#supplierId})
+@TableIndex(name: 'consignment_settlements_status_idx', columns: {#paymentStatus})
+class ConsignmentSettlements extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get settlementNo => text().unique()(); // CSL-YYYYMMDD-XXXX
+  IntColumn get supplierId => integer().references(Suppliers, #id, onDelete: KeyAction.cascade)();
+  DateTimeColumn get startDate => dateTime()();
+  DateTimeColumn get endDate => dateTime()();
+  RealColumn get totalSoldQty => real().withDefault(const Constant(0.0))();
+  RealColumn get totalSalesAmount => real().withDefault(const Constant(0.0))();
+  RealColumn get storeCommissionAmount => real().withDefault(const Constant(0.0))();
+  RealColumn get supplierPayableAmount => real().withDefault(const Constant(0.0))();
+  RealColumn get paidAmount => real().withDefault(const Constant(0.0))();
+  TextColumn get paymentStatus => text().withDefault(const Constant('unpaid'))(); // 'unpaid', 'partial', 'paid'
+  TextColumn get paymentMethod => text().nullable()(); // 'cash', 'transfer', etc.
+  TextColumn get notes => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+// 28. Rincian Item Penyelesaian Konsinyasi
+@TableIndex(name: 'consignment_settlement_items_settlement_idx', columns: {#settlementId})
+class ConsignmentSettlementItems extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get settlementId => integer().references(ConsignmentSettlements, #id, onDelete: KeyAction.cascade)();
+  IntColumn get productId => integer().references(Products, #id)();
+  IntColumn get unitId => integer().references(ProductUnits, #id)();
+  RealColumn get soldQty => real()();
+  RealColumn get unitPrice => real()();
+  RealColumn get supplierRate => real()(); // Harga setor per unit atau hak bersih per unit
+  RealColumn get subtotalPayable => real()(); // soldQty * supplierRate
+  RealColumn get subtotalCommission => real()(); // soldQty * (unitPrice - supplierRate)
+}
+
 @DriftDatabase(tables: [
   Outlets,
   Users,
@@ -401,12 +441,14 @@ class PointTransactions extends Table {
   PurchaseReturns,
   PurchaseReturnItems,
   PointTransactions,
+  ConsignmentSettlements,
+  ConsignmentSettlementItems,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -441,6 +483,17 @@ class AppDatabase extends _$AppDatabase {
             await m.addColumn(customers, customers.pointsBalance);
             await m.createTable(pointTransactions);
           }
+          if (from < 8) {
+            await m.addColumn(products, products.isConsignment);
+            await m.addColumn(products, products.supplierId);
+            await m.addColumn(products, products.consignmentType);
+            await m.addColumn(products, products.commissionRate);
+            await m.createTable(consignmentSettlements);
+            await m.createTable(consignmentSettlementItems);
+          }
+          if (from < 9) {
+            await m.addColumn(productUnits, productUnits.costPrice);
+          }
         },
         beforeOpen: (details) async {
           // PRAGMA tuning — dijalankan setiap koneksi dibuka
@@ -456,7 +509,7 @@ class AppDatabase extends _$AppDatabase {
               await into(rolePermissions).insert(
                 RolePermissionsCompanion.insert(
                   role: 'admin',
-                  allowedMenus: '["pos","products","expenses","restock","opname","history","reports","contacts","settings","users","returns"]',
+                  allowedMenus: '["pos","products","expenses","restock","opname","history","reports","contacts","settings","users","returns","consignment"]',
                 ),
               );
             }

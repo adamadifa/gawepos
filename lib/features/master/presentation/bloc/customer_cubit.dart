@@ -10,6 +10,15 @@ class CustomerLoaded extends CustomerState {
   final List<Customer> customers;
   CustomerLoaded(this.customers);
 }
+class CustomerSaved extends CustomerState {
+  final String customerName;
+  final bool isEdit;
+  CustomerSaved({required this.customerName, this.isEdit = false});
+}
+class CustomerDeleted extends CustomerState {
+  final String customerName;
+  CustomerDeleted({required this.customerName});
+}
 class CustomerError extends CustomerState {
   final String message;
   CustomerError(this.message);
@@ -45,6 +54,7 @@ class CustomerCubit extends Cubit<CustomerState> {
           address: Value(address),
         ),
       );
+      emit(CustomerSaved(customerName: name, isEdit: false));
       await loadCustomers();
     } catch (e) {
       emit(CustomerError('Gagal menambah pelanggan: $e'));
@@ -67,15 +77,17 @@ class CustomerCubit extends Cubit<CustomerState> {
           address: Value(address),
         ),
       );
+      emit(CustomerSaved(customerName: name, isEdit: true));
       await loadCustomers();
     } catch (e) {
       emit(CustomerError('Gagal mengubah pelanggan: $e'));
     }
   }
 
-  Future<void> deleteCustomer(int id) async {
+  Future<void> deleteCustomer(int id, {String customerName = ''}) async {
     try {
       await _repository.deleteCustomer(id);
+      emit(CustomerDeleted(customerName: customerName));
       await loadCustomers();
     } catch (e) {
       emit(CustomerError('Gagal menghapus pelanggan: $e'));

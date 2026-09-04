@@ -11,6 +11,7 @@ import 'return_report_page.dart';
 import 'points_report_page.dart';
 import 'product_analysis_report_page.dart';
 import 'owner_dashboard_page.dart';
+import '../../../consignment/presentation/pages/consignment_page.dart';
 
 class ReportsMenuPage extends StatefulWidget {
   const ReportsMenuPage({super.key});
@@ -130,6 +131,15 @@ class _ReportsMenuPageState extends State<ReportsMenuPage> {
       'tag': 'Reward',
       'color': const Color(0xFFCA8A04), // Yellow Ochre
       'page': const PointsReportPage(),
+    },
+    {
+      'title': 'Konsinyasi (Titip Jual)',
+      'desc': 'Rekonsiliasi barang titipan mitra/supplier, komisi toko, dan pelunasan bagi hasil.',
+      'icon': Icons.handshake_outlined,
+      'category': 'Finansial',
+      'tag': 'Mitra',
+      'color': const Color(0xFF16A34A), // Emerald 600
+      'page': const ConsignmentPage(),
     },
   ];
 

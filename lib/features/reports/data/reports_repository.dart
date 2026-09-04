@@ -8,6 +8,23 @@ class ReportsRepository {
 
   // Helper: Get cost price for a product/unit
   Future<double> getProductCostPrice(int productId, int unitId, double fallbackSellPrice) async {
+    // 0. Cek apakah produk merupakan Produk Konsinyasi (Titip Jual)
+    final product = await (_db.select(_db.products)
+          ..where((tbl) => tbl.id.equals(productId)))
+        .getSingleOrNull();
+
+    if (product != null && product.isConsignment) {
+      if (product.consignmentType == 'commission_percent') {
+        // Toko mendapat komisi X%, maka HPP (hak setor ke penitip) adalah harga jual - komisi
+        final commRate = product.commissionRate; // misal 20%
+        final commAmount = fallbackSellPrice * (commRate / 100.0);
+        return fallbackSellPrice - commAmount;
+      } else {
+        // 'fixed_cost' -> Harga setor tetap ke penitip adalah HPP toko
+        return product.commissionRate > 0 ? product.commissionRate : fallbackSellPrice * 0.8;
+      }
+    }
+
     // 1. Cari riwayat pembelian dengan satuan yang sama persis
     final purchaseItem = await (_db.select(_db.purchaseItems)
           ..where((tbl) => tbl.productId.equals(productId) & tbl.unitId.equals(unitId))
@@ -41,7 +58,25 @@ class ReportsRepository {
       }
     }
 
-    // 3. Fallback jika belum pernah dibeli sama sekali: 60% dari harga jual
+    // 3. Gunakan Harga Beli / Modal Dasar dari Master Produk (ProductUnits)
+    final targetMasterUnit = await (_db.select(_db.productUnits)
+          ..where((tbl) => tbl.id.equals(unitId)))
+        .getSingleOrNull();
+
+    if (targetMasterUnit != null && targetMasterUnit.costPrice > 0) {
+      return targetMasterUnit.costPrice;
+    }
+
+    // 4. Jika unit bukan base unit dan costPrice belum diisi, coba cari costPrice di Base Unit produk ini
+    final baseMasterUnit = await (_db.select(_db.productUnits)
+          ..where((tbl) => tbl.productId.equals(productId) & tbl.isBase.equals(true)))
+        .getSingleOrNull();
+
+    if (baseMasterUnit != null && baseMasterUnit.costPrice > 0 && targetMasterUnit != null) {
+      return baseMasterUnit.costPrice * targetMasterUnit.conversionFactor;
+    }
+
+    // 5. Fallback terakhir jika belum pernah dibeli dan harga beli master 0: 60% dari harga jual
     return fallbackSellPrice * 0.6;
   }
 
@@ -952,7 +987,7 @@ class ReportsRepository {
       final productUnits = productUnitsByProduct[prod.id] ?? [];
       final baseUnit = productUnits.firstWhere(
         (u) => u.isBase,
-        orElse: () => productUnits.isNotEmpty ? productUnits.first : ProductUnit(id: 0, productId: prod.id, name: 'Pcs', conversionFactor: 1.0, isBase: true),
+        orElse: () => productUnits.isNotEmpty ? productUnits.first : ProductUnit(id: 0, productId: prod.id, name: 'Pcs', conversionFactor: 1.0, isBase: true, costPrice: 0.0),
       );
 
       final qtySold = productBaseQuantities[prod.id] ?? 0.0;

@@ -24,6 +24,7 @@ import 'features/reports/presentation/bloc/reports_cubit.dart';
 import 'features/auth/presentation/bloc/user_management_cubit.dart';
 import 'features/auth/presentation/bloc/role_permissions_cubit.dart';
 import 'features/inventory/presentation/bloc/return_cubit.dart';
+import 'features/consignment/presentation/bloc/consignment_cubit.dart';
 
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -93,6 +94,9 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider<ReturnCubit>(
           create: (context) => getIt<ReturnCubit>(),
+        ),
+        BlocProvider<ConsignmentCubit>(
+          create: (context) => getIt<ConsignmentCubit>(),
         ),
       ],
       child: MaterialApp(

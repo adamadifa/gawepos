@@ -8,6 +8,7 @@ import 'contacts_page.dart';
 import 'products_list_page.dart';
 import '../../../inventory/presentation/pages/stock_opname_page.dart';
 import '../../../inventory/presentation/pages/stock_adjustment_page.dart';
+import '../../../consignment/presentation/pages/consignment_page.dart';
 
 class MasterMenuPage extends StatelessWidget {
   const MasterMenuPage({super.key});
@@ -17,46 +18,180 @@ class MasterMenuPage extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+          borderRadius: BorderRadius.circular(20),
         ),
-        title: Text(
-          'Isi Data Dummy',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppConstants.primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.auto_awesome_rounded, color: AppConstants.primaryColor, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Generate 100 Produk',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+            ),
+          ],
         ),
-        content: const Text(
-          'Apakah Anda yakin ingin mengisi data dummy untuk produk, kategori, merek, pelanggan, dan pemasok?',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Sistem akan membuat 100 data produk dummy UMKM lengkap dengan:',
+              style: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF334155)),
+            ),
+            const SizedBox(height: 10),
+            _buildFeatureBullet('8 Kategori & Brand Populer (Makanan, Minuman, Sembako, dll)'),
+            _buildFeatureBullet('Foto thumbnail produk otomatis'),
+            _buildFeatureBullet('Multi-satuan (Pcs, Dus, Slop, Karton, dsb)'),
+            _buildFeatureBullet('Harga bertingkat eceran & grosir serta stok awal'),
+          ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('BATAL'),
+            child: Text(
+              'BATAL',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+            ),
           ),
-          ElevatedButton(
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppConstants.primaryColor,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             onPressed: () async {
               Navigator.pop(ctx);
-              try {
-                await getIt<MasterRepository>().seedDummyData();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Berhasil mengisi data dummy master.')),
-                  );
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Gagal mengisi data dummy: $e'),
-                      backgroundColor: AppConstants.errorColor,
-                    ),
-                  );
-                }
-              }
+              _startSeedingWithProgress(context);
             },
-            child: const Text('YA, ISI DATA'),
+            child: Text(
+              'GENERATE SEKARANG',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 12.5),
+            ),
           ),
         ],
       ),
     );
+  }
+
+  static Widget _buildFeatureBullet(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.check_circle_rounded, color: AppConstants.successColor, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF475569)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _startSeedingWithProgress(BuildContext context) {
+    int currentProgress = 0;
+    int totalProgress = 100;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (progressCtx) {
+        return StatefulBuilder(
+          builder: (context, setProgressState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              contentPadding: const EdgeInsets.all(24),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3.5,
+                      color: AppConstants.primaryColor,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Membuat Data & Foto Produk...',
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 15),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$currentProgress dari $totalProgress produk diproses',
+                    style: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 14),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: totalProgress > 0 ? (currentProgress / totalProgress) : 0,
+                      minHeight: 8,
+                      backgroundColor: const Color(0xFFE2E8F0),
+                      color: AppConstants.primaryColor,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    // Jalankan seeding
+    getIt<MasterRepository>().seedDummyData(
+      onProgress: (cur, tot) {
+        currentProgress = cur;
+        totalProgress = tot;
+      },
+    ).then((count) {
+      if (context.mounted) {
+        Navigator.pop(context); // Tutup dialog progress
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Berhasil membuat $count produk dummy beserta foto!',
+                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF0F172A),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    }).catchError((e) {
+      if (context.mounted) {
+        Navigator.pop(context); // Tutup dialog progress
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengisi data dummy: $e'),
+            backgroundColor: AppConstants.errorColor,
+          ),
+        );
+      }
+    });
   }
 
   Widget _buildMenuCard({
@@ -255,6 +390,21 @@ class MasterMenuPage extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder: (context) => const StockAdjustmentPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  _buildMenuCard(
+                    icon: Icons.handshake_rounded,
+                    title: 'Konsinyasi (Titip Jual)',
+                    subtitle: 'Kelola mitra titip jual, settlement & komisi toko',
+                    color: const Color(0xFF16A34A),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ConsignmentPage(),
                         ),
                       );
                     },

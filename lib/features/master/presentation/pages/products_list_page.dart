@@ -27,24 +27,81 @@ class _ProductsListPageState extends State<ProductsListPage> {
     context.read<BrandCubit>().loadBrands();
   }
 
+  void _showAppSnackbar(String message, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(
+              isError ? Icons.error_outline_rounded : Icons.check_circle_outline_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                message,
+                style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: isError ? const Color(0xFFDC2626) : const Color(0xFF0F172A),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   void _showDeleteDialog(BuildContext context, Product product) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Hapus Produk'),
-        content: Text('Apakah Anda yakin ingin menghapus produk "${product.name}" beserta seluruh satuannya?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.delete_forever_rounded, color: Color(0xFFDC2626), size: 22),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Hapus Produk',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+            ),
+          ],
+        ),
+        content: Text(
+          'Apakah Anda yakin ingin menghapus produk "${product.name}" beserta seluruh satuan dan harganya?',
+          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF334155)),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('BATAL'),
+            child: Text(
+              'BATAL',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+            ),
           ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
             onPressed: () {
-              context.read<ProductCubit>().deleteProduct(product.id);
               Navigator.pop(ctx);
+              context.read<ProductCubit>().deleteProduct(product.id, productName: product.name);
             },
-            child: const Text('HAPUS'),
+            child: Text(
+              'YA, HAPUS',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 12.5),
+            ),
           ),
         ],
       ),
@@ -114,7 +171,18 @@ class _ProductsListPageState extends State<ProductsListPage> {
 
             // Products List
             Expanded(
-              child: BlocBuilder<ProductCubit, ProductState>(
+              child: BlocConsumer<ProductCubit, ProductState>(
+                listener: (context, state) {
+                  if (state is ProductDeleted) {
+                    _showAppSnackbar('Produk ${state.productName.isNotEmpty ? '"${state.productName}" ' : ''}berhasil dihapus.');
+                  }
+                  if (state is ProductSaved) {
+                    _showAppSnackbar(state.isUpdate ? 'Data produk berhasil diperbarui.' : 'Produk baru berhasil ditambahkan.');
+                  }
+                  if (state is ProductError) {
+                    _showAppSnackbar(state.message, isError: true);
+                  }
+                },
                 builder: (context, state) {
                   if (state is ProductLoading) {
                     return const Center(child: CircularProgressIndicator());

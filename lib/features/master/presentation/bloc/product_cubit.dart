@@ -15,7 +15,14 @@ class ProductCompleteLoaded extends ProductState {
   final Map<String, dynamic> completeProduct;
   ProductCompleteLoaded(this.completeProduct);
 }
-class ProductSaved extends ProductState {}
+class ProductSaved extends ProductState {
+  final bool isUpdate;
+  ProductSaved({this.isUpdate = false});
+}
+class ProductDeleted extends ProductState {
+  final String productName;
+  ProductDeleted({this.productName = ''});
+}
 class ProductError extends ProductState {
   final String message;
   ProductError(this.message);
@@ -63,6 +70,10 @@ class ProductCubit extends Cubit<ProductState> {
     required bool isStockManaged,
     required int minStockAlert,
     bool allowManualPrice = false,
+    bool isConsignment = false,
+    int? supplierId,
+    String? consignmentType,
+    double commissionRate = 0.0,
     required List<ProductUnitsCompanion> units,
     required List<ProductPricesCompanion> prices,
     File? newImageFile,
@@ -87,6 +98,10 @@ class ProductCubit extends Cubit<ProductState> {
           isStockManaged: Value(isStockManaged),
           minStockAlert: Value(minStockAlert),
           allowManualPrice: Value(allowManualPrice),
+          isConsignment: Value(isConsignment),
+          supplierId: Value(supplierId),
+          consignmentType: Value(consignmentType),
+          commissionRate: Value(commissionRate),
           isActive: const Value(true),
         );
 
@@ -108,6 +123,10 @@ class ProductCubit extends Cubit<ProductState> {
           isStockManaged: isStockManaged,
           minStockAlert: minStockAlert,
           allowManualPrice: allowManualPrice,
+          isConsignment: isConsignment,
+          supplierId: Value(supplierId),
+          consignmentType: Value(consignmentType),
+          commissionRate: commissionRate,
         );
 
         await _repository.updateProductComplete(
@@ -116,16 +135,17 @@ class ProductCubit extends Cubit<ProductState> {
           prices: prices,
         );
       }
-      emit(ProductSaved());
+      emit(ProductSaved(isUpdate: existingProduct != null));
       await loadProducts();
     } catch (e) {
       emit(ProductError('Gagal menyimpan produk: $e'));
     }
   }
 
-  Future<void> deleteProduct(int id) async {
+  Future<void> deleteProduct(int id, {String productName = ''}) async {
     try {
       await _repository.deleteProduct(id);
+      emit(ProductDeleted(productName: productName));
       await loadProducts();
     } catch (e) {
       emit(ProductError('Gagal menghapus produk: $e'));
