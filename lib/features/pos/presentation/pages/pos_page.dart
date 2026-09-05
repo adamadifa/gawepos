@@ -1228,33 +1228,35 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
   // CATALOG PANEL — Product Grid
   // ═════════════════════════════════════════════════
   Widget _buildCatalogPanel() {
-    var filtered = List<Map<String, dynamic>>.from(_catalogProducts);
+    var segmentFiltered = List<Map<String, dynamic>>.from(_catalogProducts);
 
     // 1. Filter berdasarkan Mode Bisnis Toko yang aktif
     if (_businessMode == 'fnb') {
-      filtered = filtered.where((p) {
+      segmentFiltered = segmentFiltered.where((p) {
         final Product prod = p['product'];
         return prod.businessSegment == 'fnb' || prod.businessSegment == 'general' || prod.hasRecipe;
       }).toList();
     } else if (_businessMode == 'retail') {
-      filtered = filtered.where((p) {
+      segmentFiltered = segmentFiltered.where((p) {
         final Product prod = p['product'];
         return prod.businessSegment == 'retail' || prod.businessSegment == 'general';
       }).toList();
     } else {
       // Mode Campuran (all) — Cek jika kasir memilih filter segmen cepat
       if (_selectedSegmentFilter == 'fnb') {
-        filtered = filtered.where((p) {
+        segmentFiltered = segmentFiltered.where((p) {
           final Product prod = p['product'];
           return prod.businessSegment == 'fnb' || prod.businessSegment == 'general' || prod.hasRecipe;
         }).toList();
       } else if (_selectedSegmentFilter == 'retail') {
-        filtered = filtered.where((p) {
+        segmentFiltered = segmentFiltered.where((p) {
           final Product prod = p['product'];
           return prod.businessSegment == 'retail' || prod.businessSegment == 'general';
         }).toList();
       }
     }
+
+    var filtered = List<Map<String, dynamic>>.from(segmentFiltered);
 
     // 2. Filter Kategori
     if (_selectedCategoryId != null) {
@@ -1344,11 +1346,19 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
             ),
           ),
 
-        // ── Category Chips ──
+        // ── Category Chips (Hanya tampilkan kategori yang memiliki produk aktif di segmen ini) ──
         BlocBuilder<CategoryCubit, CategoryState>(
           builder: (context, catState) {
             List<Category> cats = [];
             if (catState is CategoryLoaded) cats = catState.categories;
+
+            // Dapatkan set categoryId yang benar-benar ada produknya di segment yang sedang aktif
+            final activeCategoryIds = segmentFiltered.map((p) {
+              final Product prod = p['product'];
+              return prod.categoryId;
+            }).whereType<int>().toSet();
+
+            final availableCats = cats.where((c) => activeCategoryIds.contains(c.id)).toList();
 
             return SizedBox(
               height: 46,
@@ -1357,7 +1367,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
                 children: [
                   _buildCategoryChip('Semua', null),
-                  ...cats.map((c) => _buildCategoryChip(c.name, c.id)),
+                  ...availableCats.map((c) => _buildCategoryChip(c.name, c.id)),
                 ],
               ),
             );
