@@ -7,8 +7,11 @@ class SalesRepository {
   SalesRepository(this._db);
 
   // Mengambil daftar produk lengkap beserta unit dan harga jualnya
+  // Mengambil daftar produk lengkap yang siap dijual (mengecualikan bahan baku mentah)
   Future<List<Map<String, dynamic>>> getPosProducts() async {
-    final products = await _db.select(_db.products).get();
+    final products = await (_db.select(_db.products)
+          ..where((tbl) => tbl.productType.isNotValue('raw_material') & tbl.isActive.equals(true)))
+        .get();
     final brands = await _db.select(_db.brands).get();
     final categories = await _db.select(_db.categories).get();
     final brandMap = {for (final b in brands) b.id: b.name};
@@ -149,8 +152,47 @@ class SalesRepository {
               ),
             );
 
-        // Jika produk mengelola stok, update stok
-        if (product.isStockManaged) {
+        // Jika produk menggunakan resep bahan baku (BOM), potong stok bahan-bahan penyusunnya
+        if (product.hasRecipe) {
+          final recipes = await (_db.select(_db.productRecipes)
+                ..where((tbl) => tbl.parentProductId.equals(product.id)))
+              .get();
+
+          for (var r in recipes) {
+            final usedQty = r.quantityRequired * qty;
+            final existingIngredientStock = await (_db.select(_db.inventory)
+                  ..where((tbl) => tbl.productId.equals(r.ingredientProductId) & tbl.unitId.equals(r.ingredientUnitId)))
+                .getSingleOrNull();
+
+            if (existingIngredientStock == null) {
+              await _db.into(_db.inventory).insert(
+                    InventoryCompanion.insert(
+                      productId: r.ingredientProductId,
+                      unitId: r.ingredientUnitId,
+                      quantity: Value(-usedQty),
+                    ),
+                  );
+            } else {
+              await _db.update(_db.inventory).replace(
+                    existingIngredientStock.copyWith(quantity: existingIngredientStock.quantity - usedQty),
+                  );
+            }
+
+            // Catat log mutasi stok bahan baku
+            await _db.into(_db.stockMovements).insert(
+                  StockMovementsCompanion.insert(
+                    productId: r.ingredientProductId,
+                    unitId: r.ingredientUnitId,
+                    quantity: -usedQty,
+                    type: 'sale',
+                    referenceNo: Value(refNo),
+                    notes: Value('Pemakaian Resep POS: ${product.name} x${qty.toStringAsFixed(qty.truncateToDouble() == qty ? 0 : 2)}'),
+                    createdAt: Value(now),
+                  ),
+                );
+          }
+        } else if (product.isStockManaged) {
+          // Jika produk mengelola stok biasa (non-resep), update stok produk
           final existingStock = await (_db.select(_db.inventory)
                 ..where((tbl) => tbl.productId.equals(product.id) & tbl.unitId.equals(unit.id)))
               .getSingleOrNull();

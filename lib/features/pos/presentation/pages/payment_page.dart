@@ -15,12 +15,14 @@ class PaymentPage extends StatefulWidget {
   final User user;
   final CashierSession session;
   final CartState cart;
+  final bool autoClearCart;
 
   const PaymentPage({
     super.key,
     required this.user,
     required this.session,
     required this.cart,
+    this.autoClearCart = true,
   });
 
   @override
@@ -80,12 +82,21 @@ class _PaymentPageState extends State<PaymentPage>
       'icon': Icons.account_balance_rounded,
     },
     {
+      'id': 'multi',
+      'label': 'Campur',
+      'sublabel': 'Split Payment (Multi)',
+      'icon': Icons.pie_chart_rounded,
+    },
+    {
       'id': 'debt',
       'label': 'Bon',
       'sublabel': 'Bon / Piutang',
       'icon': Icons.assignment_late_rounded,
     },
   ];
+
+  // List rincian pembayaran untuk Split Payment (Multi-Payment)
+  List<Map<String, dynamic>> _splitPayments = [];
 
   @override
   void initState() {
@@ -138,11 +149,32 @@ class _PaymentPageState extends State<PaymentPage>
     } catch (_) {}
   }
 
+  void _initSplitPayments() {
+    if (_splitPayments.isEmpty) {
+      final total = widget.cart.grandTotal;
+      final half = (total / 2).roundToDouble();
+      _splitPayments = [
+        {'method': 'cash', 'amount': half, 'referenceId': null},
+        {'method': 'qris', 'amount': total - half, 'referenceId': null},
+      ];
+    }
+  }
+
+  double get _totalSplitPaid => _splitPayments.fold<double>(
+        0.0,
+        (sum, item) => sum + (item['amount'] as double? ?? 0.0),
+      );
+
   void _calculateChange() {
     setState(() {
       if (_paymentMethod == 'debt') {
         _changeAmount = 0.0;
         // Let _amountPaid be whatever user typed for DP, default to 0.0 initially
+      } else if (_paymentMethod == 'multi') {
+        _initSplitPayments();
+        _amountPaid = _totalSplitPaid;
+        _changeAmount = _amountPaid - widget.cart.grandTotal;
+        if (_changeAmount < 0) _changeAmount = 0.0;
       } else if (_paymentMethod != 'cash') {
         _amountPaid = widget.cart.grandTotal;
         _amountPaidController.text = _formatNumber(_amountPaid.toStringAsFixed(0));
@@ -191,6 +223,33 @@ class _PaymentPageState extends State<PaymentPage>
       return;
     }
 
+    if (_paymentMethod == 'multi') {
+      final totalPaid = _totalSplitPaid;
+      if (_splitPayments.isEmpty || totalPaid < widget.cart.grandTotal) {
+        HapticFeedback.heavyImpact();
+        final sisa = widget.cart.grandTotal - totalPaid;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Total pembayaran split masih kurang ${CurrencyFormatter.format(sisa)}!',
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppConstants.errorColor,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+        return;
+      }
+    }
+
     HapticFeedback.mediumImpact();
     final cartItemsMap = widget.cart.items.map((item) {
       return {
@@ -203,8 +262,9 @@ class _PaymentPageState extends State<PaymentPage>
       };
     }).toList();
 
-    final paymentsMap = [
-      if (_paymentMethod == 'debt') ...[
+    List<Map<String, dynamic>> paymentsMap;
+    if (_paymentMethod == 'debt') {
+      paymentsMap = [
         {
           'method': 'debt',
           'amount': widget.cart.grandTotal - _amountPaid,
@@ -216,19 +276,32 @@ class _PaymentPageState extends State<PaymentPage>
             'amount': _amountPaid,
             'referenceId': null,
           },
-      ] else
+      ];
+    } else if (_paymentMethod == 'multi') {
+      paymentsMap = _splitPayments.where((p) => (p['amount'] as double? ?? 0.0) > 0).map((p) {
+        return {
+          'method': p['method'] as String,
+          'amount': p['amount'] as double,
+          'referenceId': p['referenceId'] as String?,
+        };
+      }).toList();
+    } else {
+      paymentsMap = [
         {
           'method': _paymentMethod,
           'amount': widget.cart.grandTotal,
           'referenceId': null,
         }
-    ];
+      ];
+    }
 
     final effectiveGrandTotal = widget.cart.grandTotal;
     final earnRate = _pointsSettings['earnRate'] ?? 1000;
     final actualPaid = _paymentMethod == 'debt'
         ? _amountPaid
-        : (_paymentMethod == 'cash' ? _amountPaid : effectiveGrandTotal);
+        : (_paymentMethod == 'cash'
+            ? _amountPaid
+            : (_paymentMethod == 'multi' ? _totalSplitPaid : effectiveGrandTotal));
     final pointsEarned = actualPaid >= earnRate ? (actualPaid ~/ earnRate) : 0;
 
     context.read<SalesCubit>().checkout(
@@ -239,7 +312,9 @@ class _PaymentPageState extends State<PaymentPage>
           taxAmount: widget.cart.taxAmount,
           grandTotal: effectiveGrandTotal,
           paidAmount: actualPaid,
-          changeAmount: _changeAmount,
+          changeAmount: _paymentMethod == 'multi'
+              ? (actualPaid > effectiveGrandTotal ? actualPaid - effectiveGrandTotal : 0.0)
+              : _changeAmount,
           downPayment: _paymentMethod == 'debt' ? _amountPaid : 0.0,
           cartItems: cartItemsMap,
           payments: paymentsMap,
@@ -269,7 +344,7 @@ class _PaymentPageState extends State<PaymentPage>
               : (_paymentMethod == 'cash' ? _amountPaid : widget.cart.grandTotal);
           final earned = actualPaid >= earnRate ? (actualPaid ~/ earnRate) : 0;
 
-          Navigator.pushReplacement(
+          Navigator.push<bool>(
             context,
             MaterialPageRoute(
               builder: (context) => PaymentSuccessPage(
@@ -279,9 +354,14 @@ class _PaymentPageState extends State<PaymentPage>
                 cart: widget.cart,
                 pointsEarned: earned,
                 pointsRedeemed: _pointsRedeemed,
+                autoClearCart: widget.autoClearCart,
               ),
             ),
-          );
+          ).then((result) {
+            if (context.mounted) {
+              Navigator.pop(context, result ?? true);
+            }
+          });
         }
         if (state is SalesError) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -460,7 +540,18 @@ class _PaymentPageState extends State<PaymentPage>
                             const SizedBox(height: 14),
                           ],
                         )
-                      : _buildNonCashInfo(),
+                      : _paymentMethod == 'multi'
+                          ? Column(
+                              key: const ValueKey('multi_section'),
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSectionLabel('Rincian Split Payment', Icons.pie_chart_outline_rounded),
+                                const SizedBox(height: 6),
+                                _buildSplitPaymentCard(),
+                                const SizedBox(height: 14),
+                              ],
+                            )
+                          : _buildNonCashInfo(),
                 ),
 
                 // Poin Pelanggan
@@ -761,7 +852,18 @@ class _PaymentPageState extends State<PaymentPage>
                                           const SizedBox(height: 16),
                                         ],
                                       )
-                                    : _buildNonCashInfo(),
+                                    : _paymentMethod == 'multi'
+                                        ? Column(
+                                            key: const ValueKey('multi_section_tablet'),
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              _buildSectionLabel('Rincian Split Payment', Icons.pie_chart_outline_rounded),
+                                              const SizedBox(height: 6),
+                                              _buildSplitPaymentCard(),
+                                              const SizedBox(height: 16),
+                                            ],
+                                          )
+                                        : _buildNonCashInfo(),
                               ),
 
                               // Poin Pelanggan
@@ -1374,6 +1476,369 @@ class _PaymentPageState extends State<PaymentPage>
         ),
         const SizedBox(height: 14),
       ],
+    );
+  }
+
+  Widget _buildSplitPaymentCard() {
+    final grandTotal = widget.cart.grandTotal;
+    final totalPaid = _totalSplitPaid;
+    final remaining = grandTotal - totalPaid;
+    final isExact = (totalPaid - grandTotal).abs() < 0.01;
+    final isOver = totalPaid > grandTotal;
+    final isUnder = remaining > 0.01;
+
+    // Pilihan metode untuk pembayaran split
+    final splitMethodOptions = [
+      {'id': 'cash', 'label': 'Tunai', 'icon': Icons.payments_rounded},
+      {'id': 'qris', 'label': 'QRIS', 'icon': Icons.qr_code_scanner_rounded},
+      {'id': 'card', 'label': 'Kartu EDC', 'icon': Icons.credit_card_rounded},
+      {'id': 'transfer', 'label': 'Transfer', 'icon': Icons.account_balance_rounded},
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isExact
+              ? const Color(0xFF059669).withValues(alpha: 0.3)
+              : (isOver
+                  ? const Color(0xFF2563EB).withValues(alpha: 0.3)
+                  : const Color(0xFFD97706).withValues(alpha: 0.3)),
+          width: 1.2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header Status Split
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isExact
+                  ? const Color(0xFFECFDF5)
+                  : (isOver ? const Color(0xFFEFF6FF) : const Color(0xFFFFFBEB)),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isExact
+                    ? const Color(0xFFA7F3D0)
+                    : (isOver ? const Color(0xFFBFDBFE) : const Color(0xFFFDE68A)),
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  isExact
+                      ? Icons.check_circle_rounded
+                      : (isOver ? Icons.info_rounded : Icons.pending_rounded),
+                  color: isExact
+                      ? const Color(0xFF059669)
+                      : (isOver ? const Color(0xFF2563EB) : const Color(0xFFD97706)),
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isExact
+                            ? 'Pembayaran Pas Terpenuhi'
+                            : (isOver ? 'Kelebihan Pembayaran (Kembalian)' : 'Sisa Belum Terbayar'),
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: const Color(0xFF64748B),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      Text(
+                        isExact
+                            ? 'Rp 0'
+                            : (isOver
+                                ? CurrencyFormatter.format(totalPaid - grandTotal)
+                                : CurrencyFormatter.format(remaining)),
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                          color: isExact
+                              ? const Color(0xFF059669)
+                              : (isOver ? const Color(0xFF2563EB) : const Color(0xFFD97706)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '${CurrencyFormatter.format(totalPaid)} / ${CurrencyFormatter.format(grandTotal)}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF475569),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // List Tiap Baris Metode Split
+          ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _splitPayments.length,
+            separatorBuilder: (_, __) => const SizedBox(height: 10),
+            itemBuilder: (context, idx) {
+              final item = _splitPayments[idx];
+              final currentMethod = item['method'] as String? ?? 'cash';
+              final currentAmount = item['amount'] as double? ?? 0.0;
+
+              return Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        // Badge Nomor Bagian
+                        Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F172A),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            '${idx + 1}',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+
+                        // Dropdown Pilih Metode
+                        Expanded(
+                          child: Container(
+                            height: 38,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFCBD5E1)),
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: currentMethod,
+                                isDense: true,
+                                isExpanded: true,
+                                icon: const Icon(Icons.arrow_drop_down_rounded,
+                                    color: Color(0xFF64748B), size: 20),
+                                items: splitMethodOptions.map((opt) {
+                                  return DropdownMenuItem<String>(
+                                    value: opt['id'] as String,
+                                    child: Row(
+                                      children: [
+                                        Icon(opt['icon'] as IconData,
+                                            size: 16,
+                                            color: const Color(0xFF0F172A)),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          opt['label'] as String,
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: const Color(0xFF0F172A),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    setState(() {
+                                      _splitPayments[idx]['method'] = val;
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+
+                        // Tombol Hapus Baris (hanya jika lebih dari 1 baris)
+                        if (_splitPayments.length > 1)
+                          InkWell(
+                            onTap: () {
+                              setState(() {
+                                _splitPayments.removeAt(idx);
+                                _calculateChange();
+                              });
+                            },
+                            borderRadius: BorderRadius.circular(6),
+                            child: Padding(
+                              padding: const EdgeInsets.all(6),
+                              child: Icon(Icons.delete_outline_rounded,
+                                  color: AppConstants.errorColor, size: 20),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Input Nominal untuk baris ini
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Container(
+                            height: 42,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFCBD5E1)),
+                            ),
+                            child: Row(
+                              children: [
+                                Text(
+                                  'Rp ',
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                    color: const Color(0xFF64748B),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: TextFormField(
+                                    key: ValueKey('split_amount_${idx}_${_splitPayments.length}'),
+                                    initialValue: currentAmount > 0
+                                        ? _formatNumber(currentAmount.toStringAsFixed(0))
+                                        : '',
+                                    keyboardType: TextInputType.number,
+                                    inputFormatters: const [_NumberInputFormatter()],
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: const Color(0xFF0F172A),
+                                    ),
+                                    decoration: InputDecoration(
+                                      isDense: true,
+                                      border: InputBorder.none,
+                                      hintText: '0',
+                                      hintStyle: GoogleFonts.poppins(
+                                        color: const Color(0xFF94A3B8),
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                    onChanged: (val) {
+                                      final raw = val.replaceAll('.', '');
+                                      final parsed = double.tryParse(raw) ?? 0.0;
+                                      setState(() {
+                                        _splitPayments[idx]['amount'] = parsed;
+                                        _calculateChange();
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+
+                        // Tombol Pintas "Isi Sisa"
+                        if (isUnder && remaining > 0)
+                          ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                _splitPayments[idx]['amount'] = currentAmount + remaining;
+                                _calculateChange();
+                              });
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF0F172A),
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                              visualDensity: VisualDensity.compact,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: Text(
+                              '+ Sisa',
+                              style: GoogleFonts.poppins(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 12),
+
+          // Tombol Tambah Metode Pembayaran Lainnya
+          OutlinedButton.icon(
+            onPressed: () {
+              setState(() {
+                final unassigned = remaining > 0 ? remaining : 0.0;
+                // Pilih default method berikutnya
+                final usedMethods = _splitPayments.map((p) => p['method']).toSet();
+                String nextMethod = 'card';
+                for (var opt in splitMethodOptions) {
+                  if (!usedMethods.contains(opt['id'])) {
+                    nextMethod = opt['id'] as String;
+                    break;
+                  }
+                }
+                _splitPayments.add({
+                  'method': nextMethod,
+                  'amount': unassigned,
+                  'referenceId': null,
+                });
+                _calculateChange();
+              });
+            },
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: Text(
+              'Tambah Metode Lain',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF0F172A),
+              side: const BorderSide(color: Color(0xFFCBD5E1), width: 1.2),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

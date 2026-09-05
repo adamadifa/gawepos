@@ -9,7 +9,11 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 import '../../../../core/constants/constants.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/whatsapp_receipt_helper.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/services/print_service.dart';
+import '../../../../core/di/injection.dart';
+import '../../../pos/data/sales_repository.dart';
 import '../bloc/reports_cubit.dart';
 
 class SalesReportPage extends StatefulWidget {
@@ -279,9 +283,98 @@ class _SalesReportPageState extends State<SalesReportPage> {
                   ],
                 ),
                 const Divider(height: 20, color: Color(0xFFF1F5F9)),
-                Text(
-                  dateStr,
-                  style: GoogleFonts.poppins(fontSize: 10.5, color: const Color(0xFF94A3B8)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      dateStr,
+                      style: GoogleFonts.poppins(fontSize: 10.5, color: const Color(0xFF94A3B8)),
+                    ),
+                    Row(
+                      children: [
+                        InkWell(
+                          onTap: () async {
+                            try {
+                              final details = await getIt<SalesRepository>().getOrderDetails(order.id);
+                              if (details != null) {
+                                final msg = await WhatsAppReceiptHelper.generateReceiptMessage(
+                                  order: details['order'],
+                                  items: details['items'],
+                                  payments: details['payments'],
+                                  customer: details['customer'],
+                                  pointsEarned: details['pointsEarned'] as int? ?? 0,
+                                  pointsRedeemed: details['pointsRedeemed'] as int? ?? 0,
+                                );
+                                if (context.mounted) {
+                                  await WhatsAppReceiptHelper.showSendWhatsAppModal(
+                                    context: context,
+                                    receiptMessage: msg,
+                                    initialCustomer: details['customer'],
+                                  );
+                                }
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Gagal membagikan struk: $e')),
+                                );
+                              }
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF25D366).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.share_rounded, size: 13, color: Color(0xFF16A34A)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Kirim WA',
+                                  style: GoogleFonts.poppins(fontSize: 10.5, fontWeight: FontWeight.w600, color: const Color(0xFF16A34A)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        InkWell(
+                          onTap: () async {
+                            final success = await getIt<PrintService>().printOrder(order.id);
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(success ? 'Struk berhasil dicetak!' : 'Gagal mencetak struk! Pastikan printer terhubung.'),
+                                  backgroundColor: success ? const Color(0xFF0F172A) : AppConstants.errorColor,
+                                ),
+                              );
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.print_rounded, size: 13, color: Color(0xFF0F172A)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Cetak',
+                                  style: GoogleFonts.poppins(fontSize: 10.5, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ],
             ),

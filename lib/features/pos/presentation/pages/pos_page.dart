@@ -19,6 +19,7 @@ import '../bloc/sales_cubit.dart';
 import 'payment_page.dart';
 import 'held_orders_page.dart';
 import 'sales_history_page.dart';
+import 'split_bill_page.dart';
 
 class _UnitInputState {
   final ProductUnit unit;
@@ -2022,7 +2023,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
         return Column(
           children: [
             // ── Customer & Hold Header ──
-            _buildCartHeaderSection(user),
+            _buildCartHeaderSection(user, session),
 
             // ── Cart Items ──
             Expanded(
@@ -2324,7 +2325,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
     );
   }
 
-  Widget _buildCartHeaderSection(User? user) {
+  Widget _buildCartHeaderSection(User? user, CashierSession? session) {
     final cart = context.read<CartCubit>().state;
 
     return Container(
@@ -2383,6 +2384,33 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
             ),
           ),
               const SizedBox(width: 8),
+              // Split Bill button
+              Material(
+                color: const Color(0xFF0F172A).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () {
+                    if (user == null || session == null) return;
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SplitBillPage(
+                          user: user,
+                          session: session,
+                          originalCart: cart,
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.all(10),
+                    child: Icon(Icons.call_split_rounded,
+                        color: Color(0xFF0F172A), size: 20),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
               // Hold button
               Material(
                 color: AppConstants.warningColor.withValues(alpha: 0.1),

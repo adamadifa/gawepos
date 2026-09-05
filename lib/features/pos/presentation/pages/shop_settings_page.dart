@@ -27,6 +27,7 @@ class _ShopSettingsPageState extends State<ShopSettingsPage> {
 
   File? _logoImageFile;
   String? _existingLogoPath;
+  String _businessMode = 'all'; // 'all', 'retail', 'fnb'
 
   @override
   void initState() {
@@ -68,6 +69,7 @@ class _ShopSettingsPageState extends State<ShopSettingsPage> {
     final rHeader = await _salesRepository.getSetting('receipt_header');
     final rFooter = await _salesRepository.getSetting('receipt_footer');
     final shopLogo = await _salesRepository.getSetting('shop_logo');
+    final bMode = await _salesRepository.getSetting('business_mode');
 
     setState(() {
       _shopNameController.text = shopName ?? '';
@@ -76,6 +78,7 @@ class _ShopSettingsPageState extends State<ShopSettingsPage> {
       _receiptHeaderController.text = rHeader ?? '';
       _receiptFooterController.text = rFooter ?? '';
       _existingLogoPath = shopLogo;
+      _businessMode = bMode ?? 'all';
       _isLoading = false;
     });
   }
@@ -145,6 +148,7 @@ class _ShopSettingsPageState extends State<ShopSettingsPage> {
     await _salesRepository.saveSetting('shop_address', _shopAddressController.text.trim());
     await _salesRepository.saveSetting('receipt_header', _receiptHeaderController.text.trim());
     await _salesRepository.saveSetting('receipt_footer', _receiptFooterController.text.trim());
+    await _salesRepository.saveSetting('business_mode', _businessMode);
 
     if (_logoImageFile != null) {
       try {
@@ -234,6 +238,8 @@ class _ShopSettingsPageState extends State<ShopSettingsPage> {
                         child: ListView(
                           padding: const EdgeInsets.all(16),
                           children: [
+                            _buildBusinessModeSection(),
+                            const SizedBox(height: 16),
                             _buildShopSection(),
                             const SizedBox(height: 20),
                             ElevatedButton(
@@ -267,6 +273,8 @@ class _ShopSettingsPageState extends State<ShopSettingsPage> {
                   return ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
+                      _buildBusinessModeSection(),
+                      const SizedBox(height: 16),
                       _buildShopSection(),
                       const SizedBox(height: 20),
                       _buildReceiptPreviewSection(),
@@ -291,6 +299,132 @@ class _ShopSettingsPageState extends State<ShopSettingsPage> {
                 }
               },
             ),
+    );
+  }
+
+  Widget _buildBusinessModeSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildSectionHeader('Mode Operasional Bisnis'),
+          const SizedBox(height: 4),
+          Text(
+            'Sesuaikan tampilan menu dan formulir produk berdasarkan model usaha Anda',
+            style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
+          ),
+          const Divider(height: 20, color: Color(0xFFF1F5F9)),
+          _buildBusinessModeOption(
+            keyMode: 'all',
+            icon: Icons.all_inclusive_rounded,
+            title: 'Campuran / All-in-One (Lengkap)',
+            desc: 'Aktifkan semua fitur retail, barcode, sembako, bahan baku & resep F&B.',
+            accentColor: const Color(0xFF1A56DB),
+          ),
+          const SizedBox(height: 10),
+          _buildBusinessModeOption(
+            keyMode: 'retail',
+            icon: Icons.storefront_rounded,
+            title: 'Retail & Toko Kelontong / Minimarket',
+            desc: 'Fokus penjualan barcode, multi-satuan & grosir. Sembunyikan menu bahan baku.',
+            accentColor: const Color(0xFF059669),
+          ),
+          const SizedBox(height: 10),
+          _buildBusinessModeOption(
+            keyMode: 'fnb',
+            icon: Icons.coffee_rounded,
+            title: 'F&B, Kafe & Restoran',
+            desc: 'Fokus menu makanan/minuman, bahan baku & resep racikan otomatis potong stok.',
+            accentColor: const Color(0xFFD97706),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBusinessModeOption({
+    required String keyMode,
+    required IconData icon,
+    required String title,
+    required String desc,
+    required Color accentColor,
+  }) {
+    final bool isSelected = _businessMode == keyMode;
+
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _businessMode = keyMode;
+        });
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isSelected ? accentColor.withValues(alpha: 0.05) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? accentColor : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: isSelected ? accentColor.withValues(alpha: 0.15) : const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: isSelected ? accentColor : const Color(0xFF64748B), size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12.5,
+                      color: isSelected ? const Color(0xFF0F172A) : const Color(0xFF334155),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    desc,
+                    style: GoogleFonts.poppins(
+                      fontSize: 10.5,
+                      color: const Color(0xFF64748B),
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+              color: isSelected ? accentColor : const Color(0xFF94A3B8),
+              size: 20,
+            ),
+          ],
+        ),
+      ),
     );
   }
 

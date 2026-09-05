@@ -9,7 +9,9 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../../core/constants/constants.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/di/injection.dart';
+import '../../../../core/utils/currency_formatter.dart';
 import '../../data/master_repository.dart';
+import '../../../pos/data/sales_repository.dart';
 import '../bloc/product_cubit.dart';
 import '../bloc/category_cubit.dart';
 import '../bloc/brand_cubit.dart';
@@ -42,8 +44,15 @@ class _ProductFormPageState extends State<ProductFormPage> {
   int? _selectedSupplierId;
   String _consignmentType = 'commission_percent'; // 'commission_percent' / 'fixed_cost'
 
+  // Resep / BOM (Bill of Materials) State
+  bool _hasRecipe = false;
+  final List<Map<String, dynamic>> _recipes = [];
+  List<Product> _rawMaterialCandidates = [];
+  final Map<int, List<ProductUnit>> _candidateUnitsMap = {};
+
   File? _imageFile;
   String? _existingImagePath;
+  String _businessMode = 'all';
 
   // Multi units repeater list
   final List<Map<String, dynamic>> _units = [];
@@ -59,9 +68,23 @@ class _ProductFormPageState extends State<ProductFormPage> {
   }
 
   Future<void> _loadPriceTiersAndData() async {
+    final mode = await getIt<SalesRepository>().getSetting('business_mode');
+    _businessMode = mode ?? 'all';
+
+    final repo = getIt<MasterRepository>();
+    final candidates = await repo.getRawMaterialCandidates();
+    _rawMaterialCandidates = candidates;
+
+    // Cache satuan untuk masing-masing calon bahan baku
+    for (var cand in candidates) {
+      final candComplete = await repo.getProductComplete(cand.id);
+      if (candComplete != null) {
+        _candidateUnitsMap[cand.id] = (candComplete['units'] as List<ProductUnit>);
+      }
+    }
+
     if (widget.existingProduct != null) {
       final product = widget.existingProduct!;
-      final repo = getIt<MasterRepository>();
       _nameController.text = product.name;
       _skuController.text = product.sku ?? '';
       _barcodeController.text = product.barcode ?? '';
@@ -77,13 +100,28 @@ class _ProductFormPageState extends State<ProductFormPage> {
       _selectedSupplierId = product.supplierId;
       _consignmentType = product.consignmentType ?? 'commission_percent';
       _consignmentRateController.text = product.commissionRate.toStringAsFixed(product.consignmentType == 'fixed_cost' ? 0 : 1);
+      _hasRecipe = product.hasRecipe;
 
       final complete = await repo.getProductComplete(product.id);
       if (complete != null) {
         final List<ProductUnit> dbUnits = complete['units'];
         final List<ProductPrice> dbPrices = complete['prices'];
+        final List<Map<String, dynamic>> dbRecipes = complete['recipes'] ?? [];
 
         setState(() {
+          for (var r in dbRecipes) {
+            final ProductRecipe rec = r['recipe'];
+            final Product ingProd = r['ingredientProduct'];
+            final ProductUnit ingUnit = r['ingredientUnit'];
+
+            _recipes.add({
+              'ingredientProductId': ingProd.id,
+              'ingredientUnitId': ingUnit.id,
+              'qtyController': TextEditingController(text: rec.quantityRequired.toStringAsFixed(rec.quantityRequired.truncateToDouble() == rec.quantityRequired ? 0 : 2)),
+              'notesController': TextEditingController(text: rec.notes ?? ''),
+            });
+          }
+
           for (var u in dbUnits) {
             final tempId = u.id;
             if (tempId >= _tempUnitIdCounter) {
@@ -119,7 +157,51 @@ class _ProductFormPageState extends State<ProductFormPage> {
       }
     } else {
       _addUnitRow(isBase: true, defaultName: 'Pcs');
+      setState(() {});
     }
+  }
+
+  void _addRecipeRow() {
+    if (_rawMaterialCandidates.isEmpty) {
+      _showAppSnackbar('Belum ada data produk bahan baku yang tersedia.', isError: true);
+      return;
+    }
+    final defaultProduct = _rawMaterialCandidates.first;
+    final defaultUnits = _candidateUnitsMap[defaultProduct.id] ?? [];
+    final defaultUnitId = defaultUnits.isNotEmpty ? defaultUnits.first.id : 0;
+
+    setState(() {
+      _recipes.add({
+        'ingredientProductId': defaultProduct.id,
+        'ingredientUnitId': defaultUnitId,
+        'qtyController': TextEditingController(text: '1'),
+        'notesController': TextEditingController(),
+      });
+    });
+  }
+
+  void _removeRecipeRow(int index) {
+    setState(() {
+      final r = _recipes[index];
+      (r['qtyController'] as TextEditingController).dispose();
+      (r['notesController'] as TextEditingController).dispose();
+      _recipes.removeAt(index);
+    });
+  }
+
+  double _calculateEstimatedHpp() {
+    double totalHpp = 0.0;
+    for (var r in _recipes) {
+      final prodId = r['ingredientProductId'] as int?;
+      final unitId = r['ingredientUnitId'] as int?;
+      final qty = double.tryParse((r['qtyController'] as TextEditingController).text) ?? 0.0;
+      if (prodId != null && unitId != null && qty > 0) {
+        final units = _candidateUnitsMap[prodId] ?? [];
+        final matchedUnit = units.firstWhere((u) => u.id == unitId, orElse: () => units.isNotEmpty ? units.first : ProductUnit(id: 0, productId: 0, name: '', conversionFactor: 1.0, costPrice: 0.0, isBase: true));
+        totalHpp += (matchedUnit.costPrice * qty);
+      }
+    }
+    return totalHpp;
   }
 
   void _addUnitRow({bool isBase = false, String defaultName = ''}) {
@@ -504,6 +586,29 @@ class _ProductFormPageState extends State<ProductFormPage> {
 
     final rateVal = double.tryParse(_consignmentRateController.text.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0.0;
 
+    // Resep Companions
+    final List<ProductRecipesCompanion> recipesCompanions = [];
+    if (_hasRecipe) {
+      for (var r in _recipes) {
+        final ingProdId = r['ingredientProductId'] as int?;
+        final ingUnitId = r['ingredientUnitId'] as int?;
+        final qty = double.tryParse((r['qtyController'] as TextEditingController).text.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0.0;
+        final notes = (r['notesController'] as TextEditingController).text.trim();
+
+        if (ingProdId != null && ingUnitId != null && qty > 0) {
+          recipesCompanions.add(
+            ProductRecipesCompanion(
+              parentProductId: const drift.Value(0),
+              ingredientProductId: drift.Value(ingProdId),
+              ingredientUnitId: drift.Value(ingUnitId),
+              quantityRequired: drift.Value(qty),
+              notes: drift.Value(notes.isEmpty ? null : notes),
+            ),
+          );
+        }
+      }
+    }
+
     setState(() => _isSaving = true);
 
     context.read<ProductCubit>().saveProduct(
@@ -523,8 +628,10 @@ class _ProductFormPageState extends State<ProductFormPage> {
       supplierId: _isConsignment ? _selectedSupplierId : null,
       consignmentType: _isConsignment ? _consignmentType : null,
       commissionRate: _isConsignment ? rateVal : 0.0,
+      hasRecipe: _hasRecipe,
       units: unitsCompanions,
       prices: pricesCompanions,
+      recipes: recipesCompanions,
       newImageFile: _imageFile,
     );
   }
@@ -537,6 +644,10 @@ class _ProductFormPageState extends State<ProductFormPage> {
       _descController.dispose();
       _minStockController.dispose();
       _consignmentRateController.dispose();
+      for (var r in _recipes) {
+        (r['qtyController'] as TextEditingController).dispose();
+        (r['notesController'] as TextEditingController).dispose();
+      }
       for (var u in _units) {
         (u['nameController'] as TextEditingController).dispose();
         (u['factorController'] as TextEditingController).dispose();
@@ -603,6 +714,10 @@ class _ProductFormPageState extends State<ProductFormPage> {
                       _buildBasicInfoSection(),
                       const SizedBox(height: 16),
                       _buildUnitsAndPricingSection(),
+                      if (_productType != 'raw_material' && _businessMode != 'retail') ...[
+                        const SizedBox(height: 16),
+                        _buildRecipeSection(),
+                      ],
                       const SizedBox(height: 16),
                       _buildInventoryAndSettingsSection(),
                       const SizedBox(height: 16),
@@ -632,8 +747,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
                   child: FilledButton(
                     onPressed: _isSaving ? null : _save,
                     style: FilledButton.styleFrom(
-                      backgroundColor: AppConstants.primaryColor,
-                      disabledBackgroundColor: AppConstants.primaryColor.withValues(alpha: 0.6),
+                      backgroundColor: const Color(0xFF0F172A),
+                      disabledBackgroundColor: const Color(0xFF0F172A).withValues(alpha: 0.6),
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(
@@ -692,10 +807,10 @@ class _ProductFormPageState extends State<ProductFormPage> {
             child: Stack(
               children: [
                 Container(
-                  width: 90,
-                  height: 90,
+                  width: 88,
+                  height: 88,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: const Color(0xFFF8FAFC),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: const Color(0xFFCBD5E1)),
                   ),
@@ -705,22 +820,29 @@ class _ProductFormPageState extends State<ProductFormPage> {
                   ),
                 ),
                 Positioned(
-                  bottom: 2,
-                  right: 2,
+                  bottom: 0,
+                  right: 0,
                   child: Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
                       color: AppConstants.primaryColor,
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 2),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppConstants.primaryColor.withValues(alpha: 0.3),
+                          blurRadius: 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
-                    child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 14),
+                    child: const Icon(Icons.camera_alt_rounded, color: Colors.white, size: 13),
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
           // Ringkasan Info & Tipe Produk Selector
           Expanded(
             child: Column(
@@ -728,15 +850,16 @@ class _ProductFormPageState extends State<ProductFormPage> {
               children: [
                 Text(
                   'Tipe Produk',
-                  style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+                  style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF475569)),
                 ),
                 const SizedBox(height: 8),
                 Row(
                   children: [
                     _buildTypeChip(
-                      label: 'Barang Fisik',
+                      label: 'Barang Jadi',
                       icon: Icons.inventory_2_outlined,
                       isSelected: _productType == 'goods',
+                      activeColor: const Color(0xFF0F172A),
                       onTap: () {
                         setState(() {
                           _productType = 'goods';
@@ -746,22 +869,26 @@ class _ProductFormPageState extends State<ProductFormPage> {
                     ),
                     const SizedBox(width: 8),
                     _buildTypeChip(
-                      label: 'Jasa',
+                      label: 'Jasa / Layanan',
                       icon: Icons.design_services_outlined,
                       isSelected: _productType == 'service',
+                      activeColor: const Color(0xFF7C3AED),
                       onTap: () {
                         setState(() {
                           _productType = 'service';
                           _isStockManaged = false;
+                          _hasRecipe = false;
                         });
                       },
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Text(
-                  _productType == 'goods' ? 'Memiliki stok fisik & pelacakan gudang' : 'Layanan / non-fisik (tanpa stok)',
-                  style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF94A3B8)),
+                  _productType == 'goods'
+                      ? 'Barang jadi/siap jual dengan stok inventori fisik'
+                      : 'Layanan jasa / non-fisik (tanpa kelola stok)',
+                  style: GoogleFonts.poppins(fontSize: 10.5, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
                 ),
               ],
             ),
@@ -776,6 +903,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
     required IconData icon,
     required bool isSelected,
     required VoidCallback onTap,
+    Color activeColor = AppConstants.primaryColor,
   }) {
     return Expanded(
       child: Material(
@@ -785,28 +913,37 @@ class _ProductFormPageState extends State<ProductFormPage> {
           borderRadius: BorderRadius.circular(10),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+            padding: const EdgeInsets.symmetric(vertical: 7, horizontal: 4),
             decoration: BoxDecoration(
-              color: isSelected ? AppConstants.primaryColor : const Color(0xFFF1F5F9),
+              color: isSelected ? activeColor : const Color(0xFFF1F5F9),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: isSelected ? AppConstants.primaryColor : const Color(0xFFCBD5E1),
+                color: isSelected ? activeColor : const Color(0xFFE2E8F0),
               ),
+              boxShadow: isSelected
+                  ? [
+                      BoxShadow(
+                        color: activeColor.withValues(alpha: 0.25),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(
                   icon,
-                  size: 14,
+                  size: 13,
                   color: isSelected ? Colors.white : const Color(0xFF475569),
                 ),
-                const SizedBox(width: 4),
+                const SizedBox(width: 3),
                 Flexible(
                   child: Text(
                     label,
                     style: GoogleFonts.poppins(
-                      fontSize: 11.5,
+                      fontSize: 11,
                       fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                       color: isSelected ? Colors.white : const Color(0xFF475569),
                     ),
@@ -970,7 +1107,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
         icon: const Icon(Icons.add_rounded, size: 18),
         label: Text('Tambah Satuan', style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600)),
         style: TextButton.styleFrom(
-          foregroundColor: AppConstants.primaryColor,
+          foregroundColor: const Color(0xFF0F172A),
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
           visualDensity: VisualDensity.compact,
         ),
@@ -1000,7 +1137,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
                   color: isBase ? const Color(0xFFF8FAFC) : const Color(0xFFFAFAFA),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: isBase ? AppConstants.primaryColor.withValues(alpha: 0.3) : const Color(0xFFE2E8F0),
+                    color: isBase ? const Color(0xFF0F172A).withValues(alpha: 0.3) : const Color(0xFFE2E8F0),
                     width: isBase ? 1.5 : 1,
                   ),
                 ),
@@ -1014,7 +1151,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: isBase ? AppConstants.primaryColor : const Color(0xFF64748B),
+                            color: isBase ? const Color(0xFF0F172A) : const Color(0xFF64748B),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -1265,7 +1402,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
                   ),
                   Switch.adaptive(
                     value: _isStockManaged,
-                    activeColor: AppConstants.primaryColor,
+                    activeTrackColor: AppConstants.primaryColor,
+                    activeThumbColor: Colors.white,
                     onChanged: (val) => setState(() => _isStockManaged = val),
                   ),
                 ],
@@ -1294,7 +1432,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.price_change_outlined, color: Color(0xFF334155), size: 22),
+                const Icon(Icons.price_change_outlined, color: AppConstants.primaryColor, size: 22),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -1313,7 +1451,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 ),
                 Switch.adaptive(
                   value: _allowManualPrice,
-                  activeColor: AppConstants.primaryColor,
+                  activeTrackColor: AppConstants.primaryColor,
+                  activeThumbColor: Colors.white,
                   onChanged: (val) => setState(() => _allowManualPrice = val),
                 ),
               ],
@@ -1334,11 +1473,11 @@ class _ProductFormPageState extends State<ProductFormPage> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF64748B).withValues(alpha: 0.04),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 3),
           ),
@@ -1351,12 +1490,12 @@ class _ProductFormPageState extends State<ProductFormPage> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(6),
+                padding: const EdgeInsets.all(7),
                 decoration: BoxDecoration(
-                  color: AppConstants.primaryColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: AppConstants.primaryColor, size: 18),
+                child: Icon(icon, color: const Color(0xFF0F172A), size: 18),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -1451,7 +1590,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppConstants.primaryColor, width: 1.5),
+              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
             ),
           ),
         ),
@@ -1480,7 +1619,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
         ),
         const SizedBox(height: 6),
         DropdownButtonFormField<T>(
-          value: value,
+          value: (value != null && items.any((it) => it.value == value)) ? value : (items.isNotEmpty ? items.first.value : null),
           items: items,
           onChanged: onChanged,
           isExpanded: true,
@@ -1500,7 +1639,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
-              borderSide: const BorderSide(color: AppConstants.primaryColor, width: 1.5),
+              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
             ),
           ),
         ),
@@ -1565,7 +1704,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
                 ),
                 Switch(
                   value: _isConsignment,
-                  activeColor: const Color(0xFF16A34A),
+                  activeTrackColor: const Color(0xFF16A34A),
+                  activeThumbColor: Colors.white,
                   onChanged: (val) {
                     setState(() => _isConsignment = val);
                   },
@@ -1622,12 +1762,12 @@ class _ProductFormPageState extends State<ProductFormPage> {
                       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                       decoration: BoxDecoration(
                         color: _consignmentType == 'commission_percent'
-                            ? const Color(0xFFEFF6FF)
+                            ? AppConstants.primaryColor.withValues(alpha: 0.08)
                             : const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                           color: _consignmentType == 'commission_percent'
-                              ? const Color(0xFF3B82F6)
+                              ? AppConstants.primaryColor
                               : const Color(0xFFCBD5E1),
                           width: _consignmentType == 'commission_percent' ? 1.5 : 1,
                         ),
@@ -1639,7 +1779,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
                             Icons.percent_rounded,
                             size: 16,
                             color: _consignmentType == 'commission_percent'
-                                ? const Color(0xFF2563EB)
+                                ? AppConstants.primaryColor
                                 : const Color(0xFF64748B),
                           ),
                           const SizedBox(width: 6),
@@ -1649,7 +1789,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: _consignmentType == 'commission_percent'
-                                  ? const Color(0xFF2563EB)
+                                  ? AppConstants.primaryColor
                                   : const Color(0xFF64748B),
                             ),
                           ),
@@ -1667,12 +1807,12 @@ class _ProductFormPageState extends State<ProductFormPage> {
                       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                       decoration: BoxDecoration(
                         color: _consignmentType == 'fixed_cost'
-                            ? const Color(0xFFEFF6FF)
+                            ? AppConstants.primaryColor.withValues(alpha: 0.08)
                             : const Color(0xFFF8FAFC),
                         borderRadius: BorderRadius.circular(10),
                         border: Border.all(
                           color: _consignmentType == 'fixed_cost'
-                              ? const Color(0xFF3B82F6)
+                              ? AppConstants.primaryColor
                               : const Color(0xFFCBD5E1),
                           width: _consignmentType == 'fixed_cost' ? 1.5 : 1,
                         ),
@@ -1684,7 +1824,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
                             Icons.payments_outlined,
                             size: 16,
                             color: _consignmentType == 'fixed_cost'
-                                ? const Color(0xFF2563EB)
+                                ? AppConstants.primaryColor
                                 : const Color(0xFF64748B),
                           ),
                           const SizedBox(width: 6),
@@ -1694,7 +1834,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: _consignmentType == 'fixed_cost'
-                                  ? const Color(0xFF2563EB)
+                                  ? AppConstants.primaryColor
                                   : const Color(0xFF64748B),
                             ),
                           ),
@@ -1722,6 +1862,344 @@ class _ProductFormPageState extends State<ProductFormPage> {
                   ? 'Toko mendapat persentase dari harga jual, sisanya menjadi hak penitip'
                   : 'Penitip menerima nominal tetap ini per item yang terjual',
             ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  // Bagian: Resep Komposisi Bahan Baku (Bill of Materials / BOM untuk F&B)
+  Widget _buildRecipeSection() {
+    final estimatedHpp = _calculateEstimatedHpp();
+
+    return _buildSectionCard(
+      title: 'Resep / Komposisi Bahan (BOM)',
+      icon: Icons.science_outlined,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Switch Aktifkan Resep
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: _hasRecipe ? AppConstants.primaryColor.withValues(alpha: 0.06) : const Color(0xFFF8FAFC),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _hasRecipe ? AppConstants.primaryColor.withValues(alpha: 0.3) : const Color(0xFFE2E8F0),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: _hasRecipe ? AppConstants.primaryColor.withValues(alpha: 0.12) : const Color(0xFFE2E8F0),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.soup_kitchen_rounded,
+                    size: 20,
+                    color: _hasRecipe ? AppConstants.primaryColor : const Color(0xFF64748B),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Produk Racikan / Menggunakan Resep',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                      Text(
+                        'Stok bahan baku otomatis terpotong saat menu ini terjual di kasir',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: const Color(0xFF64748B),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: _hasRecipe,
+                  activeTrackColor: AppConstants.primaryColor,
+                  activeThumbColor: Colors.white,
+                  onChanged: (val) {
+                    setState(() {
+                      _hasRecipe = val;
+                      if (val && _recipes.isEmpty) {
+                        _addRecipeRow();
+                      }
+                    });
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          if (_hasRecipe) ...[
+            const SizedBox(height: 16),
+
+            // Card Estimasi HPP Racikan Otomatis
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.calculate_rounded, color: Color(0xFF38BDF8), size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'ESTIMASI HPP (MODAL RACIKAN)',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF94A3B8),
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        Text(
+                          CurrencyFormatter.format(estimatedHpp),
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF059669).withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFF059669).withValues(alpha: 0.4)),
+                    ),
+                    child: Text(
+                      '${_recipes.length} Bahan',
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF34D399),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Header Daftar Bahan
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Daftar Bahan Baku Pembuat',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF334155),
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: _addRecipeRow,
+                  icon: const Icon(Icons.add_circle_outline_rounded, size: 16),
+                  label: Text(
+                    'Tambah Bahan',
+                    style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                  style: TextButton.styleFrom(
+                    foregroundColor: const Color(0xFF2563EB),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+
+            // List Komposisi Bahan
+            if (_recipes.isEmpty)
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Center(
+                  child: Text(
+                    'Belum ada bahan baku yang dimasukkan. Klik "+ Tambah Bahan" di atas.',
+                    style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF94A3B8)),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              )
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _recipes.length,
+                separatorBuilder: (context, index) => const SizedBox(height: 10),
+                itemBuilder: (context, index) {
+                  final item = _recipes[index];
+                  final int? selectedProdId = item['ingredientProductId'];
+                  final int? selectedUnitId = item['ingredientUnitId'];
+                  final qtyCtrl = item['qtyController'] as TextEditingController;
+                  final availableUnits = selectedProdId != null ? (_candidateUnitsMap[selectedProdId] ?? []) : <ProductUnit>[];
+
+                  return Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '#${index + 1}',
+                                style: GoogleFonts.poppins(fontSize: 11, fontWeight: FontWeight.w700, color: const Color(0xFF64748B)),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Bahan Baku',
+                                style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete_outline_rounded, color: Color(0xFFEF4444), size: 18),
+                              onPressed: () => _removeRecipeRow(index),
+                              tooltip: 'Hapus Bahan Ini',
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Dropdown Pilih Produk Bahan Baku
+                        DropdownButtonFormField<int>(
+                          value: selectedProdId,
+                          isExpanded: true,
+                          decoration: InputDecoration(
+                            labelText: 'Pilih Bahan Baku',
+                            labelStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF64748B)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          ),
+                          items: _rawMaterialCandidates.map((p) {
+                            return DropdownMenuItem<int>(
+                              value: p.id,
+                              child: Text(
+                                p.name,
+                                style: GoogleFonts.poppins(fontSize: 12.5),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            );
+                          }).toList(),
+                          onChanged: (newProdId) {
+                            if (newProdId != null) {
+                              setState(() {
+                                item['ingredientProductId'] = newProdId;
+                                final units = _candidateUnitsMap[newProdId] ?? [];
+                                item['ingredientUnitId'] = units.isNotEmpty ? units.first.id : 0;
+                              });
+                            }
+                          },
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Input Takaran & Dropdown Satuan
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: TextFormField(
+                                controller: qtyCtrl,
+                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                decoration: InputDecoration(
+                                  labelText: 'Takaran / Qty',
+                                  labelStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF64748B)),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                  hintText: 'Contoh: 18',
+                                ),
+                                style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
+                                onChanged: (val) => setState(() {}),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              flex: 3,
+                              child: DropdownButtonFormField<int>(
+                                value: availableUnits.any((u) => u.id == selectedUnitId) ? selectedUnitId : (availableUnits.isNotEmpty ? availableUnits.first.id : null),
+                                isExpanded: true,
+                                decoration: InputDecoration(
+                                  labelText: 'Satuan',
+                                  labelStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF64748B)),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                items: availableUnits.map((u) {
+                                  return DropdownMenuItem<int>(
+                                    value: u.id,
+                                    child: Text(
+                                      '${u.name} (HPP: ${CurrencyFormatter.format(u.costPrice)})',
+                                      style: GoogleFonts.poppins(fontSize: 11.5),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (newUnitId) {
+                                  if (newUnitId != null) {
+                                    setState(() {
+                                      item['ingredientUnitId'] = newUnitId;
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
           ],
         ],
       ),

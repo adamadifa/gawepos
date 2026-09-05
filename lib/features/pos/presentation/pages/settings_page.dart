@@ -29,6 +29,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _isPrinterConnected = false;
   bool _isPointsActive = false;
   String _dbSize = '0 KB';
+  String _businessMode = 'all';
 
   @override
   void initState() {
@@ -42,6 +43,7 @@ class _SettingsPageState extends State<SettingsPage> {
       final name = await salesRepo.getSetting('shop_name');
       final printer = await salesRepo.getSetting('printer_name');
       final pointsEnabled = await salesRepo.getSetting('points_enabled');
+      final bMode = await salesRepo.getSetting('business_mode');
 
       final printService = getIt<PrintService>();
       final isConn = await printService.isConnected();
@@ -65,6 +67,7 @@ class _SettingsPageState extends State<SettingsPage> {
           _isPrinterConnected = isConn;
           _isPointsActive = pointsEnabled == '1';
           _dbSize = sizeStr;
+          _businessMode = bMode ?? 'all';
         });
       }
     } catch (_) {}
@@ -229,9 +232,9 @@ class _SettingsPageState extends State<SettingsPage> {
               icon: Icons.store_mall_directory_outlined,
               iconColor: const Color(0xFF2563EB), // Blue
               bgColor: const Color(0xFFEFF6FF),
-              title: 'Profil & Format Struk Toko',
-              subtitle: 'Nama gerai, alamat, logo toko, teks header & footer bon belanja',
-              badgeText: _shopName,
+              title: 'Profil & Mode Operasional Bisnis',
+              subtitle: 'Mode Usaha: ${_businessMode == 'retail' ? '🏪 Retail/Minimarket' : (_businessMode == 'fnb' ? '☕ F&B/Resto' : '⚡ Campuran/All')} • Format struk & logo',
+              badgeText: _businessMode == 'retail' ? 'Retail' : (_businessMode == 'fnb' ? 'F&B Resto' : 'All-in-One'),
               badgeColor: const Color(0xFFDBEAFE),
               badgeTextColor: const Color(0xFF1D4ED8),
               onTap: () async {

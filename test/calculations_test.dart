@@ -15,6 +15,7 @@ void main() {
       allowManualPrice: false,
       isConsignment: false,
       commissionRate: 0.0,
+      hasRecipe: false,
       createdAt: DateTime.now(),
     );
 
@@ -28,6 +29,7 @@ void main() {
       allowManualPrice: false,
       isConsignment: false,
       commissionRate: 0.0,
+      hasRecipe: false,
       createdAt: DateTime.now(),
     );
 

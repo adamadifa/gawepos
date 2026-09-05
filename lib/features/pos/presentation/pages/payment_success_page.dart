@@ -4,8 +4,10 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/constants.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_formatter.dart';
+import '../../../../core/utils/whatsapp_receipt_helper.dart';
 import '../../../../core/services/print_service.dart';
 import '../../../../core/di/injection.dart';
+import '../../data/sales_repository.dart';
 import '../bloc/cart_cubit.dart';
 
 class PaymentSuccessPage extends StatefulWidget {
@@ -15,6 +17,7 @@ class PaymentSuccessPage extends StatefulWidget {
   final CartState cart;
   final int pointsEarned;
   final int pointsRedeemed;
+  final bool autoClearCart;
 
   const PaymentSuccessPage({
     super.key,
@@ -24,6 +27,7 @@ class PaymentSuccessPage extends StatefulWidget {
     required this.cart,
     this.pointsEarned = 0,
     this.pointsRedeemed = 0,
+    this.autoClearCart = true,
   });
 
   @override
@@ -36,6 +40,7 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
   late Animation<double> _fadeAnimation;
   late Animation<double> _slideAnimation;
   bool _isPrinting = false;
+  bool _isSharingWa = false;
 
   @override
   void initState() {
@@ -66,6 +71,54 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
     super.dispose();
   }
 
+  Future<void> _shareReceiptWhatsApp() async {
+    setState(() => _isSharingWa = true);
+    try {
+      final details = await getIt<SalesRepository>().getOrderDetails(widget.orderId);
+      if (details == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Gagal memuat detail transaksi.')),
+          );
+        }
+        return;
+      }
+
+      final Order order = details['order'];
+      final List<Map<String, dynamic>> items = details['items'];
+      final List<OrderPayment> payments = details['payments'];
+      final Customer? customer = details['customer'];
+      final int pointsEarned = details['pointsEarned'] as int? ?? 0;
+      final int pointsRedeemed = details['pointsRedeemed'] as int? ?? 0;
+
+      final message = await WhatsAppReceiptHelper.generateReceiptMessage(
+        order: order,
+        items: items,
+        payments: payments,
+        customer: customer,
+        cashierName: widget.user.name,
+        pointsEarned: pointsEarned,
+        pointsRedeemed: pointsRedeemed,
+      );
+
+      if (mounted) {
+        await WhatsAppReceiptHelper.showSendWhatsAppModal(
+          context: context,
+          receiptMessage: message,
+          initialCustomer: customer,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal membagikan struk: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isSharingWa = false);
+    }
+  }
+
   Future<void> _printReceipt() async {
     setState(() {
       _isPrinting = true;
@@ -94,8 +147,10 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
   }
 
   void _finish() {
-    context.read<CartCubit>().clearCart();
-    Navigator.pop(context);
+    if (widget.autoClearCart) {
+      context.read<CartCubit>().clearCart();
+    }
+    Navigator.pop(context, true);
   }
 
   @override
@@ -132,22 +187,37 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          // Print button
-                          FilledButton.icon(
-                            onPressed: _printReceipt,
-                            icon: const Icon(Icons.print_rounded, size: 16),
-                            label: Text(
-                              'Cetak',
-                              style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 12),
-                            ),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: Colors.white.withValues(alpha: 0.15),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: _isSharingWa
+                                    ? const SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF25D366)),
+                                      )
+                                    : const Icon(Icons.share_rounded, color: Colors.white, size: 20),
+                                tooltip: 'Kirim Struk WA / Bagikan',
+                                onPressed: _isSharingWa ? null : _shareReceiptWhatsApp,
                               ),
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            ),
+                              const SizedBox(width: 4),
+                              FilledButton.icon(
+                                onPressed: _printReceipt,
+                                icon: const Icon(Icons.print_rounded, size: 16),
+                                label: Text(
+                                  'Cetak',
+                                  style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 12),
+                                ),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: Colors.white.withValues(alpha: 0.15),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -374,38 +444,72 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
 
                 // --- FOOTER BUTTONS ---
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 480),
-                      child: Row(
+                      child: Column(
                         children: [
-                          Expanded(
-                            child: OutlinedButton.icon(
-                              onPressed: _printReceipt,
-                              icon: const Icon(Icons.print_rounded, size: 18),
-                              label: Text(
-                                'Cetak Struk',
-                                style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 13),
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: _printReceipt,
+                                  icon: const Icon(Icons.print_rounded, size: 16),
+                                  label: Text(
+                                    'Cetak Struk',
+                                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 12),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.white,
+                                    side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
                                 ),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
                               ),
-                            ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: _isSharingWa ? null : _shareReceiptWhatsApp,
+                                  icon: const Icon(Icons.share_rounded, size: 16, color: Color(0xFF25D366)),
+                                  label: Text(
+                                    'Kirim WA',
+                                    style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 12, color: const Color(0xFF25D366)),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: const Color(0xFF25D366),
+                                    side: BorderSide(color: const Color(0xFF25D366).withValues(alpha: 0.5)),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            width: double.infinity,
                             child: ElevatedButton.icon(
                               onPressed: _finish,
-                              icon: const Icon(Icons.add_shopping_cart_rounded, size: 18),
+                              icon: Icon(
+                                widget.autoClearCart
+                                    ? Icons.add_shopping_cart_rounded
+                                    : Icons.check_circle_outline_rounded,
+                                size: 18,
+                              ),
                               label: Text(
-                                'Transaksi Baru',
-                                style: GoogleFonts.poppins(fontWeight: FontWeight.bold, fontSize: 13),
+                                widget.autoClearCart
+                                    ? 'Transaksi Baru'
+                                    : 'Selesai & Lanjut Tagihan Lain',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
                               ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.white,

@@ -30,6 +30,7 @@ class ProductError extends ProductState {
 
 class ProductCubit extends Cubit<ProductState> {
   final MasterRepository _repository;
+  MasterRepository get repository => _repository;
 
   ProductCubit(this._repository) : super(ProductInitial());
 
@@ -74,8 +75,10 @@ class ProductCubit extends Cubit<ProductState> {
     int? supplierId,
     String? consignmentType,
     double commissionRate = 0.0,
+    bool hasRecipe = false,
     required List<ProductUnitsCompanion> units,
     required List<ProductPricesCompanion> prices,
+    List<ProductRecipesCompanion> recipes = const [],
     File? newImageFile,
   }) async {
     emit(ProductLoading());
@@ -102,6 +105,7 @@ class ProductCubit extends Cubit<ProductState> {
           supplierId: Value(supplierId),
           consignmentType: Value(consignmentType),
           commissionRate: Value(commissionRate),
+          hasRecipe: Value(hasRecipe),
           isActive: const Value(true),
         );
 
@@ -109,6 +113,7 @@ class ProductCubit extends Cubit<ProductState> {
           product: productCompanion,
           units: units,
           prices: prices,
+          recipes: recipes,
         );
       } else {
         final updatedProduct = existingProduct.copyWith(
@@ -127,12 +132,14 @@ class ProductCubit extends Cubit<ProductState> {
           supplierId: Value(supplierId),
           consignmentType: Value(consignmentType),
           commissionRate: commissionRate,
+          hasRecipe: hasRecipe,
         );
 
         await _repository.updateProductComplete(
           product: updatedProduct,
           units: units,
           prices: prices,
+          recipes: recipes,
         );
       }
       emit(ProductSaved(isUpdate: existingProduct != null));

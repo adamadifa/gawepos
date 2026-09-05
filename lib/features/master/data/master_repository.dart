@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import '../../../core/database/app_database.dart';
 import 'dummy_products_data.dart';
+import 'dummy_coffee_raw_materials.dart';
 
 class MasterRepository {
   final AppDatabase _db;
@@ -132,6 +133,7 @@ class MasterRepository {
 
     final units = await (_db.select(_db.productUnits)..where((tbl) => tbl.productId.equals(productId))).get();
     final prices = await (_db.select(_db.productPrices)..where((tbl) => tbl.productId.equals(productId))).get();
+    final recipes = await getProductRecipes(productId);
 
     return {
       'product': product,
@@ -139,7 +141,69 @@ class MasterRepository {
       'category': category,
       'units': units,
       'prices': prices,
+      'recipes': recipes,
     };
+  }
+
+  // ─── RESEP / BILL OF MATERIALS (BOM) ────────────────────────────────
+
+  // Mengambil daftar bahan baku yang terhubung dengan menu jadi (dengan nama bahan & satuannya)
+  Future<List<Map<String, dynamic>>> getProductRecipes(int parentProductId) async {
+    final query = _db.select(_db.productRecipes).join([
+      innerJoin(
+        _db.products,
+        _db.products.id.equalsExp(_db.productRecipes.ingredientProductId),
+        useColumns: true,
+      ),
+      innerJoin(
+        _db.productUnits,
+        _db.productUnits.id.equalsExp(_db.productRecipes.ingredientUnitId),
+        useColumns: true,
+      ),
+    ])..where(_db.productRecipes.parentProductId.equals(parentProductId));
+
+    final rows = await query.get();
+    return rows.map((row) {
+      return {
+        'recipe': row.readTable(_db.productRecipes),
+        'ingredientProduct': row.readTable(_db.products),
+        'ingredientUnit': row.readTable(_db.productUnits),
+      };
+    }).toList();
+  }
+
+  // Mengambil produk bertipe bahan baku ('raw_material') untuk dipilih di form resep
+  Future<List<Product>> getRawMaterialCandidates() async {
+    return await (_db.select(_db.products)
+          ..where((tbl) => tbl.productType.equals('raw_material') & tbl.isActive.equals(true))
+          ..orderBy([(t) => OrderingTerm(expression: t.name)]))
+        .get();
+  }
+
+  // Mengambil daftar bahan baku lengkap untuk halaman Master Bahan Baku
+  Future<List<Map<String, dynamic>>> getRawMaterialsWithDetails() async {
+    final rawProducts = await (_db.select(_db.products)
+          ..where((tbl) => tbl.productType.equals('raw_material'))
+          ..orderBy([(t) => OrderingTerm(expression: t.name)]))
+        .get();
+
+    final List<Map<String, dynamic>> results = [];
+    for (var prod in rawProducts) {
+      final units = await (_db.select(_db.productUnits)
+            ..where((tbl) => tbl.productId.equals(prod.id)))
+          .get();
+      
+      final category = prod.categoryId != null
+          ? await (_db.select(_db.categories)..where((tbl) => tbl.id.equals(prod.categoryId!))).getSingleOrNull()
+          : null;
+
+      results.add({
+        'product': prod,
+        'units': units,
+        'category': category,
+      });
+    }
+    return results;
   }
 
   // Simpan/salin file gambar yang dipilih ke direktori dokumen aplikasi
@@ -159,11 +223,12 @@ class MasterRepository {
     }
   }
 
-  // Menyimpan Produk baru beserta Units dan Prices (Pricing Matrix) dalam satu transaksi aman
+  // Menyimpan Produk baru beserta Units, Prices (Pricing Matrix), dan Resep Bahan Baku (BOM)
   Future<int> insertProductComplete({
     required ProductsCompanion product,
     required List<ProductUnitsCompanion> units,
     required List<ProductPricesCompanion> prices,
+    List<ProductRecipesCompanion> recipes = const [],
   }) async {
     return await _db.transaction(() async {
       // 0. Pastikan setidaknya ada default PriceTier (misal: 'Harga Umum' id 1)
@@ -211,15 +276,25 @@ class MasterRepository {
         await _db.into(_db.productPrices).insert(companion);
       }
 
+      // 4. Insert recipes (jika ada)
+      for (var recipe in recipes) {
+        final companion = recipe.copyWith(
+          parentProductId: Value(productId),
+          id: const Value.absent(),
+        );
+        await _db.into(_db.productRecipes).insert(companion);
+      }
+
       return productId;
     });
   }
 
-  // Mengubah data Produk beserta unit & harganya dalam satu transaksi aman
+  // Mengubah data Produk beserta unit, harga, dan resepnya dalam satu transaksi aman
   Future<void> updateProductComplete({
     required Product product,
     required List<ProductUnitsCompanion> units,
     required List<ProductPricesCompanion> prices,
+    List<ProductRecipesCompanion> recipes = const [],
   }) async {
     await _db.transaction(() async {
       // 1. Update product info
@@ -287,6 +362,19 @@ class MasterRepository {
           id: const Value.absent(),
         );
         await _db.into(_db.productPrices).insert(companion);
+      }
+
+      // 6. Delete existing recipes and insert new ones
+      await (_db.delete(_db.productRecipes)
+            ..where((tbl) => tbl.parentProductId.equals(product.id)))
+          .go();
+
+      for (var recipe in recipes) {
+        final companion = recipe.copyWith(
+          parentProductId: Value(product.id),
+          id: const Value.absent(),
+        );
+        await _db.into(_db.productRecipes).insert(companion);
       }
     });
   }
@@ -492,4 +580,274 @@ class MasterRepository {
 
     return insertedCount;
   }
+
+  // ─── SEED DUMMY BAHAN BAKU KEDAI KOPI (RAW MATERIALS) ───────────────
+  Future<int> seedCoffeeRawMaterials({Function(int current, int total)? onProgress}) async {
+    // 1. Dapatkan atau buat Default Price Tier (Harga Umum)
+    final existingTiers = await _db.select(_db.priceTiers).get();
+    int defaultTierId = 1;
+    if (existingTiers.isEmpty) {
+      defaultTierId = await _db.into(_db.priceTiers).insert(
+        PriceTiersCompanion.insert(name: 'Harga Umum'),
+      );
+    } else {
+      defaultTierId = existingTiers.first.id;
+    }
+
+    // 2. Cache Kategori Bahan Baku
+    final categories = await _db.select(_db.categories).get();
+    final categoryMap = {for (var c in categories) c.name: c.id};
+
+    int insertedCount = 0;
+    final totalItems = CoffeeShopDummyData.rawMaterials.length;
+
+    for (int i = 0; i < totalItems; i++) {
+      final item = CoffeeShopDummyData.rawMaterials[i];
+
+      // Dapatkan atau buat Kategori
+      int? catId = categoryMap[item.category];
+      if (catId == null) {
+        catId = await _db.into(_db.categories).insert(
+          CategoriesCompanion.insert(name: item.category),
+        );
+        categoryMap[item.category] = catId;
+      }
+
+      // Cek apakah bahan baku dengan nama ini sudah ada
+      final existingProd = await (_db.select(_db.products)
+            ..where((tbl) => tbl.name.equals(item.name) & tbl.productType.equals('raw_material')))
+          .getSingleOrNull();
+
+      if (existingProd != null) {
+        insertedCount++;
+        onProgress?.call(i + 1, totalItems);
+        continue;
+      }
+
+      // Insert Bahan Baku Baru beserta Satuan, Harga Modal, dan Saldo Stok Awal
+      await _db.transaction(() async {
+        final prodId = await _db.into(_db.products).insert(
+          ProductsCompanion.insert(
+            name: item.name,
+            categoryId: Value(catId),
+            productType: const Value('raw_material'),
+            isStockManaged: const Value(true),
+            minStockAlert: Value(item.minStock),
+            allowManualPrice: const Value(false),
+            isActive: const Value(true),
+            hasRecipe: const Value(false),
+          ),
+        );
+
+        // Satuan Unit (Gram, Ml, Pcs, dll)
+        final unitId = await _db.into(_db.productUnits).insert(
+          ProductUnitsCompanion.insert(
+            productId: prodId,
+            name: item.unitName,
+            conversionFactor: const Value(1.0),
+            costPrice: Value(item.costPrice),
+            isBase: const Value(true),
+          ),
+        );
+
+        // Matriks Harga Dasar (Harga Modal)
+        await _db.into(_db.productPrices).insert(
+          ProductPricesCompanion.insert(
+            productId: prodId,
+            unitId: unitId,
+            priceTierId: defaultTierId,
+            price: Value(item.costPrice),
+            minQty: const Value(1),
+          ),
+        );
+
+        // Inisialisasi Saldo Stok Fisik Awal
+        await _db.into(_db.inventory).insert(
+          InventoryCompanion.insert(
+            productId: prodId,
+            unitId: unitId,
+            quantity: Value(item.initialStock),
+          ),
+        );
+
+        // Catat di Mutasi Stok Masuk Awal
+        await _db.into(_db.stockMovements).insert(
+          StockMovementsCompanion.insert(
+            productId: prodId,
+            unitId: unitId,
+            quantity: item.initialStock,
+            type: 'opname',
+            notes: const Value('Saldo stok awal bahan baku kedai kopi dummy'),
+          ),
+        );
+      });
+
+      insertedCount++;
+      onProgress?.call(i + 1, totalItems);
+    }
+
+    return insertedCount;
+  }
+
+  // ─── SEED DUMMY MENU F&B KEDAI KOPI (DENGAN RESEP RACIKAN / BOM) ───────
+  Future<int> seedCoffeeMenuProducts({Function(int current, int total)? onProgress}) async {
+    // 1. Pastikan seluruh bahan baku kedai kopi sudah ter-seed
+    await seedCoffeeRawMaterials();
+
+    // 2. Dapatkan atau buat Default Price Tier (Harga Umum)
+    final existingTiers = await _db.select(_db.priceTiers).get();
+    int defaultTierId = 1;
+    if (existingTiers.isEmpty) {
+      defaultTierId = await _db.into(_db.priceTiers).insert(
+        PriceTiersCompanion.insert(name: 'Harga Umum'),
+      );
+    } else {
+      defaultTierId = existingTiers.first.id;
+    }
+
+    // 3. Cache Kategori & Brand
+    final categories = await _db.select(_db.categories).get();
+    final categoryMap = {for (var c in categories) c.name: c.id};
+
+    final brands = await _db.select(_db.brands).get();
+    final brandMap = {for (var b in brands) b.name: b.id};
+
+    // 4. Cache Raw Material Products & Base Units
+    final rawProds = await (_db.select(_db.products)
+          ..where((tbl) => tbl.productType.equals('raw_material')))
+        .get();
+    final rawProdMap = {for (var p in rawProds) p.name: p.id};
+
+    final allUnits = await _db.select(_db.productUnits).get();
+    final rawProdBaseUnitMap = <int, int>{};
+    for (var u in allUnits) {
+      if (u.isBase) {
+        rawProdBaseUnitMap[u.productId] = u.id;
+      }
+    }
+
+    int insertedCount = 0;
+    final totalItems = CoffeeShopDummyData.menuProducts.length;
+
+    for (int i = 0; i < totalItems; i++) {
+      final item = CoffeeShopDummyData.menuProducts[i];
+
+      // Dapatkan atau buat Kategori
+      int? catId = categoryMap[item.category];
+      if (catId == null) {
+        catId = await _db.into(_db.categories).insert(
+          CategoriesCompanion.insert(name: item.category),
+        );
+        categoryMap[item.category] = catId;
+      }
+
+      // Dapatkan atau buat Brand
+      int? brandId = brandMap[item.brand];
+      if (brandId == null) {
+        brandId = await _db.into(_db.brands).insert(
+          BrandsCompanion.insert(name: item.brand),
+        );
+        brandMap[item.brand] = brandId;
+      }
+
+      // Generate Image PNG lokal untuk menu F&B
+      final imagePath = await DummyDataGenerator.generateProductImage(
+        name: item.name,
+        category: item.category,
+        color: item.badgeColor,
+        shortCode: item.shortCode,
+      );
+
+      // Cek apakah produk dengan barcode/SKU sudah ada
+      final existingProd = await (_db.select(_db.products)
+            ..where((tbl) => tbl.barcode.equals(item.barcode) | tbl.sku.equals(item.sku)))
+          .getSingleOrNull();
+
+      if (existingProd != null) {
+        if (existingProd.imagePath == null && imagePath != null) {
+          await (_db.update(_db.products)..where((tbl) => tbl.id.equals(existingProd.id)))
+              .write(ProductsCompanion(imagePath: Value(imagePath)));
+        }
+        insertedCount++;
+        onProgress?.call(i + 1, totalItems);
+        continue;
+      }
+
+      // Insert Produk Menu F&B beserta Satuan, Harga Jual, dan Komposisi Resep BOM
+      await _db.transaction(() async {
+        final prodId = await _db.into(_db.products).insert(
+          ProductsCompanion.insert(
+            name: item.name,
+            sku: Value(item.sku),
+            barcode: Value(item.barcode),
+            categoryId: Value(catId),
+            brandId: Value(brandId),
+            productType: const Value('goods'),
+            imagePath: Value(imagePath),
+            isStockManaged: const Value(false), // Menu F&B stok dikontrol via bahan baku (BOM)
+            hasRecipe: const Value(true), // Menandakan menu ini memotong stok bahan baku
+            isActive: const Value(true),
+          ),
+        );
+
+        // Satuan Jual Utama (Cup / Porsi)
+        final unitId = await _db.into(_db.productUnits).insert(
+          ProductUnitsCompanion.insert(
+            productId: prodId,
+            name: item.unitName,
+            conversionFactor: const Value(1.0),
+            isBase: const Value(true),
+          ),
+        );
+
+        // Matriks Harga Jual Satuan (Eceran & Grosir)
+        await _db.into(_db.productPrices).insert(
+          ProductPricesCompanion.insert(
+            productId: prodId,
+            unitId: unitId,
+            priceTierId: defaultTierId,
+            price: Value(item.sellPrice),
+            minQty: const Value(1),
+          ),
+        );
+
+        if (item.grosirPrice > 0 && item.grosirPrice < item.sellPrice) {
+          await _db.into(_db.productPrices).insert(
+            ProductPricesCompanion.insert(
+              productId: prodId,
+              unitId: unitId,
+              priceTierId: defaultTierId,
+              price: Value(item.grosirPrice),
+              minQty: const Value(5),
+            ),
+          );
+        }
+
+        // Simpan Komposisi Resep (BOM) untuk setiap bahan baku terkait
+        for (final ing in item.recipe) {
+          final ingProdId = rawProdMap[ing.rawMaterialName];
+          if (ingProdId != null) {
+            final ingUnitId = rawProdBaseUnitMap[ingProdId];
+            if (ingUnitId != null) {
+              await _db.into(_db.productRecipes).insert(
+                ProductRecipesCompanion.insert(
+                  parentProductId: prodId,
+                  ingredientProductId: ingProdId,
+                  ingredientUnitId: ingUnitId,
+                  quantityRequired: ing.quantity,
+                  notes: Value(ing.notes),
+                ),
+              );
+            }
+          }
+        }
+      });
+
+      insertedCount++;
+      onProgress?.call(i + 1, totalItems);
+    }
+
+    return insertedCount;
+  }
 }
+

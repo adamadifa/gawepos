@@ -297,13 +297,37 @@ class _StockCardPageState extends State<StockCardPage> {
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Kartu Stok Barang',
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.w700,
-                fontSize: 16.5,
-                color: const Color(0xFF0F172A),
-              ),
+            Row(
+              children: [
+                Text(
+                  widget.product.productType == 'raw_material' ? 'Kartu Stok Bahan Baku' : 'Kartu Stok Barang',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: widget.product.productType == 'raw_material'
+                        ? const Color(0xFF059669).withValues(alpha: 0.1)
+                        : const Color(0xFF0F172A).withValues(alpha: 0.06),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    widget.product.productType == 'raw_material' ? 'Bahan Baku' : 'Barang Jadi',
+                    style: GoogleFonts.poppins(
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w700,
+                      color: widget.product.productType == 'raw_material'
+                          ? const Color(0xFF059669)
+                          : const Color(0xFF0F172A),
+                    ),
+                  ),
+                ),
+              ],
             ),
             Text(
               widget.product.name,
@@ -477,30 +501,40 @@ class _StockCardPageState extends State<StockCardPage> {
                                                 ],
                                               ),
                                             ),
-                                            // Numbers column
-                                            Column(
-                                              crossAxisAlignment: CrossAxisAlignment.end,
-                                              children: [
-                                                Text(
-                                                  '${move.quantity > 0 ? "+" : ""}${move.quantity.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '')} ${unit.name}',
-                                                  style: GoogleFonts.poppins(
-                                                    fontWeight: FontWeight.w700,
-                                                    fontSize: 13,
-                                                    color: move.quantity >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626),
-                                                  ),
-                                                ),
-                                                if (move.notes != null && move.notes!.isNotEmpty) ...[
-                                                  const SizedBox(height: 3),
+                                            const SizedBox(width: 10),
+                                            // Numbers & notes column
+                                            ConstrainedBox(
+                                              constraints: BoxConstraints(
+                                                maxWidth: MediaQuery.of(context).size.width * 0.42,
+                                              ),
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.end,
+                                                children: [
                                                   Text(
-                                                    move.notes!,
+                                                    '${move.quantity > 0 ? "+" : ""}${move.quantity.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '')} ${unit.name}',
+                                                    textAlign: TextAlign.end,
                                                     style: GoogleFonts.poppins(
-                                                      fontSize: 11,
-                                                      color: const Color(0xFF64748B),
-                                                      fontWeight: FontWeight.w500,
+                                                      fontWeight: FontWeight.w700,
+                                                      fontSize: 13,
+                                                      color: move.quantity >= 0 ? const Color(0xFF059669) : const Color(0xFFDC2626),
                                                     ),
                                                   ),
+                                                  if (move.notes != null && move.notes!.isNotEmpty) ...[
+                                                    const SizedBox(height: 3),
+                                                    Text(
+                                                      move.notes!,
+                                                      textAlign: TextAlign.end,
+                                                      maxLines: 2,
+                                                      overflow: TextOverflow.ellipsis,
+                                                      style: GoogleFonts.poppins(
+                                                        fontSize: 10.5,
+                                                        color: const Color(0xFF64748B),
+                                                        fontWeight: FontWeight.w500,
+                                                      ),
+                                                    ),
+                                                  ],
                                                 ],
-                                              ],
+                                              ),
                                             ),
                                           ],
                                         ),

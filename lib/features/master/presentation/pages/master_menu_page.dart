@@ -3,17 +3,221 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/constants.dart';
 import '../../../../core/di/injection.dart';
 import '../../data/master_repository.dart';
+import '../../../pos/data/sales_repository.dart';
 import 'categories_brands_page.dart';
 import 'contacts_page.dart';
 import 'products_list_page.dart';
+import 'raw_materials_page.dart';
 import '../../../inventory/presentation/pages/stock_opname_page.dart';
 import '../../../inventory/presentation/pages/stock_adjustment_page.dart';
 import '../../../consignment/presentation/pages/consignment_page.dart';
 
-class MasterMenuPage extends StatelessWidget {
+class MasterMenuPage extends StatefulWidget {
   const MasterMenuPage({super.key});
 
-  void _showSeedConfirmDialog(BuildContext context) {
+  @override
+  State<MasterMenuPage> createState() => _MasterMenuPageState();
+}
+
+class _MasterMenuPageState extends State<MasterMenuPage> {
+  String _businessMode = 'all';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBusinessMode();
+  }
+
+  Future<void> _loadBusinessMode() async {
+    final mode = await getIt<SalesRepository>().getSetting('business_mode');
+    if (mounted) {
+      setState(() {
+        _businessMode = mode ?? 'all';
+      });
+    }
+  }
+
+  void _showSeedChoiceDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFCBD5E1),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF0F172A), size: 22),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  'Generate Data Dummy Contoh',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                    color: const Color(0xFF0F172A),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Option 1: F&B Coffee Shop Menu with Recipes
+            InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () {
+                Navigator.pop(ctx);
+                _startSeedingCoffeeProducts(context);
+              },
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF78350F).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.coffee_rounded, color: Color(0xFF78350F), size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Menu Kedai Kopi (F&B)',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13.5,
+                                  color: const Color(0xFF0F172A),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDCFCE7),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  'Resep BOM',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF16A34A),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            '15 Menu Minuman F&B siap kasir terhubung otomatis ke 23 Bahan Baku racikan',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11.5,
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF94A3B8), size: 14),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Option 2: Retail / Minimarket 100 Products
+            InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showRetailSeedConfirmDialog(context);
+              },
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppConstants.primaryColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.storefront_rounded, color: AppConstants.primaryColor, size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '100 Produk Retail / Minimarket',
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13.5,
+                              color: const Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Sembako, snack, minuman botol, rokok, sabun, multi-satuan & harga grosir',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11.5,
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF94A3B8), size: 14),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showRetailSeedConfirmDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -194,6 +398,102 @@ class MasterMenuPage extends StatelessWidget {
     });
   }
 
+  void _startSeedingCoffeeProducts(BuildContext context) {
+    int currentProgress = 0;
+    int totalProgress = 15;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (progressCtx) {
+        return StatefulBuilder(
+          builder: (context, setProgressState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              contentPadding: const EdgeInsets.all(24),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3.5,
+                      color: Color(0xFF78350F),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Membuat Menu & Resep F&B...',
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 15),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$currentProgress dari $totalProgress menu kedai kopi diproses',
+                    style: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 14),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: totalProgress > 0 ? (currentProgress / totalProgress) : 0,
+                      minHeight: 8,
+                      backgroundColor: const Color(0xFFE2E8F0),
+                      color: const Color(0xFF78350F),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    // Jalankan seeding F&B
+    getIt<MasterRepository>().seedCoffeeMenuProducts(
+      onProgress: (cur, tot) {
+        currentProgress = cur;
+        totalProgress = tot;
+      },
+    ).then((count) {
+      if (context.mounted) {
+        Navigator.pop(context); // Tutup dialog progress
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Berhasil membuat $count menu F&B lengkap dengan komposisi resep bahan baku!',
+                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF0F172A),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    }).catchError((e) {
+      if (context.mounted) {
+        Navigator.pop(context); // Tutup dialog progress
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membuat menu F&B: $e'),
+            backgroundColor: AppConstants.errorColor,
+          ),
+        );
+      }
+    });
+  }
+
   Widget _buildMenuCard({
     required IconData icon,
     required String title,
@@ -302,7 +602,7 @@ class MasterMenuPage extends StatelessWidget {
                     borderRadius: BorderRadius.circular(10),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(10),
-                      onTap: () => _showSeedConfirmDialog(context),
+                      onTap: () => _showSeedChoiceDialog(context),
                       child: const Padding(
                         padding: EdgeInsets.all(8),
                         child: Icon(Icons.playlist_add_rounded,
@@ -322,8 +622,10 @@ class MasterMenuPage extends StatelessWidget {
                 children: [
                   _buildMenuCard(
                     icon: Icons.inventory_2_rounded,
-                    title: 'Daftar Produk',
-                    subtitle: 'Kelola katalog barang, satuan & variasi harga',
+                    title: _businessMode == 'fnb' ? 'Katalog Menu F&B' : 'Daftar Produk',
+                    subtitle: _businessMode == 'fnb'
+                        ? 'Kelola varian rasa, ukuran minuman & harga kasir'
+                        : 'Kelola katalog barang jadi & variasi harga kasir',
                     color: const Color(0xFF0F172A),
                     onTap: () {
                       Navigator.push(
@@ -334,6 +636,23 @@ class MasterMenuPage extends StatelessWidget {
                       );
                     },
                   ),
+                  if (_businessMode != 'retail') ...[
+                    const SizedBox(height: 12),
+                    _buildMenuCard(
+                      icon: Icons.eco_rounded,
+                      title: 'Bahan Baku (Raw Materials)',
+                      subtitle: 'Kelola bahan mentah, takaran racikan & harga modal',
+                      color: const Color(0xFF059669),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const RawMaterialsPage(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   _buildMenuCard(
                     icon: Icons.category_rounded,

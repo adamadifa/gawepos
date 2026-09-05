@@ -66,22 +66,11 @@ class _StockOpnamePageState extends State<StockOpnamePage> {
           if (state is InventorySuccess) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Row(
-                  children: [
-                    const Icon(Icons.check_circle_outline_rounded, color: Colors.white, size: 20),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Hasil stok opname berhasil disimpan.',
-                        style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                  ],
+                content: Text(
+                  'Hasil stok opname berhasil disimpan.',
+                  style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
                 ),
                 backgroundColor: const Color(0xFF0F172A),
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                margin: const EdgeInsets.all(16),
                 duration: const Duration(seconds: 2),
               ),
             );
@@ -89,23 +78,12 @@ class _StockOpnamePageState extends State<StockOpnamePage> {
           if (state is InventoryError) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Row(
-                  children: [
-                    const Icon(Icons.error_outline_rounded, color: Colors.white, size: 20),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        state.message,
-                        style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                  ],
+                content: Text(
+                  state.message,
+                  style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
                 ),
                 backgroundColor: const Color(0xFFDC2626),
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                margin: const EdgeInsets.all(16),
-                duration: const Duration(seconds: 2),
+                duration: const Duration(seconds: 3),
               ),
             );
           }
@@ -208,7 +186,37 @@ class _StockOpnamePageState extends State<StockOpnamePage> {
                   child: BlocBuilder<InventoryCubit, InventoryState>(
                     builder: (context, state) {
                       if (state is InventoryLoading) {
-                        return const Center(child: CircularProgressIndicator());
+                        return const Center(child: CircularProgressIndicator(color: Color(0xFF0F172A)));
+                      }
+                      if (state is InventoryError) {
+                        return Center(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.all(24.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.error_outline_rounded, color: Color(0xFFDC2626), size: 40),
+                                const SizedBox(height: 12),
+                                Text(
+                                  state.message,
+                                  style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFFDC2626)),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton.icon(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF0F172A),
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                  onPressed: () => context.read<InventoryCubit>().loadInventory(),
+                                  icon: const Icon(Icons.refresh_rounded, size: 16),
+                                  label: Text('Coba Lagi', style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 12)),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
                       }
                       if (state is InventoryLoaded) {
                         var itemsList = state.items;

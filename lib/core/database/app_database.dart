@@ -65,6 +65,8 @@ class Products extends Table {
   IntColumn get supplierId => integer().nullable().references(Suppliers, #id, onDelete: KeyAction.setNull)();
   TextColumn get consignmentType => text().nullable()(); // 'fixed_cost' (harga setor tetap) / 'commission_percent' (bagi hasil persentase)
   RealColumn get commissionRate => real().withDefault(const Constant(0.0))(); // Nilai komisi toko (%) atau nominal harga setor
+  // Resep / Bill of Materials (BOM)
+  BoolColumn get hasRecipe => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -409,6 +411,21 @@ class ConsignmentSettlementItems extends Table {
   RealColumn get subtotalCommission => real()(); // soldQty * (unitPrice - supplierRate)
 }
 
+// 27. Komposisi Resep Produk / Bill of Materials (BOM)
+@TableIndex(name: 'product_recipes_parent_idx', columns: {#parentProductId})
+@TableIndex(name: 'product_recipes_ingredient_idx', columns: {#ingredientProductId})
+class ProductRecipes extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  @ReferenceName('recipeParentProducts')
+  IntColumn get parentProductId => integer().references(Products, #id, onDelete: KeyAction.cascade)();
+  @ReferenceName('recipeIngredientProducts')
+  IntColumn get ingredientProductId => integer().references(Products, #id, onDelete: KeyAction.cascade)();
+  IntColumn get ingredientUnitId => integer().references(ProductUnits, #id, onDelete: KeyAction.restrict)();
+  RealColumn get quantityRequired => real()();
+  TextColumn get notes => text().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
 @DriftDatabase(tables: [
   Outlets,
   Users,
@@ -443,12 +460,13 @@ class ConsignmentSettlementItems extends Table {
   PointTransactions,
   ConsignmentSettlements,
   ConsignmentSettlementItems,
+  ProductRecipes,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -493,6 +511,10 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 9) {
             await m.addColumn(productUnits, productUnits.costPrice);
+          }
+          if (from < 10) {
+            await m.addColumn(products, products.hasRecipe);
+            await m.createTable(productRecipes);
           }
         },
         beforeOpen: (details) async {

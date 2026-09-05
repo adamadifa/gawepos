@@ -251,6 +251,10 @@ class CartCubit extends Cubit<CartState> {
     ));
   }
 
+  void replaceCart(CartState newState) {
+    emit(newState);
+  }
+
   double _getPriceForUnit(int unitId, List<ProductPrice> matrix, {required double quantity}) {
     final validPrices = matrix.where((p) => p.unitId == unitId && p.price > 0).toList();
     if (validPrices.isEmpty) return 0.0;
