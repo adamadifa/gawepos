@@ -906,7 +906,7 @@ class $CategoriesTable extends Categories
     false,
     type: DriftSqlType.string,
     requiredDuringInsert: false,
-    defaultValue: const Constant('food'),
+    defaultValue: const Constant('none'),
   );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',

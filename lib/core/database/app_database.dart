@@ -32,7 +32,7 @@ class Categories extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text().withLength(min: 1, max: 100)();
   TextColumn get description => text().nullable()();
-  TextColumn get defaultNoteType => text().withDefault(const Constant('food'))(); // 'food' / 'beverage' / 'general' / 'none'
+  TextColumn get defaultNoteType => text().withDefault(const Constant('none'))(); // 'none' / 'food' / 'beverage' / 'general' / custom group ID
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 

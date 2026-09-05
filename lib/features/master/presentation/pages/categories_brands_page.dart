@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../../core/di/injection.dart';
+import '../../../pos/data/sales_repository.dart';
 import '../bloc/category_cubit.dart';
 import '../bloc/brand_cubit.dart';
 
@@ -124,12 +126,37 @@ class _CategoriesBrandsPageState extends State<CategoriesBrandsPage>
 }
 
 // ─── CATEGORY TAB CONTENT ───────────────────────────────────────────
-class _CategoryTabContent extends StatelessWidget {
+class _CategoryTabContent extends StatefulWidget {
+  @override
+  State<_CategoryTabContent> createState() => _CategoryTabContentState();
+}
+
+class _CategoryTabContentState extends State<_CategoryTabContent> {
   final _nameController = TextEditingController();
   final _descController = TextEditingController();
 
-  void _showFormDialog(BuildContext context, {Category? category}) {
-    String selectedNoteType = category?.defaultNoteType ?? 'food';
+  List<OrderNoteGroup> _noteGroups = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadNoteGroups();
+  }
+
+  Future<void> _loadNoteGroups() async {
+    final groups = await getIt<SalesRepository>().getOrderNoteGroups();
+    if (mounted) {
+      setState(() {
+        _noteGroups = groups;
+      });
+    }
+  }
+
+  void _showFormDialog(BuildContext context, {Category? category}) async {
+    await _loadNoteGroups();
+    if (!mounted) return;
+
+    String selectedNoteType = category?.defaultNoteType ?? 'none';
     if (category != null) {
       _nameController.text = category.name;
       _descController.text = category.description ?? '';
@@ -319,37 +346,23 @@ class _CategoryTabContent extends StatelessWidget {
                         runSpacing: 8,
                         children: [
                           _buildNoteTypeSelectorOption(
-                            type: 'food',
-                            label: '🍜 Makanan & Dapur',
-                            sublabel: 'Level Pedas, Kuah, Bawang',
-                            activeColor: const Color(0xFFDC2626),
-                            isSelected: selectedNoteType == 'food',
-                            onTap: () => setModalState(() => selectedNoteType = 'food'),
-                          ),
-                          _buildNoteTypeSelectorOption(
-                            type: 'beverage',
-                            label: '☕ Minuman & Barista',
-                            sublabel: 'Gula, Es, Shot Espresso',
-                            activeColor: const Color(0xFF78350F),
-                            isSelected: selectedNoteType == 'beverage',
-                            onTap: () => setModalState(() => selectedNoteType = 'beverage'),
-                          ),
-                          _buildNoteTypeSelectorOption(
-                            type: 'general',
-                            label: '🛍️ Umum & Kemasan',
-                            sublabel: 'Bungkus, Kantong, Nota',
-                            activeColor: const Color(0xFF2563EB),
-                            isSelected: selectedNoteType == 'general',
-                            onTap: () => setModalState(() => selectedNoteType = 'general'),
-                          ),
-                          _buildNoteTypeSelectorOption(
                             type: 'none',
                             label: '❌ Tanpa Catatan',
-                            sublabel: 'Tidak ada tombol racikan',
+                            sublabel: 'Retail / tidak ada racikan',
                             activeColor: const Color(0xFF64748B),
-                            isSelected: selectedNoteType == 'none',
+                            isSelected: selectedNoteType == 'none' || selectedNoteType.isEmpty,
                             onTap: () => setModalState(() => selectedNoteType = 'none'),
                           ),
+                          ..._noteGroups.map((group) {
+                            return _buildNoteTypeSelectorOption(
+                              type: group.id,
+                              label: group.name,
+                              sublabel: '${group.options.length} pilihan opsi cepat',
+                              activeColor: Color(group.colorValue),
+                              isSelected: selectedNoteType == group.id,
+                              onTap: () => setModalState(() => selectedNoteType = group.id),
+                            );
+                          }),
                         ],
                       ),
                       const SizedBox(height: 24),
@@ -568,6 +581,16 @@ class _CategoryTabContent extends StatelessWidget {
                   itemCount: list.length,
                   itemBuilder: (context, index) {
                     final item = list[index];
+                    final matchedGroup = _noteGroups.where((g) => g.id == item.defaultNoteType).firstOrNull;
+                    final isNone = item.defaultNoteType == 'none' || item.defaultNoteType.isEmpty || matchedGroup == null;
+
+                    final badgeColor = isNone
+                        ? const Color(0xFF64748B)
+                        : Color(matchedGroup.colorValue);
+                    final badgeLabel = isNone
+                        ? '❌ Tanpa Racikan'
+                        : '${matchedGroup.name} (${matchedGroup.options.length} Opsi)';
+
                     return Container(
                       margin: const EdgeInsets.only(bottom: 10),
                       decoration: BoxDecoration(
@@ -610,33 +633,15 @@ class _CategoryTabContent extends StatelessWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: item.defaultNoteType == 'food'
-                                    ? const Color(0xFFDC2626).withValues(alpha: 0.1)
-                                    : (item.defaultNoteType == 'beverage'
-                                        ? const Color(0xFF78350F).withValues(alpha: 0.1)
-                                        : (item.defaultNoteType == 'general'
-                                            ? const Color(0xFF2563EB).withValues(alpha: 0.1)
-                                            : const Color(0xFF64748B).withValues(alpha: 0.1))),
+                                color: badgeColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(4),
                               ),
                               child: Text(
-                                item.defaultNoteType == 'food'
-                                    ? '🍜 Racikan Makanan'
-                                    : (item.defaultNoteType == 'beverage'
-                                        ? '☕ Racikan Minuman'
-                                        : (item.defaultNoteType == 'general'
-                                            ? '🛍️ Racikan Umum'
-                                            : '❌ Tanpa Racikan')),
+                                badgeLabel,
                                 style: GoogleFonts.poppins(
                                   fontSize: 9.5,
                                   fontWeight: FontWeight.w600,
-                                  color: item.defaultNoteType == 'food'
-                                      ? const Color(0xFFDC2626)
-                                      : (item.defaultNoteType == 'beverage'
-                                          ? const Color(0xFF78350F)
-                                          : (item.defaultNoteType == 'general'
-                                              ? const Color(0xFF2563EB)
-                                              : const Color(0xFF64748B))),
+                                  color: badgeColor,
                                 ),
                               ),
                             ),

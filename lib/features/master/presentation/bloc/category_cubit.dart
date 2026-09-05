@@ -39,7 +39,7 @@ class CategoryCubit extends Cubit<CategoryState> {
     }
   }
 
-  Future<void> addCategory(String name, String? description, {String defaultNoteType = 'food'}) async {
+  Future<void> addCategory(String name, String? description, {String defaultNoteType = 'none'}) async {
     try {
       await _repository.insertCategory(
         CategoriesCompanion.insert(

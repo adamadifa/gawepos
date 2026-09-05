@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -21,7 +20,6 @@ import 'payment_page.dart';
 import 'held_orders_page.dart';
 import 'sales_history_page.dart';
 import 'split_bill_page.dart';
-import 'order_notes_settings_page.dart';
 
 class _UnitInputState {
   final ProductUnit unit;
@@ -75,28 +73,16 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
     });
   }
 
-  List<String> _foodNotes = [];
-  List<String> _beverageNotes = [];
-  List<String> _generalNotes = [];
+  List<OrderNoteGroup> _orderNoteGroups = [];
 
   Future<void> _loadBusinessMode() async {
     final mode = await getIt<SalesRepository>().getSetting('business_mode');
-    final foodStr = await getIt<SalesRepository>().getSetting('food_order_notes');
-    final bevStr = await getIt<SalesRepository>().getSetting('beverage_order_notes');
-    final genStr = await getIt<SalesRepository>().getSetting('general_order_notes');
+    final groups = await getIt<SalesRepository>().getOrderNoteGroups();
 
     if (mounted) {
       setState(() {
         _businessMode = mode ?? 'all';
-        _foodNotes = foodStr != null
-            ? List<String>.from(jsonDecode(foodStr))
-            : List<String>.from(OrderNotesSettingsPage.defaultFoodNotes);
-        _beverageNotes = bevStr != null
-            ? List<String>.from(jsonDecode(bevStr))
-            : List<String>.from(OrderNotesSettingsPage.defaultBeverageNotes);
-        _generalNotes = genStr != null
-            ? List<String>.from(jsonDecode(genStr))
-            : List<String>.from(OrderNotesSettingsPage.defaultGeneralNotes);
+        _orderNoteGroups = groups;
       });
     }
   }
@@ -110,7 +96,12 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
       }
     }
 
-    // 2. Fallback cerdas berdasarkan nama produk & nama kategori
+    // 2. Fallback untuk produk retail / default jika tidak diset -> 'none' (tanpa catatan)
+    if (prod.businessSegment == 'retail') {
+      return 'none';
+    }
+
+    // 3. Fallback cerdas berdasarkan nama produk & nama kategori untuk FnB
     final name = prod.name.toLowerCase();
     final cat = (categoryName ?? category?.name ?? '').toLowerCase();
 
@@ -136,6 +127,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
     if (isDrink) return 'beverage';
 
     final isFood = prod.hasRecipe ||
+        prod.businessSegment == 'fnb' ||
         name.contains('seblak') ||
         name.contains('mie') ||
         name.contains('bakso') ||
@@ -157,7 +149,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
 
     if (isFood) return 'food';
 
-    return 'general';
+    return 'none';
   }
 
   @override
@@ -2131,32 +2123,20 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                                 ),
                               ],
                             ),
-                            // Small category switch chips
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                _buildNoteTypeSwitchChip(
-                                  label: '🍜 Makanan',
-                                  isSelected: currentTabType == 'food',
-                                  activeColor: const Color(0xFFDC2626),
-                                  onTap: () => setModalState(() => currentTabType = 'food'),
-                                ),
-                                const SizedBox(width: 4),
-                                _buildNoteTypeSwitchChip(
-                                  label: '☕ Minuman',
-                                  isSelected: currentTabType == 'beverage',
-                                  activeColor: const Color(0xFF78350F),
-                                  onTap: () => setModalState(() => currentTabType = 'beverage'),
-                                ),
-                                const SizedBox(width: 4),
-                                _buildNoteTypeSwitchChip(
-                                  label: '🛍️ Umum',
-                                  isSelected: currentTabType == 'general',
-                                  activeColor: const Color(0xFF2563EB),
-                                  onTap: () => setModalState(() => currentTabType = 'general'),
-                                ),
-                              ],
-                            ),
+                            // Dynamic category switch chips
+                            if (_orderNoteGroups.isNotEmpty)
+                              Wrap(
+                                spacing: 4,
+                                runSpacing: 4,
+                                children: _orderNoteGroups.map((g) {
+                                  return _buildNoteTypeSwitchChip(
+                                    label: g.name,
+                                    isSelected: currentTabType == g.id,
+                                    activeColor: Color(g.colorValue),
+                                    onTap: () => setModalState(() => currentTabType = g.id),
+                                  );
+                                }).toList(),
+                              ),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -2164,11 +2144,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                           controller: notesController,
                           style: GoogleFonts.poppins(fontSize: 12.5),
                           decoration: InputDecoration(
-                            hintText: currentTabType == 'beverage'
-                                ? 'Misal: Less Sugar, Less Ice, Extra Shot...'
-                                : (currentTabType == 'food'
-                                    ? 'Misal: Pedas Level 3, Kuah Nyemek, Tanpa Bawang...'
-                                    : 'Misal: Bungkus Rapi, Pisah Kantong...'),
+                            hintText: 'Misal: Level Pedas, Takaran Gula, Bungkus Rapi...',
                             hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF94A3B8)),
                             filled: true,
                             fillColor: const Color(0xFFF8FAFC),
@@ -2187,9 +2163,11 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                         // Quick Presets Chips based on active tab
                         Builder(
                           builder: (context) {
-                            final activePresetList = currentTabType == 'beverage'
-                                ? _beverageNotes
-                                : (currentTabType == 'food' ? _foodNotes : _generalNotes);
+                            final matchedGroup = _orderNoteGroups.where((g) => g.id == currentTabType).firstOrNull ??
+                                _orderNoteGroups.firstOrNull;
+                            final activePresetList = matchedGroup?.options ?? [];
+
+                            if (activePresetList.isEmpty) return const SizedBox();
 
                             return Wrap(
                               spacing: 6,
@@ -2773,42 +2751,27 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Category Switch Tabs
-                Wrap(
-                  spacing: 4,
-                  runSpacing: 4,
-                  alignment: WrapAlignment.end,
-                  children: [
-                    _buildNoteTypeSwitchChip(
-                      label: '🍜 Makanan',
-                      isSelected: currentTabType == 'food',
-                      activeColor: const Color(0xFFDC2626),
-                      onTap: () => setDlgState(() => currentTabType = 'food'),
-                    ),
-                    _buildNoteTypeSwitchChip(
-                      label: '☕ Minuman',
-                      isSelected: currentTabType == 'beverage',
-                      activeColor: const Color(0xFF78350F),
-                      onTap: () => setDlgState(() => currentTabType = 'beverage'),
-                    ),
-                    _buildNoteTypeSwitchChip(
-                      label: '🛍️ Umum',
-                      isSelected: currentTabType == 'general',
-                      activeColor: const Color(0xFF2563EB),
-                      onTap: () => setDlgState(() => currentTabType = 'general'),
-                    ),
-                  ],
-                ),
+                if (_orderNoteGroups.isNotEmpty)
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
+                    alignment: WrapAlignment.end,
+                    children: _orderNoteGroups.map((g) {
+                      return _buildNoteTypeSwitchChip(
+                        label: g.name,
+                        isSelected: currentTabType == g.id,
+                        activeColor: Color(g.colorValue),
+                        onTap: () => setDlgState(() => currentTabType = g.id),
+                      );
+                    }).toList(),
+                  ),
                 const SizedBox(height: 8),
                 TextField(
                   controller: noteController,
                   autofocus: true,
                   style: GoogleFonts.poppins(fontSize: 13),
                   decoration: InputDecoration(
-                    hintText: currentTabType == 'beverage'
-                        ? 'Misal: Less Sugar, Less Ice, Extra Shot...'
-                        : (currentTabType == 'food'
-                            ? 'Misal: Pedas Level 3, Kuah Nyemek, Tanpa Bawang...'
-                            : 'Misal: Bungkus Rapi, Pisah Kantong...'),
+                    hintText: 'Misal: Level Pedas, Takaran Gula, Bungkus Rapi...',
                     hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF94A3B8)),
                     filled: true,
                     fillColor: const Color(0xFFF8FAFC),
@@ -2827,9 +2790,11 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                 // Preset chips based on active category
                 Builder(
                   builder: (context) {
-                    final activePresetList = currentTabType == 'beverage'
-                        ? _beverageNotes
-                        : (currentTabType == 'food' ? _foodNotes : _generalNotes);
+                    final matchedGroup = _orderNoteGroups.where((g) => g.id == currentTabType).firstOrNull ??
+                        _orderNoteGroups.firstOrNull;
+                    final activePresetList = matchedGroup?.options ?? [];
+
+                    if (activePresetList.isEmpty) return const SizedBox();
 
                     return Wrap(
                       spacing: 6,

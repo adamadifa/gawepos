@@ -465,7 +465,10 @@ class MasterRepository {
       int? catId = categoryMap[item.category];
       if (catId == null) {
         catId = await _db.into(_db.categories).insert(
-          CategoriesCompanion.insert(name: item.category),
+          CategoriesCompanion.insert(
+            name: item.category,
+            defaultNoteType: const Value('none'),
+          ),
         );
         categoryMap[item.category] = catId;
       }
@@ -622,7 +625,10 @@ class MasterRepository {
       int? catId = categoryMap[item.category];
       if (catId == null) {
         catId = await _db.into(_db.categories).insert(
-          CategoriesCompanion.insert(name: item.category),
+          CategoriesCompanion.insert(
+            name: item.category,
+            defaultNoteType: const Value('none'),
+          ),
         );
         categoryMap[item.category] = catId;
       }
@@ -893,7 +899,10 @@ class MasterRepository {
       int? catId = categoryMap[item.category];
       if (catId == null) {
         catId = await _db.into(_db.categories).insert(
-          CategoriesCompanion.insert(name: item.category),
+          CategoriesCompanion.insert(
+            name: item.category,
+            defaultNoteType: const Value('none'),
+          ),
         );
         categoryMap[item.category] = catId;
       }

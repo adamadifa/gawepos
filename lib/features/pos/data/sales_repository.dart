@@ -1,5 +1,114 @@
+import 'dart:convert';
 import 'package:drift/drift.dart';
 import '../../../core/database/app_database.dart';
+
+// Model Grup Preset Catatan Dinamis
+class OrderNoteGroup {
+  final String id;
+  final String name;
+  final String icon; // string identifier icon, misal: 'food', 'beverage', 'general', 'star', etc
+  final int colorValue; // ARGB int color value
+  final List<String> options;
+
+  const OrderNoteGroup({
+    required this.id,
+    required this.name,
+    this.icon = 'food',
+    this.colorValue = 0xFF0F172A,
+    required this.options,
+  });
+
+  OrderNoteGroup copyWith({
+    String? id,
+    String? name,
+    String? icon,
+    int? colorValue,
+    List<String>? options,
+  }) {
+    return OrderNoteGroup(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      icon: icon ?? this.icon,
+      colorValue: colorValue ?? this.colorValue,
+      options: options ?? this.options,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'icon': icon,
+      'colorValue': colorValue,
+      'options': options,
+    };
+  }
+
+  factory OrderNoteGroup.fromJson(Map<String, dynamic> json) {
+    return OrderNoteGroup(
+      id: json['id'] as String? ?? 'general',
+      name: json['name'] as String? ?? 'Umum',
+      icon: json['icon'] as String? ?? 'food',
+      colorValue: json['colorValue'] as int? ?? 0xFF0F172A,
+      options: (json['options'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+    );
+  }
+
+  // Grup bawaan pabrik (Default Factory Presets)
+  static const List<OrderNoteGroup> defaultGroups = [
+    OrderNoteGroup(
+      id: 'food',
+      name: 'Makanan & Dapur',
+      icon: 'food',
+      colorValue: 0xFFDC2626,
+      options: [
+        'Pedas Lv 0 (Original)',
+        'Pedas Lv 1',
+        'Pedas Lv 2',
+        'Pedas Lv 3',
+        'Pedas Lv 5 (Ekstra)',
+        'Kuah Nyemek',
+        'Kuah Banyak',
+        'Kuah Kering / Goreng',
+        'Tanpa Daun Bawang',
+        'Tanpa Micin',
+        'Extra Telur',
+        'Bungkus / Take Away',
+      ],
+    ),
+    OrderNoteGroup(
+      id: 'beverage',
+      name: 'Minuman & Barista',
+      icon: 'beverage',
+      colorValue: 0xFF78350F,
+      options: [
+        'Normal Sugar',
+        'Less Sugar (50%)',
+        'No Sugar (0%)',
+        'Normal Ice',
+        'Less Ice',
+        'No Ice / Hangat',
+        'Extra Ice',
+        'Extra Shot Espresso',
+        'Less Sweet',
+        'Cup / Take Away',
+      ],
+    ),
+    OrderNoteGroup(
+      id: 'general',
+      name: 'Umum & Kemasan',
+      icon: 'general',
+      colorValue: 0xFF2563EB,
+      options: [
+        'Bungkus Rapi',
+        'Minta Kantong Plastik',
+        'Pisah Kantong',
+        'Jangan Pakai Sedotan',
+        'Nota Print Terpisah',
+      ],
+    ),
+  ];
+}
 
 class SalesRepository {
   final AppDatabase _db;
@@ -325,6 +434,65 @@ class SalesRepository {
           ),
           mode: InsertMode.insertOrReplace,
         );
+  }
+
+  // --- DYNAMIC ORDER NOTES PRESETS HELPERS ---
+  Future<List<OrderNoteGroup>> getOrderNoteGroups() async {
+    final customJson = await getSetting('order_note_presets_custom');
+    if (customJson != null && customJson.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(customJson) as List<dynamic>;
+        if (decoded.isNotEmpty) {
+          return decoded.map((e) => OrderNoteGroup.fromJson(e as Map<String, dynamic>)).toList();
+        }
+      } catch (_) {}
+    }
+
+    // Fallback atau backward compatibility jika ada settingan lama (food_order_notes, dll)
+    final foodStr = await getSetting('food_order_notes');
+    final bevStr = await getSetting('beverage_order_notes');
+    final genStr = await getSetting('general_order_notes');
+
+    if (foodStr != null || bevStr != null || genStr != null) {
+      final List<String> foodOptions = foodStr != null
+          ? List<String>.from(jsonDecode(foodStr))
+          : OrderNoteGroup.defaultGroups[0].options;
+      final List<String> bevOptions = bevStr != null
+          ? List<String>.from(jsonDecode(bevStr))
+          : OrderNoteGroup.defaultGroups[1].options;
+      final List<String> genOptions = genStr != null
+          ? List<String>.from(jsonDecode(genStr))
+          : OrderNoteGroup.defaultGroups[2].options;
+
+      return [
+        OrderNoteGroup.defaultGroups[0].copyWith(options: foodOptions),
+        OrderNoteGroup.defaultGroups[1].copyWith(options: bevOptions),
+        OrderNoteGroup.defaultGroups[2].copyWith(options: genOptions),
+      ];
+    }
+
+    return List<OrderNoteGroup>.from(OrderNoteGroup.defaultGroups);
+  }
+
+  Future<void> saveOrderNoteGroups(List<OrderNoteGroup> groups) async {
+    final encoded = jsonEncode(groups.map((g) => g.toJson()).toList());
+    await saveSetting('order_note_presets_custom', encoded);
+
+    // Sync juga backward compatibility key jika grup standar ada
+    for (var g in groups) {
+      if (g.id == 'food') {
+        await saveSetting('food_order_notes', jsonEncode(g.options));
+      } else if (g.id == 'beverage') {
+        await saveSetting('beverage_order_notes', jsonEncode(g.options));
+      } else if (g.id == 'general') {
+        await saveSetting('general_order_notes', jsonEncode(g.options));
+      }
+    }
+  }
+
+  Future<List<OrderNoteGroup>> resetOrderNoteGroupsToDefault() async {
+    await saveOrderNoteGroups(OrderNoteGroup.defaultGroups);
+    return List<OrderNoteGroup>.from(OrderNoteGroup.defaultGroups);
   }
 
   // --- POINTS SETTINGS ---
