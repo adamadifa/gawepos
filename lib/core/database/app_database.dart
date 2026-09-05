@@ -32,6 +32,7 @@ class Categories extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text().withLength(min: 1, max: 100)();
   TextColumn get description => text().nullable()();
+  TextColumn get defaultNoteType => text().withDefault(const Constant('food'))(); // 'food' / 'beverage' / 'general' / 'none'
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -469,7 +470,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -524,6 +525,9 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 12) {
             await m.addColumn(products, products.businessSegment);
+          }
+          if (from < 13) {
+            await m.addColumn(categories, categories.defaultNoteType);
           }
         },
         beforeOpen: (details) async {

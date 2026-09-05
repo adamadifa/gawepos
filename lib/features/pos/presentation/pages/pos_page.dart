@@ -101,10 +101,18 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
     }
   }
 
-  // Deteksi apakah produk bertipe Minuman, Makanan, atau Retail
-  String _detectProductNoteType(Product prod, String? categoryName) {
+  // Deteksi jenis preset catatan berdasarkan Kategori Produk (dengan fallback smart detector)
+  String _detectProductNoteType(Product prod, {Category? category, String? categoryName}) {
+    // 1. Jika Kategori disetel secara eksplisit, gunakan settingan kategori tersebut
+    if (category != null) {
+      if (category.defaultNoteType.isNotEmpty) {
+        return category.defaultNoteType;
+      }
+    }
+
+    // 2. Fallback cerdas berdasarkan nama produk & nama kategori
     final name = prod.name.toLowerCase();
-    final cat = (categoryName ?? '').toLowerCase();
+    final cat = (categoryName ?? category?.name ?? '').toLowerCase();
 
     final isDrink = name.contains('kopi') ||
         name.contains('coffee') ||
@@ -1876,9 +1884,20 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
 
           final totalQty = unitStates.fold<double>(0.0, (sum, u) => sum + u.qty);
 
-          // Deteksi kategori catatan awal berdasarkan produk (minuman vs makanan vs umum)
-          final defaultNoteType = _detectProductNoteType(prod, categoryName);
-          String currentTabType = defaultNoteType;
+          // Ambil object Kategori untuk membaca settingan defaultNoteType
+          Category? prodCategory;
+          final catState = context.read<CategoryCubit>().state;
+          if (catState is CategoryLoaded) {
+            final match = catState.categories.cast<Category?>().firstWhere(
+                  (c) => c?.id == prod.categoryId,
+                  orElse: () => null,
+                );
+            prodCategory = match;
+          }
+
+          // Deteksi kategori catatan awal berdasarkan settingan Kategori produk
+          final defaultNoteType = _detectProductNoteType(prod, category: prodCategory, categoryName: categoryName);
+          String currentTabType = defaultNoteType == 'none' ? 'food' : defaultNoteType;
 
           return Center(
             child: ConstrainedBox(
@@ -2697,17 +2716,18 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
   void _showItemNoteDialog(BuildContext context, CartItem item) {
     final noteController = TextEditingController(text: item.notes ?? '');
     
-    // Auto-detect note type category based on product
-    String? categoryName;
+    // Auto-detect note type category based on product Category setting
+    Category? prodCategory;
     final catState = context.read<CategoryCubit>().state;
     if (catState is CategoryLoaded) {
       final match = catState.categories.cast<Category?>().firstWhere(
             (c) => c?.id == item.product.categoryId,
             orElse: () => null,
           );
-      categoryName = match?.name;
+      prodCategory = match;
     }
-    String currentTabType = _detectProductNoteType(item.product, categoryName);
+    String currentTabType = _detectProductNoteType(item.product, category: prodCategory);
+    if (currentTabType == 'none') currentTabType = 'food';
 
     showDialog(
       context: context,

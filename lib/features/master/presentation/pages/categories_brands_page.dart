@@ -129,6 +129,7 @@ class _CategoryTabContent extends StatelessWidget {
   final _descController = TextEditingController();
 
   void _showFormDialog(BuildContext context, {Category? category}) {
+    String selectedNoteType = category?.defaultNoteType ?? 'food';
     if (category != null) {
       _nameController.text = category.name;
       _descController.text = category.description ?? '';
@@ -293,6 +294,64 @@ class _CategoryTabContent extends StatelessWidget {
                         ),
                         maxLines: 2,
                       ),
+                      const SizedBox(height: 16),
+
+                      // Field: Jenis Preset Catatan / Racikan
+                      Text(
+                        'Jenis Preset Catatan & Racikan Kasir',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF334155),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Preset racikan yang otomatis tampil saat produk dalam kategori ini dipilih di kasir.',
+                        style: GoogleFonts.poppins(
+                          fontSize: 11,
+                          color: const Color(0xFF64748B),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _buildNoteTypeSelectorOption(
+                            type: 'food',
+                            label: '🍜 Makanan & Dapur',
+                            sublabel: 'Level Pedas, Kuah, Bawang',
+                            activeColor: const Color(0xFFDC2626),
+                            isSelected: selectedNoteType == 'food',
+                            onTap: () => setModalState(() => selectedNoteType = 'food'),
+                          ),
+                          _buildNoteTypeSelectorOption(
+                            type: 'beverage',
+                            label: '☕ Minuman & Barista',
+                            sublabel: 'Gula, Es, Shot Espresso',
+                            activeColor: const Color(0xFF78350F),
+                            isSelected: selectedNoteType == 'beverage',
+                            onTap: () => setModalState(() => selectedNoteType = 'beverage'),
+                          ),
+                          _buildNoteTypeSelectorOption(
+                            type: 'general',
+                            label: '🛍️ Umum & Kemasan',
+                            sublabel: 'Bungkus, Kantong, Nota',
+                            activeColor: const Color(0xFF2563EB),
+                            isSelected: selectedNoteType == 'general',
+                            onTap: () => setModalState(() => selectedNoteType = 'general'),
+                          ),
+                          _buildNoteTypeSelectorOption(
+                            type: 'none',
+                            label: '❌ Tanpa Catatan',
+                            sublabel: 'Tidak ada tombol racikan',
+                            activeColor: const Color(0xFF64748B),
+                            isSelected: selectedNoteType == 'none',
+                            onTap: () => setModalState(() => selectedNoteType = 'none'),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 24),
 
                       // Submit Button
@@ -315,12 +374,14 @@ class _CategoryTabContent extends StatelessWidget {
                                     context.read<CategoryCubit>().addCategory(
                                       name,
                                       _descController.text.trim().isEmpty ? null : _descController.text.trim(),
+                                      defaultNoteType: selectedNoteType,
                                     );
                                   } else {
                                     context.read<CategoryCubit>().editCategory(
                                       category,
                                       name,
                                       _descController.text.trim().isEmpty ? null : _descController.text.trim(),
+                                      defaultNoteType: selectedNoteType,
                                     );
                                   }
                                   Navigator.pop(ctx);
@@ -340,6 +401,64 @@ class _CategoryTabContent extends StatelessWidget {
           },
         );
       },
+    );
+  }
+
+  Widget _buildNoteTypeSelectorOption({
+    required String type,
+    required String label,
+    required String sublabel,
+    required Color activeColor,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor.withValues(alpha: 0.08) : const Color(0xFFF8FAFC),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? activeColor : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected ? Icons.radio_button_checked_rounded : Icons.radio_button_off_rounded,
+              size: 16,
+              color: isSelected ? activeColor : const Color(0xFF94A3B8),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                    color: isSelected ? activeColor : const Color(0xFF0F172A),
+                  ),
+                ),
+                Text(
+                  sublabel,
+                  style: GoogleFonts.poppins(
+                    fontSize: 10,
+                    color: const Color(0xFF64748B),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -475,15 +594,54 @@ class _CategoryTabContent extends StatelessWidget {
                             color: const Color(0xFF0F172A),
                           ),
                         ),
-                        subtitle: item.description != null
-                            ? Text(
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (item.description != null && item.description!.isNotEmpty) ...[
+                              Text(
                                 item.description!,
                                 style: GoogleFonts.poppins(
                                   fontSize: 11,
                                   color: const Color(0xFF64748B),
                                 ),
-                              )
-                            : null,
+                              ),
+                              const SizedBox(height: 4),
+                            ],
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: item.defaultNoteType == 'food'
+                                    ? const Color(0xFFDC2626).withValues(alpha: 0.1)
+                                    : (item.defaultNoteType == 'beverage'
+                                        ? const Color(0xFF78350F).withValues(alpha: 0.1)
+                                        : (item.defaultNoteType == 'general'
+                                            ? const Color(0xFF2563EB).withValues(alpha: 0.1)
+                                            : const Color(0xFF64748B).withValues(alpha: 0.1))),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                item.defaultNoteType == 'food'
+                                    ? '🍜 Racikan Makanan'
+                                    : (item.defaultNoteType == 'beverage'
+                                        ? '☕ Racikan Minuman'
+                                        : (item.defaultNoteType == 'general'
+                                            ? '🛍️ Racikan Umum'
+                                            : '❌ Tanpa Racikan')),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 9.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: item.defaultNoteType == 'food'
+                                      ? const Color(0xFFDC2626)
+                                      : (item.defaultNoteType == 'beverage'
+                                          ? const Color(0xFF78350F)
+                                          : (item.defaultNoteType == 'general'
+                                              ? const Color(0xFF2563EB)
+                                              : const Color(0xFF64748B))),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [

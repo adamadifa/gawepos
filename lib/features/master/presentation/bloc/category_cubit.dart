@@ -39,12 +39,13 @@ class CategoryCubit extends Cubit<CategoryState> {
     }
   }
 
-  Future<void> addCategory(String name, String? description) async {
+  Future<void> addCategory(String name, String? description, {String defaultNoteType = 'food'}) async {
     try {
       await _repository.insertCategory(
         CategoriesCompanion.insert(
           name: name,
           description: Value(description),
+          defaultNoteType: Value(defaultNoteType),
         ),
       );
       emit(CategorySaved(categoryName: name, isEdit: false));
@@ -54,12 +55,13 @@ class CategoryCubit extends Cubit<CategoryState> {
     }
   }
 
-  Future<void> editCategory(Category category, String name, String? description) async {
+  Future<void> editCategory(Category category, String name, String? description, {String? defaultNoteType}) async {
     try {
       await _repository.updateCategory(
         category.copyWith(
           name: name,
           description: Value(description),
+          defaultNoteType: defaultNoteType ?? category.defaultNoteType,
         ),
       );
       emit(CategorySaved(categoryName: name, isEdit: true));

@@ -896,6 +896,18 @@ class $CategoriesTable extends Categories
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _defaultNoteTypeMeta = const VerificationMeta(
+    'defaultNoteType',
+  );
+  @override
+  late final GeneratedColumn<String> defaultNoteType = GeneratedColumn<String>(
+    'default_note_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('food'),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -909,7 +921,13 @@ class $CategoriesTable extends Categories
     defaultValue: currentDateAndTime,
   );
   @override
-  List<GeneratedColumn> get $columns => [id, name, description, createdAt];
+  List<GeneratedColumn> get $columns => [
+    id,
+    name,
+    description,
+    defaultNoteType,
+    createdAt,
+  ];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -942,6 +960,15 @@ class $CategoriesTable extends Categories
         ),
       );
     }
+    if (data.containsKey('default_note_type')) {
+      context.handle(
+        _defaultNoteTypeMeta,
+        defaultNoteType.isAcceptableOrUnknown(
+          data['default_note_type']!,
+          _defaultNoteTypeMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -969,6 +996,10 @@ class $CategoriesTable extends Categories
         DriftSqlType.string,
         data['${effectivePrefix}description'],
       ),
+      defaultNoteType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}default_note_type'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -986,11 +1017,13 @@ class Category extends DataClass implements Insertable<Category> {
   final int id;
   final String name;
   final String? description;
+  final String defaultNoteType;
   final DateTime createdAt;
   const Category({
     required this.id,
     required this.name,
     this.description,
+    required this.defaultNoteType,
     required this.createdAt,
   });
   @override
@@ -1001,6 +1034,7 @@ class Category extends DataClass implements Insertable<Category> {
     if (!nullToAbsent || description != null) {
       map['description'] = Variable<String>(description);
     }
+    map['default_note_type'] = Variable<String>(defaultNoteType);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -1012,6 +1046,7 @@ class Category extends DataClass implements Insertable<Category> {
       description: description == null && nullToAbsent
           ? const Value.absent()
           : Value(description),
+      defaultNoteType: Value(defaultNoteType),
       createdAt: Value(createdAt),
     );
   }
@@ -1025,6 +1060,7 @@ class Category extends DataClass implements Insertable<Category> {
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
       description: serializer.fromJson<String?>(json['description']),
+      defaultNoteType: serializer.fromJson<String>(json['defaultNoteType']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -1035,6 +1071,7 @@ class Category extends DataClass implements Insertable<Category> {
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
       'description': serializer.toJson<String?>(description),
+      'defaultNoteType': serializer.toJson<String>(defaultNoteType),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -1043,11 +1080,13 @@ class Category extends DataClass implements Insertable<Category> {
     int? id,
     String? name,
     Value<String?> description = const Value.absent(),
+    String? defaultNoteType,
     DateTime? createdAt,
   }) => Category(
     id: id ?? this.id,
     name: name ?? this.name,
     description: description.present ? description.value : this.description,
+    defaultNoteType: defaultNoteType ?? this.defaultNoteType,
     createdAt: createdAt ?? this.createdAt,
   );
   Category copyWithCompanion(CategoriesCompanion data) {
@@ -1057,6 +1096,9 @@ class Category extends DataClass implements Insertable<Category> {
       description: data.description.present
           ? data.description.value
           : this.description,
+      defaultNoteType: data.defaultNoteType.present
+          ? data.defaultNoteType.value
+          : this.defaultNoteType,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -1067,13 +1109,15 @@ class Category extends DataClass implements Insertable<Category> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('description: $description, ')
+          ..write('defaultNoteType: $defaultNoteType, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, description, createdAt);
+  int get hashCode =>
+      Object.hash(id, name, description, defaultNoteType, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1081,6 +1125,7 @@ class Category extends DataClass implements Insertable<Category> {
           other.id == this.id &&
           other.name == this.name &&
           other.description == this.description &&
+          other.defaultNoteType == this.defaultNoteType &&
           other.createdAt == this.createdAt);
 }
 
@@ -1088,29 +1133,34 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   final Value<int> id;
   final Value<String> name;
   final Value<String?> description;
+  final Value<String> defaultNoteType;
   final Value<DateTime> createdAt;
   const CategoriesCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.description = const Value.absent(),
+    this.defaultNoteType = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   CategoriesCompanion.insert({
     this.id = const Value.absent(),
     required String name,
     this.description = const Value.absent(),
+    this.defaultNoteType = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Category> custom({
     Expression<int>? id,
     Expression<String>? name,
     Expression<String>? description,
+    Expression<String>? defaultNoteType,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
       if (description != null) 'description': description,
+      if (defaultNoteType != null) 'default_note_type': defaultNoteType,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -1119,12 +1169,14 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     Value<int>? id,
     Value<String>? name,
     Value<String?>? description,
+    Value<String>? defaultNoteType,
     Value<DateTime>? createdAt,
   }) {
     return CategoriesCompanion(
       id: id ?? this.id,
       name: name ?? this.name,
       description: description ?? this.description,
+      defaultNoteType: defaultNoteType ?? this.defaultNoteType,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -1141,6 +1193,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     if (description.present) {
       map['description'] = Variable<String>(description.value);
     }
+    if (defaultNoteType.present) {
+      map['default_note_type'] = Variable<String>(defaultNoteType.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -1153,6 +1208,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
           ..write('id: $id, ')
           ..write('name: $name, ')
           ..write('description: $description, ')
+          ..write('defaultNoteType: $defaultNoteType, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -17385,6 +17441,7 @@ typedef $$CategoriesTableCreateCompanionBuilder =
       Value<int> id,
       required String name,
       Value<String?> description,
+      Value<String> defaultNoteType,
       Value<DateTime> createdAt,
     });
 typedef $$CategoriesTableUpdateCompanionBuilder =
@@ -17392,6 +17449,7 @@ typedef $$CategoriesTableUpdateCompanionBuilder =
       Value<int> id,
       Value<String> name,
       Value<String?> description,
+      Value<String> defaultNoteType,
       Value<DateTime> createdAt,
     });
 
@@ -17440,6 +17498,11 @@ class $$CategoriesTableFilterComposer
 
   ColumnFilters<String> get description => $composableBuilder(
     column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get defaultNoteType => $composableBuilder(
+    column: $table.defaultNoteType,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -17498,6 +17561,11 @@ class $$CategoriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get defaultNoteType => $composableBuilder(
+    column: $table.defaultNoteType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -17521,6 +17589,11 @@ class $$CategoriesTableAnnotationComposer
 
   GeneratedColumn<String> get description => $composableBuilder(
     column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get defaultNoteType => $composableBuilder(
+    column: $table.defaultNoteType,
     builder: (column) => column,
   );
 
@@ -17584,11 +17657,13 @@ class $$CategoriesTableTableManager
                 Value<int> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
                 Value<String?> description = const Value.absent(),
+                Value<String> defaultNoteType = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => CategoriesCompanion(
                 id: id,
                 name: name,
                 description: description,
+                defaultNoteType: defaultNoteType,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -17596,11 +17671,13 @@ class $$CategoriesTableTableManager
                 Value<int> id = const Value.absent(),
                 required String name,
                 Value<String?> description = const Value.absent(),
+                Value<String> defaultNoteType = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => CategoriesCompanion.insert(
                 id: id,
                 name: name,
                 description: description,
+                defaultNoteType: defaultNoteType,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
