@@ -35,6 +35,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
   final _consignmentRateController = TextEditingController(text: '0');
 
   String _productType = 'goods';
+  String _businessSegment = 'retail'; // 'retail' / 'fnb' / 'general'
   bool _isStockManaged = true;
   int? _selectedCategoryId;
   int? _selectedBrandId;
@@ -70,6 +71,11 @@ class _ProductFormPageState extends State<ProductFormPage> {
   Future<void> _loadPriceTiersAndData() async {
     final mode = await getIt<SalesRepository>().getSetting('business_mode');
     _businessMode = mode ?? 'all';
+    if (_businessMode == 'fnb') {
+      _businessSegment = 'fnb';
+    } else if (_businessMode == 'retail') {
+      _businessSegment = 'retail';
+    }
 
     final repo = getIt<MasterRepository>();
     final candidates = await repo.getRawMaterialCandidates();
@@ -91,6 +97,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
       _descController.text = product.description ?? '';
       _minStockController.text = product.minStockAlert.toString();
       _productType = product.productType;
+      _businessSegment = product.businessSegment;
       _isStockManaged = product.isStockManaged;
       _selectedCategoryId = product.categoryId;
       _selectedBrandId = product.brandId;
@@ -621,6 +628,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
       brandId: _selectedBrandId,
       imagePath: _existingImagePath,
       productType: _productType,
+      businessSegment: _businessSegment,
       isStockManaged: _isStockManaged,
       minStockAlert: int.tryParse(_minStockController.text) ?? 0,
       allowManualPrice: _allowManualPrice,
@@ -883,12 +891,38 @@ class _ProductFormPageState extends State<ProductFormPage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 6),
+                const SizedBox(height: 10),
                 Text(
-                  _productType == 'goods'
-                      ? 'Barang jadi/siap jual dengan stok inventori fisik'
-                      : 'Layanan jasa / non-fisik (tanpa kelola stok)',
-                  style: GoogleFonts.poppins(fontSize: 10.5, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
+                  'Segmen Bisnis',
+                  style: GoogleFonts.poppins(fontSize: 12, fontWeight: FontWeight.w600, color: const Color(0xFF475569)),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _buildTypeChip(
+                      label: '🛒 Retail',
+                      icon: Icons.storefront_rounded,
+                      isSelected: _businessSegment == 'retail',
+                      activeColor: const Color(0xFF1E3A8A),
+                      onTap: () => setState(() => _businessSegment = 'retail'),
+                    ),
+                    const SizedBox(width: 6),
+                    _buildTypeChip(
+                      label: '🍜 F&B',
+                      icon: Icons.restaurant_rounded,
+                      isSelected: _businessSegment == 'fnb',
+                      activeColor: const Color(0xFF78350F),
+                      onTap: () => setState(() => _businessSegment = 'fnb'),
+                    ),
+                    const SizedBox(width: 6),
+                    _buildTypeChip(
+                      label: '🌐 Semua',
+                      icon: Icons.all_inclusive_rounded,
+                      isSelected: _businessSegment == 'general',
+                      activeColor: const Color(0xFF059669),
+                      onTap: () => setState(() => _businessSegment = 'general'),
+                    ),
+                  ],
                 ),
               ],
             ),

@@ -132,6 +132,7 @@ class _RawMaterialFormPageState extends State<RawMaterialFormPage> {
         final productComp = ProductsCompanion.insert(
           name: _nameController.text.trim(),
           productType: const drift.Value('raw_material'),
+          businessSegment: const drift.Value('fnb'),
           isStockManaged: const drift.Value(true),
           minStockAlert: drift.Value(minStock),
           categoryId: drift.Value(_selectedCategoryId),

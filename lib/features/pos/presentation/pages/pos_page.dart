@@ -49,6 +49,8 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
   late AnimationController _fabAnimController;
   String _searchQuery = '';
   int? _selectedCategoryId;
+  String _selectedSegmentFilter = 'all'; // 'all' / 'retail' / 'fnb'
+  String _businessMode = 'all'; // 'all' / 'retail' / 'fnb'
   List<Map<String, dynamic>> _catalogProducts = [];
   final TextEditingController _searchController = TextEditingController();
 
@@ -61,12 +63,23 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
       duration: const Duration(milliseconds: 300),
     );
 
+    _loadBusinessMode();
+
     // Load data via Bloc
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<SalesCubit>().loadProducts();
       context.read<CategoryCubit>().loadCategories();
       context.read<CustomerCubit>().loadCustomers();
     });
+  }
+
+  Future<void> _loadBusinessMode() async {
+    final mode = await getIt<SalesRepository>().getSetting('business_mode');
+    if (mounted) {
+      setState(() {
+        _businessMode = mode ?? 'all';
+      });
+    }
   }
 
   @override
@@ -86,6 +99,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
 
   @override
   void didPopNext() {
+    _loadBusinessMode();
     context.read<SalesCubit>().loadProducts();
   }
 
@@ -1146,6 +1160,33 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
   Widget _buildCatalogPanel() {
     var filtered = List<Map<String, dynamic>>.from(_catalogProducts);
 
+    // 1. Filter berdasarkan Mode Bisnis Toko yang aktif
+    if (_businessMode == 'fnb') {
+      filtered = filtered.where((p) {
+        final Product prod = p['product'];
+        return prod.businessSegment == 'fnb' || prod.businessSegment == 'general' || prod.hasRecipe;
+      }).toList();
+    } else if (_businessMode == 'retail') {
+      filtered = filtered.where((p) {
+        final Product prod = p['product'];
+        return prod.businessSegment == 'retail' || prod.businessSegment == 'general';
+      }).toList();
+    } else {
+      // Mode Campuran (all) — Cek jika kasir memilih filter segmen cepat
+      if (_selectedSegmentFilter == 'fnb') {
+        filtered = filtered.where((p) {
+          final Product prod = p['product'];
+          return prod.businessSegment == 'fnb' || prod.businessSegment == 'general' || prod.hasRecipe;
+        }).toList();
+      } else if (_selectedSegmentFilter == 'retail') {
+        filtered = filtered.where((p) {
+          final Product prod = p['product'];
+          return prod.businessSegment == 'retail' || prod.businessSegment == 'general';
+        }).toList();
+      }
+    }
+
+    // 2. Filter Kategori
     if (_selectedCategoryId != null) {
       filtered = filtered.where((p) {
         final Product prod = p['product'];
@@ -1153,6 +1194,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
       }).toList();
     }
 
+    // 3. Filter Search Bar
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((p) {
         final Product prod = p['product'];
@@ -1211,6 +1253,26 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
             ),
           ),
         ),
+
+        // ── Quick Segment Toggle (Hanya muncul jika Toko di Mode Campuran / All) ──
+        if (_businessMode == 'all')
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+            child: Container(
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  _buildSegmentTab('Semua', 'all', Icons.all_inclusive_rounded),
+                  _buildSegmentTab('🍜 Menu F&B', 'fnb', Icons.restaurant_rounded),
+                  _buildSegmentTab('🛒 Retail', 'retail', Icons.storefront_rounded),
+                ],
+              ),
+            ),
+          ),
 
         // ── Category Chips ──
         BlocBuilder<CategoryCubit, CategoryState>(
@@ -1356,6 +1418,51 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
     );
   });
 }
+
+  Widget _buildSegmentTab(String label, String key, IconData icon) {
+    final isSelected = _selectedSegmentFilter == key;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedSegmentFilter = key),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF0F172A) : Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: const Color(0xFF0F172A).withValues(alpha: 0.15),
+                      blurRadius: 4,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 13,
+                color: isSelected ? Colors.white : const Color(0xFF64748B),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected ? Colors.white : const Color(0xFF64748B),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _buildCategoryChip(String label, int? categoryId) {
     final isSelected = _selectedCategoryId == categoryId;

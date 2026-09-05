@@ -384,6 +384,18 @@ class MasterRepository {
     return await (_db.delete(_db.products)..where((tbl) => tbl.id.equals(id))).go();
   }
 
+  // Reset / Bersihkan seluruh data katalog produk master (produk, satuan, harga matriks, resep, inventori)
+  Future<void> resetMasterCatalogData() async {
+    await _db.transaction(() async {
+      await _db.delete(_db.productRecipes).go();
+      await _db.delete(_db.productPrices).go();
+      await _db.delete(_db.inventory).go();
+      await _db.delete(_db.stockMovements).go();
+      await _db.delete(_db.productUnits).go();
+      await _db.delete(_db.products).go();
+    });
+  }
+
   // Seed data dummy master (100 Produk Terkategori Lengkap dengan Foto & Satuan)
   Future<int> seedDummyData({void Function(int current, int total)? onProgress}) async {
     // 0. Pastikan PriceTier default 'Harga Umum' dan 'Harga Grosir' ada
@@ -501,6 +513,7 @@ class MasterRepository {
             brandId: Value(brandId),
             imagePath: Value(imagePath),
             productType: const Value('goods'),
+            businessSegment: const Value('retail'),
             isStockManaged: const Value(true),
             minStockAlert: Value(item.minStock),
             allowManualPrice: const Value(false),
@@ -631,6 +644,7 @@ class MasterRepository {
             name: item.name,
             categoryId: Value(catId),
             productType: const Value('raw_material'),
+            businessSegment: const Value('fnb'),
             isStockManaged: const Value(true),
             minStockAlert: Value(item.minStock),
             allowManualPrice: const Value(false),
@@ -783,6 +797,7 @@ class MasterRepository {
             categoryId: Value(catId),
             brandId: Value(brandId),
             productType: const Value('goods'),
+            businessSegment: const Value('fnb'),
             imagePath: Value(imagePath),
             isStockManaged: const Value(false), // Menu F&B stok dikontrol via bahan baku (BOM)
             hasRecipe: const Value(true), // Menandakan menu ini memotong stok bahan baku

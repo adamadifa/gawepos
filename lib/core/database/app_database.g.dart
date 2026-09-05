@@ -1989,6 +1989,18 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     ),
     defaultValue: const Constant(false),
   );
+  static const VerificationMeta _businessSegmentMeta = const VerificationMeta(
+    'businessSegment',
+  );
+  @override
+  late final GeneratedColumn<String> businessSegment = GeneratedColumn<String>(
+    'business_segment',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('retail'),
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -2021,6 +2033,7 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     consignmentType,
     commissionRate,
     hasRecipe,
+    businessSegment,
     createdAt,
   ];
   @override
@@ -2166,6 +2179,15 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
         hasRecipe.isAcceptableOrUnknown(data['has_recipe']!, _hasRecipeMeta),
       );
     }
+    if (data.containsKey('business_segment')) {
+      context.handle(
+        _businessSegmentMeta,
+        businessSegment.isAcceptableOrUnknown(
+          data['business_segment']!,
+          _businessSegmentMeta,
+        ),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -2253,6 +2275,10 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
         DriftSqlType.bool,
         data['${effectivePrefix}has_recipe'],
       )!,
+      businessSegment: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}business_segment'],
+      )!,
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -2285,6 +2311,7 @@ class Product extends DataClass implements Insertable<Product> {
   final String? consignmentType;
   final double commissionRate;
   final bool hasRecipe;
+  final String businessSegment;
   final DateTime createdAt;
   const Product({
     required this.id,
@@ -2305,6 +2332,7 @@ class Product extends DataClass implements Insertable<Product> {
     this.consignmentType,
     required this.commissionRate,
     required this.hasRecipe,
+    required this.businessSegment,
     required this.createdAt,
   });
   @override
@@ -2344,6 +2372,7 @@ class Product extends DataClass implements Insertable<Product> {
     }
     map['commission_rate'] = Variable<double>(commissionRate);
     map['has_recipe'] = Variable<bool>(hasRecipe);
+    map['business_segment'] = Variable<String>(businessSegment);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
   }
@@ -2382,6 +2411,7 @@ class Product extends DataClass implements Insertable<Product> {
           : Value(consignmentType),
       commissionRate: Value(commissionRate),
       hasRecipe: Value(hasRecipe),
+      businessSegment: Value(businessSegment),
       createdAt: Value(createdAt),
     );
   }
@@ -2410,6 +2440,7 @@ class Product extends DataClass implements Insertable<Product> {
       consignmentType: serializer.fromJson<String?>(json['consignmentType']),
       commissionRate: serializer.fromJson<double>(json['commissionRate']),
       hasRecipe: serializer.fromJson<bool>(json['hasRecipe']),
+      businessSegment: serializer.fromJson<String>(json['businessSegment']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -2435,6 +2466,7 @@ class Product extends DataClass implements Insertable<Product> {
       'consignmentType': serializer.toJson<String?>(consignmentType),
       'commissionRate': serializer.toJson<double>(commissionRate),
       'hasRecipe': serializer.toJson<bool>(hasRecipe),
+      'businessSegment': serializer.toJson<String>(businessSegment),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -2458,6 +2490,7 @@ class Product extends DataClass implements Insertable<Product> {
     Value<String?> consignmentType = const Value.absent(),
     double? commissionRate,
     bool? hasRecipe,
+    String? businessSegment,
     DateTime? createdAt,
   }) => Product(
     id: id ?? this.id,
@@ -2480,6 +2513,7 @@ class Product extends DataClass implements Insertable<Product> {
         : this.consignmentType,
     commissionRate: commissionRate ?? this.commissionRate,
     hasRecipe: hasRecipe ?? this.hasRecipe,
+    businessSegment: businessSegment ?? this.businessSegment,
     createdAt: createdAt ?? this.createdAt,
   );
   Product copyWithCompanion(ProductsCompanion data) {
@@ -2522,6 +2556,9 @@ class Product extends DataClass implements Insertable<Product> {
           ? data.commissionRate.value
           : this.commissionRate,
       hasRecipe: data.hasRecipe.present ? data.hasRecipe.value : this.hasRecipe,
+      businessSegment: data.businessSegment.present
+          ? data.businessSegment.value
+          : this.businessSegment,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -2547,6 +2584,7 @@ class Product extends DataClass implements Insertable<Product> {
           ..write('consignmentType: $consignmentType, ')
           ..write('commissionRate: $commissionRate, ')
           ..write('hasRecipe: $hasRecipe, ')
+          ..write('businessSegment: $businessSegment, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -2572,6 +2610,7 @@ class Product extends DataClass implements Insertable<Product> {
     consignmentType,
     commissionRate,
     hasRecipe,
+    businessSegment,
     createdAt,
   );
   @override
@@ -2596,6 +2635,7 @@ class Product extends DataClass implements Insertable<Product> {
           other.consignmentType == this.consignmentType &&
           other.commissionRate == this.commissionRate &&
           other.hasRecipe == this.hasRecipe &&
+          other.businessSegment == this.businessSegment &&
           other.createdAt == this.createdAt);
 }
 
@@ -2618,6 +2658,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
   final Value<String?> consignmentType;
   final Value<double> commissionRate;
   final Value<bool> hasRecipe;
+  final Value<String> businessSegment;
   final Value<DateTime> createdAt;
   const ProductsCompanion({
     this.id = const Value.absent(),
@@ -2638,6 +2679,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     this.consignmentType = const Value.absent(),
     this.commissionRate = const Value.absent(),
     this.hasRecipe = const Value.absent(),
+    this.businessSegment = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   ProductsCompanion.insert({
@@ -2659,6 +2701,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     this.consignmentType = const Value.absent(),
     this.commissionRate = const Value.absent(),
     this.hasRecipe = const Value.absent(),
+    this.businessSegment = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Product> custom({
@@ -2680,6 +2723,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Expression<String>? consignmentType,
     Expression<double>? commissionRate,
     Expression<bool>? hasRecipe,
+    Expression<String>? businessSegment,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -2701,6 +2745,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       if (consignmentType != null) 'consignment_type': consignmentType,
       if (commissionRate != null) 'commission_rate': commissionRate,
       if (hasRecipe != null) 'has_recipe': hasRecipe,
+      if (businessSegment != null) 'business_segment': businessSegment,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -2724,6 +2769,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Value<String?>? consignmentType,
     Value<double>? commissionRate,
     Value<bool>? hasRecipe,
+    Value<String>? businessSegment,
     Value<DateTime>? createdAt,
   }) {
     return ProductsCompanion(
@@ -2745,6 +2791,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       consignmentType: consignmentType ?? this.consignmentType,
       commissionRate: commissionRate ?? this.commissionRate,
       hasRecipe: hasRecipe ?? this.hasRecipe,
+      businessSegment: businessSegment ?? this.businessSegment,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -2806,6 +2853,9 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     if (hasRecipe.present) {
       map['has_recipe'] = Variable<bool>(hasRecipe.value);
     }
+    if (businessSegment.present) {
+      map['business_segment'] = Variable<String>(businessSegment.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -2833,6 +2883,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
           ..write('consignmentType: $consignmentType, ')
           ..write('commissionRate: $commissionRate, ')
           ..write('hasRecipe: $hasRecipe, ')
+          ..write('businessSegment: $businessSegment, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -18571,6 +18622,7 @@ typedef $$ProductsTableCreateCompanionBuilder =
       Value<String?> consignmentType,
       Value<double> commissionRate,
       Value<bool> hasRecipe,
+      Value<String> businessSegment,
       Value<DateTime> createdAt,
     });
 typedef $$ProductsTableUpdateCompanionBuilder =
@@ -18593,6 +18645,7 @@ typedef $$ProductsTableUpdateCompanionBuilder =
       Value<String?> consignmentType,
       Value<double> commissionRate,
       Value<bool> hasRecipe,
+      Value<String> businessSegment,
       Value<DateTime> createdAt,
     });
 
@@ -18974,6 +19027,11 @@ class $$ProductsTableFilterComposer
 
   ColumnFilters<bool> get hasRecipe => $composableBuilder(
     column: $table.hasRecipe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get businessSegment => $composableBuilder(
+    column: $table.businessSegment,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -19413,6 +19471,11 @@ class $$ProductsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get businessSegment => $composableBuilder(
+    column: $table.businessSegment,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -19557,6 +19620,11 @@ class $$ProductsTableAnnotationComposer
 
   GeneratedColumn<bool> get hasRecipe =>
       $composableBuilder(column: $table.hasRecipe, builder: (column) => column);
+
+  GeneratedColumn<String> get businessSegment => $composableBuilder(
+    column: $table.businessSegment,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -19972,6 +20040,7 @@ class $$ProductsTableTableManager
                 Value<String?> consignmentType = const Value.absent(),
                 Value<double> commissionRate = const Value.absent(),
                 Value<bool> hasRecipe = const Value.absent(),
+                Value<String> businessSegment = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => ProductsCompanion(
                 id: id,
@@ -19992,6 +20061,7 @@ class $$ProductsTableTableManager
                 consignmentType: consignmentType,
                 commissionRate: commissionRate,
                 hasRecipe: hasRecipe,
+                businessSegment: businessSegment,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -20014,6 +20084,7 @@ class $$ProductsTableTableManager
                 Value<String?> consignmentType = const Value.absent(),
                 Value<double> commissionRate = const Value.absent(),
                 Value<bool> hasRecipe = const Value.absent(),
+                Value<String> businessSegment = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => ProductsCompanion.insert(
                 id: id,
@@ -20034,6 +20105,7 @@ class $$ProductsTableTableManager
                 consignmentType: consignmentType,
                 commissionRate: commissionRate,
                 hasRecipe: hasRecipe,
+                businessSegment: businessSegment,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0

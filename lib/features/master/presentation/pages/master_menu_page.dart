@@ -74,7 +74,7 @@ class _MasterMenuPageState extends State<MasterMenuPage> {
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  'Generate Data Dummy Contoh',
+                  'Data Contoh & Reset Katalog',
                   style: GoogleFonts.poppins(
                     fontWeight: FontWeight.w800,
                     fontSize: 16,
@@ -211,8 +211,129 @@ class _MasterMenuPageState extends State<MasterMenuPage> {
                 ),
               ),
             ),
+            const SizedBox(height: 12),
+            // Option 3: Reset Total Master Data
+            InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () {
+                Navigator.pop(ctx);
+                _showResetCatalogConfirmDialog(context);
+              },
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFFECACA)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDC2626).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.delete_sweep_rounded, color: Color(0xFFDC2626), size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Reset Bersihkan Katalog Produk',
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13.5,
+                              color: const Color(0xFFDC2626),
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            'Kosongkan semua produk & bahan baku agar data kasir kembali bersih 0',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11.5,
+                              color: const Color(0xFF991B1B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFFDC2626), size: 14),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showResetCatalogConfirmDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 24),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'Reset Katalog Produk?',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 16),
+            ),
+          ],
+        ),
+        content: Text(
+          'Semua daftar produk, bahan baku, resep racikan, dan saldo stok inventori akan dihapus bersih. Riwayat transaksi penjualan lama dan pengaturan toko tetap aman tersimpan.',
+          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF334155)),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(
+              'BATAL',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w600, color: const Color(0xFF64748B)),
+            ),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await getIt<MasterRepository>().resetMasterCatalogData();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Katalog produk dan bahan baku berhasil dibersihkan!',
+                      style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                    backgroundColor: const Color(0xFF0F172A),
+                    behavior: SnackBarBehavior.floating,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    margin: const EdgeInsets.all(16),
+                  ),
+                );
+              }
+            },
+            child: Text(
+              'YA, BERSIHKAN SEKARANG',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 12),
+            ),
+          ),
+        ],
       ),
     );
   }

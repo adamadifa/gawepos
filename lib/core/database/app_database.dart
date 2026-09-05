@@ -67,6 +67,8 @@ class Products extends Table {
   RealColumn get commissionRate => real().withDefault(const Constant(0.0))(); // Nilai komisi toko (%) atau nominal harga setor
   // Resep / Bill of Materials (BOM)
   BoolColumn get hasRecipe => boolean().withDefault(const Constant(false))();
+  // Segmen Usaha: 'retail' (Barang Toko), 'fnb' (Menu F&B Dapur), 'general' (Bisa Keduanya)
+  TextColumn get businessSegment => text().withDefault(const Constant('retail'))();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -467,7 +469,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -519,6 +521,9 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 11) {
             await m.addColumn(orderItems, orderItems.notes);
+          }
+          if (from < 12) {
+            await m.addColumn(products, products.businessSegment);
           }
         },
         beforeOpen: (details) async {
