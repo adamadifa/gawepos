@@ -15,6 +15,7 @@ import 'database_management_page.dart';
 import 'points_settings_page.dart';
 import 'printer_settings_page.dart';
 import 'shop_settings_page.dart';
+import 'order_notes_settings_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -283,6 +284,24 @@ class _SettingsPageState extends State<SettingsPage> {
                 await Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const PointsSettingsPage()),
+                );
+                _loadSystemOverview();
+              },
+            ),
+            const SizedBox(height: 10),
+            _buildSettingsCard(
+              icon: Icons.edit_note_rounded,
+              iconColor: const Color(0xFF059669), // Emerald
+              bgColor: const Color(0xFFECFDF5),
+              title: 'Preset Catatan Pesanan & Racikan',
+              subtitle: 'Kustomisasi opsi cepat rasa, level pedas, takaran gula & instruksi dapur',
+              badgeText: 'Kustom Catatan',
+              badgeColor: const Color(0xFFD1FAE5),
+              badgeTextColor: const Color(0xFF065F46),
+              onTap: () async {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const OrderNotesSettingsPage()),
                 );
                 _loadSystemOverview();
               },

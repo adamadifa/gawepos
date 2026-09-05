@@ -101,5 +101,32 @@ void main() {
       expect(prices.isNotEmpty, isTrue);
       expect(prices.first.price, equals(18000.0));
     });
+
+    test('seedSeblakRawMaterials berhasil membuat 6 bahan baku seblak dengan saldo stok', () async {
+      final count = await repo.seedSeblakRawMaterials();
+      expect(count, equals(6));
+
+      final rawMats = await repo.getRawMaterialsWithDetails();
+      expect(rawMats.length, equals(6));
+
+      final bumbu = rawMats.firstWhere((r) => (r['product'] as Product).name.contains('Bumbu Kencur'));
+      final prod = bumbu['product'] as Product;
+      final inv = await (db.select(db.inventory)..where((tbl) => tbl.productId.equals(prod.id))).get();
+      expect(inv.isNotEmpty, isTrue);
+      expect(inv.first.quantity, greaterThan(0));
+    });
+
+    test('seedSeblakMenuProducts berhasil membuat 19 topping seblak dengan harga & resep BOM', () async {
+      await repo.seedSeblakRawMaterials();
+      final count = await repo.seedSeblakMenuProducts();
+      expect(count, equals(19));
+
+      final allProds = await repo.getProductsWithDetails();
+      final seblakProducts = allProds.where((p) => (p['product'] as Product).sku?.startsWith('SBL-') ?? false).toList();
+      expect(seblakProducts.length, equals(19));
+
+      final bomItems = await db.select(db.productRecipes).get();
+      expect(bomItems.isNotEmpty, isTrue);
+    });
   });
 }

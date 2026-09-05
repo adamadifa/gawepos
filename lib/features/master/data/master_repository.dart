@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import '../../../core/database/app_database.dart';
 import 'dummy_products_data.dart';
 import 'dummy_coffee_raw_materials.dart';
+import 'dummy_seblak_data.dart';
 
 class MasterRepository {
   final AppDatabase _db;
@@ -839,6 +840,265 @@ class MasterRepository {
         }
 
         // Simpan Komposisi Resep (BOM) untuk setiap bahan baku terkait
+        for (final ing in item.recipe) {
+          final ingProdId = rawProdMap[ing.rawMaterialName];
+          if (ingProdId != null) {
+            final ingUnitId = rawProdBaseUnitMap[ingProdId];
+            if (ingUnitId != null) {
+              await _db.into(_db.productRecipes).insert(
+                ProductRecipesCompanion.insert(
+                  parentProductId: prodId,
+                  ingredientProductId: ingProdId,
+                  ingredientUnitId: ingUnitId,
+                  quantityRequired: ing.quantity,
+                  notes: Value(ing.notes),
+                ),
+              );
+            }
+          }
+        }
+      });
+
+      insertedCount++;
+      onProgress?.call(i + 1, totalItems);
+    }
+
+    return insertedCount;
+  }
+
+  // ─── SEED DUMMY SEBLAK PRASMANAN (BAHAN BAKU & 19 TOPPING SIAP JUAL) ──
+  Future<int> seedSeblakRawMaterials({Function(int current, int total)? onProgress}) async {
+    final existingTiers = await _db.select(_db.priceTiers).get();
+    int defaultTierId = 1;
+    if (existingTiers.isEmpty) {
+      defaultTierId = await _db.into(_db.priceTiers).insert(
+        PriceTiersCompanion.insert(name: 'Harga Umum'),
+      );
+    } else {
+      defaultTierId = existingTiers.first.id;
+    }
+
+    final categories = await _db.select(_db.categories).get();
+    final categoryMap = {for (var c in categories) c.name: c.id};
+
+    int insertedCount = 0;
+    final totalItems = DummySeblakData.rawMaterials.length;
+
+    for (int i = 0; i < totalItems; i++) {
+      final item = DummySeblakData.rawMaterials[i];
+
+      int? catId = categoryMap[item.category];
+      if (catId == null) {
+        catId = await _db.into(_db.categories).insert(
+          CategoriesCompanion.insert(name: item.category),
+        );
+        categoryMap[item.category] = catId;
+      }
+
+      final existingProd = await (_db.select(_db.products)
+            ..where((tbl) => tbl.name.equals(item.name) & tbl.productType.equals('raw_material')))
+          .getSingleOrNull();
+
+      if (existingProd != null) {
+        insertedCount++;
+        onProgress?.call(i + 1, totalItems);
+        continue;
+      }
+
+      await _db.transaction(() async {
+        final prodId = await _db.into(_db.products).insert(
+          ProductsCompanion.insert(
+            name: item.name,
+            categoryId: Value(catId),
+            productType: const Value('raw_material'),
+            businessSegment: const Value('fnb'),
+            isStockManaged: const Value(true),
+            minStockAlert: Value(item.minStock),
+            allowManualPrice: const Value(false),
+            isActive: const Value(true),
+            hasRecipe: const Value(false),
+          ),
+        );
+
+        final unitId = await _db.into(_db.productUnits).insert(
+          ProductUnitsCompanion.insert(
+            productId: prodId,
+            name: item.unitName,
+            conversionFactor: const Value(1.0),
+            costPrice: Value(item.costPrice),
+            isBase: const Value(true),
+          ),
+        );
+
+        await _db.into(_db.productPrices).insert(
+          ProductPricesCompanion.insert(
+            productId: prodId,
+            unitId: unitId,
+            priceTierId: defaultTierId,
+            price: Value(item.costPrice),
+            minQty: const Value(1),
+          ),
+        );
+
+        await _db.into(_db.inventory).insert(
+          InventoryCompanion.insert(
+            productId: prodId,
+            unitId: unitId,
+            quantity: Value(item.initialStock),
+          ),
+        );
+
+        await _db.into(_db.stockMovements).insert(
+          StockMovementsCompanion.insert(
+            productId: prodId,
+            unitId: unitId,
+            quantity: item.initialStock,
+            type: 'opname',
+            notes: const Value('Saldo stok awal bahan baku seblak prasmanan'),
+          ),
+        );
+      });
+
+      insertedCount++;
+      onProgress?.call(i + 1, totalItems);
+    }
+
+    return insertedCount;
+  }
+
+  Future<int> seedSeblakMenuProducts({Function(int current, int total)? onProgress}) async {
+    // 1. Pastikan bahan baku seblak ter-seed
+    await seedSeblakRawMaterials();
+
+    final existingTiers = await _db.select(_db.priceTiers).get();
+    int defaultTierId = 1;
+    if (existingTiers.isEmpty) {
+      defaultTierId = await _db.into(_db.priceTiers).insert(
+        PriceTiersCompanion.insert(name: 'Harga Umum'),
+      );
+    } else {
+      defaultTierId = existingTiers.first.id;
+    }
+
+    final categories = await _db.select(_db.categories).get();
+    final categoryMap = {for (var c in categories) c.name: c.id};
+
+    final brands = await _db.select(_db.brands).get();
+    final brandMap = {for (var b in brands) b.name: b.id};
+
+    final rawProds = await (_db.select(_db.products)
+          ..where((tbl) => tbl.productType.equals('raw_material')))
+        .get();
+    final rawProdMap = {for (var p in rawProds) p.name: p.id};
+
+    final allUnits = await _db.select(_db.productUnits).get();
+    final rawProdBaseUnitMap = <int, int>{};
+    for (var u in allUnits) {
+      if (u.isBase) {
+        rawProdBaseUnitMap[u.productId] = u.id;
+      }
+    }
+
+    int insertedCount = 0;
+    final totalItems = DummySeblakData.seblakProducts.length;
+
+    for (int i = 0; i < totalItems; i++) {
+      final item = DummySeblakData.seblakProducts[i];
+
+      int? catId = categoryMap[item.category];
+      if (catId == null) {
+        catId = await _db.into(_db.categories).insert(
+          CategoriesCompanion.insert(name: item.category),
+        );
+        categoryMap[item.category] = catId;
+      }
+
+      int? brandId = brandMap[item.brand];
+      if (brandId == null) {
+        brandId = await _db.into(_db.brands).insert(
+          BrandsCompanion.insert(name: item.brand),
+        );
+        brandMap[item.brand] = brandId;
+      }
+
+      final imagePath = await DummyDataGenerator.generateProductImage(
+        name: item.name,
+        category: item.category,
+        color: item.badgeColor,
+        shortCode: item.shortCode,
+      );
+
+      final existingProd = await (_db.select(_db.products)
+            ..where((tbl) => tbl.barcode.equals(item.barcode) | tbl.sku.equals(item.sku)))
+          .getSingleOrNull();
+
+      if (existingProd != null) {
+        if (existingProd.imagePath == null && imagePath != null) {
+          await (_db.update(_db.products)..where((tbl) => tbl.id.equals(existingProd.id)))
+              .write(ProductsCompanion(imagePath: Value(imagePath)));
+        }
+        insertedCount++;
+        onProgress?.call(i + 1, totalItems);
+        continue;
+      }
+
+      await _db.transaction(() async {
+        final prodId = await _db.into(_db.products).insert(
+          ProductsCompanion.insert(
+            name: item.name,
+            sku: Value(item.sku),
+            barcode: Value(item.barcode),
+            categoryId: Value(catId),
+            brandId: Value(brandId),
+            productType: const Value('goods'),
+            businessSegment: const Value('fnb'),
+            imagePath: Value(imagePath),
+            isStockManaged: const Value(true), // Topping seblak stok per porsi/pcs
+            hasRecipe: Value(item.recipe.isNotEmpty),
+            isActive: const Value(true),
+          ),
+        );
+
+        final unitId = await _db.into(_db.productUnits).insert(
+          ProductUnitsCompanion.insert(
+            productId: prodId,
+            name: item.unitName,
+            conversionFactor: const Value(1.0),
+            isBase: const Value(true),
+          ),
+        );
+
+        await _db.into(_db.productPrices).insert(
+          ProductPricesCompanion.insert(
+            productId: prodId,
+            unitId: unitId,
+            priceTierId: defaultTierId,
+            price: Value(item.sellPrice),
+            minQty: const Value(1),
+          ),
+        );
+
+        if (item.grosirPrice > 0 && item.grosirPrice < item.sellPrice) {
+          await _db.into(_db.productPrices).insert(
+            ProductPricesCompanion.insert(
+              productId: prodId,
+              unitId: unitId,
+              priceTierId: defaultTierId,
+              price: Value(item.grosirPrice),
+              minQty: const Value(5),
+            ),
+          );
+        }
+
+        // Inisialisasi stok awal topping seblak (50 porsi/pcs)
+        await _db.into(_db.inventory).insert(
+          InventoryCompanion.insert(
+            productId: prodId,
+            unitId: unitId,
+            quantity: const Value(50.0),
+          ),
+        );
+
         for (final ing in item.recipe) {
           final ingProdId = rawProdMap[ing.rawMaterialName];
           if (ingProdId != null) {

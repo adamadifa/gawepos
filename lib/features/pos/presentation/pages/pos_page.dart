@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -20,6 +21,7 @@ import 'payment_page.dart';
 import 'held_orders_page.dart';
 import 'sales_history_page.dart';
 import 'split_bill_page.dart';
+import 'order_notes_settings_page.dart';
 
 class _UnitInputState {
   final ProductUnit unit;
@@ -73,13 +75,81 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
     });
   }
 
+  List<String> _foodNotes = [];
+  List<String> _beverageNotes = [];
+  List<String> _generalNotes = [];
+
   Future<void> _loadBusinessMode() async {
     final mode = await getIt<SalesRepository>().getSetting('business_mode');
+    final foodStr = await getIt<SalesRepository>().getSetting('food_order_notes');
+    final bevStr = await getIt<SalesRepository>().getSetting('beverage_order_notes');
+    final genStr = await getIt<SalesRepository>().getSetting('general_order_notes');
+
     if (mounted) {
       setState(() {
         _businessMode = mode ?? 'all';
+        _foodNotes = foodStr != null
+            ? List<String>.from(jsonDecode(foodStr))
+            : List<String>.from(OrderNotesSettingsPage.defaultFoodNotes);
+        _beverageNotes = bevStr != null
+            ? List<String>.from(jsonDecode(bevStr))
+            : List<String>.from(OrderNotesSettingsPage.defaultBeverageNotes);
+        _generalNotes = genStr != null
+            ? List<String>.from(jsonDecode(genStr))
+            : List<String>.from(OrderNotesSettingsPage.defaultGeneralNotes);
       });
     }
+  }
+
+  // Deteksi apakah produk bertipe Minuman, Makanan, atau Retail
+  String _detectProductNoteType(Product prod, String? categoryName) {
+    final name = prod.name.toLowerCase();
+    final cat = (categoryName ?? '').toLowerCase();
+
+    final isDrink = name.contains('kopi') ||
+        name.contains('coffee') ||
+        name.contains('latte') ||
+        name.contains('tea') ||
+        name.contains('teh') ||
+        name.contains('boba') ||
+        name.contains('juice') ||
+        name.contains('jus') ||
+        name.contains('matcha') ||
+        name.contains('cokelat') ||
+        name.contains('chocolate') ||
+        name.contains('susu') ||
+        name.contains('drink') ||
+        name.contains('es ') ||
+        cat.contains('coffee') ||
+        cat.contains('minuman') ||
+        cat.contains('beverage') ||
+        cat.contains('boba');
+
+    if (isDrink) return 'beverage';
+
+    final isFood = prod.hasRecipe ||
+        name.contains('seblak') ||
+        name.contains('mie') ||
+        name.contains('bakso') ||
+        name.contains('kerupuk') ||
+        name.contains('ceker') ||
+        name.contains('tulang') ||
+        name.contains('dumpling') ||
+        name.contains('chikuwa') ||
+        name.contains('sosis') ||
+        name.contains('kwetiau') ||
+        name.contains('makaroni') ||
+        name.contains('nasi') ||
+        name.contains('ayam') ||
+        cat.contains('makanan') ||
+        cat.contains('seblak') ||
+        cat.contains('snack') ||
+        cat.contains('topping') ||
+        cat.contains('dapur');
+
+    if (isFood) return 'food';
+
+    return 'general';
   }
 
   @override
@@ -1693,6 +1763,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
     final Product prod = item['product'];
     final List<ProductUnit> units = List<ProductUnit>.from(item['units'] ?? []);
     final List<ProductPrice> prices = List<ProductPrice>.from(item['prices'] ?? []);
+    final String? categoryName = item['categoryName'] as String?;
 
     // Helper functions to fetch qty and price for a specific unit
     double getQtyForUnit(ProductUnit unit) {
@@ -1795,11 +1866,9 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
 
           final totalQty = unitStates.fold<double>(0.0, (sum, u) => sum + u.qty);
 
-          final quickNotesPreset = [
-            'Pedas Lv 1', 'Pedas Lv 2', 'Pedas Lv 3', 'Pedas Lv 5',
-            'Kuah Nyemek', 'Kuah Banyak', 'Kuah Kering',
-            'Tanpa Daun Bawang', 'Tanpa Micin', 'Less Sugar (50%)', 'Less Ice', 'Bungkus / Take Away'
-          ];
+          // Deteksi kategori catatan awal berdasarkan produk (minuman vs makanan vs umum)
+          final defaultNoteType = _detectProductNoteType(prod, categoryName);
+          String currentTabType = defaultNoteType;
 
           return Center(
             child: ConstrainedBox(
@@ -1908,33 +1977,30 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                                         labelText: prod.allowManualPrice ? 'Harga (Manual)' : 'Harga (Otomatis)',
                                         prefixText: 'Rp ',
                                         isDense: true,
-                                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                         border: OutlineInputBorder(
                                           borderRadius: BorderRadius.circular(8),
-                                          borderSide: const BorderSide(color: AppConstants.borderLightColor),
                                         ),
-                                        focusedBorder: OutlineInputBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                          borderSide: const BorderSide(color: AppConstants.primaryColor, width: 1.5),
-                                        ),
+                                        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                                       ),
                                       onChanged: (val) {
+                                        final p = double.tryParse(val.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0.0;
                                         setModalState(() {
-                                          uState.price = double.tryParse(val) ?? 0.0;
+                                          uState.price = p;
                                         });
                                       },
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
-                                  // Qty Stepper
+                                  const SizedBox(width: 8),
+                                  // Quantity stepper
                                   Expanded(
-                                    flex: 4,
+                                    flex: 3,
                                     child: Container(
                                       decoration: BoxDecoration(
-                                        color: AppConstants.backgroundColor,
+                                        color: AppConstants.borderLightColor.withValues(alpha: 0.15),
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
                                           IconButton(
                                             icon: const Icon(Icons.remove_rounded, size: 18),
@@ -1942,9 +2008,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                                               if (uState.qty > 0) {
                                                 setModalState(() {
                                                   uState.qty--;
-                                                  uState.qtyController.text = uState.qty > 0 
-                                                      ? uState.qty.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '') 
-                                                      : '';
+                                                  uState.qtyController.text = uState.qty.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '');
                                                   if (!prod.allowManualPrice) {
                                                     updatePriceForQuantity(uState);
                                                   }
@@ -2018,25 +2082,59 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Icon(Icons.edit_note_rounded, size: 18, color: Color(0xFF0F172A)),
-                            const SizedBox(width: 6),
-                            Text(
-                              'Catatan Pesanan & Racikan Dapur (Opsional)',
-                              style: GoogleFonts.poppins(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF0F172A),
-                              ),
+                            Row(
+                              children: [
+                                const Icon(Icons.edit_note_rounded, size: 18, color: Color(0xFF0F172A)),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'Catatan Pesanan & Racikan (Opsional)',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF0F172A),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            // Small category switch chips
+                            Row(
+                              children: [
+                                _buildNoteTypeSwitchChip(
+                                  label: '🍜 Makanan',
+                                  isSelected: currentTabType == 'food',
+                                  activeColor: const Color(0xFFDC2626),
+                                  onTap: () => setModalState(() => currentTabType = 'food'),
+                                ),
+                                const SizedBox(width: 4),
+                                _buildNoteTypeSwitchChip(
+                                  label: '☕ Minuman',
+                                  isSelected: currentTabType == 'beverage',
+                                  activeColor: const Color(0xFF78350F),
+                                  onTap: () => setModalState(() => currentTabType = 'beverage'),
+                                ),
+                                const SizedBox(width: 4),
+                                _buildNoteTypeSwitchChip(
+                                  label: '🛍️ Umum',
+                                  isSelected: currentTabType == 'general',
+                                  activeColor: const Color(0xFF2563EB),
+                                  onTap: () => setModalState(() => currentTabType = 'general'),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 8),
                         TextField(
                           controller: notesController,
                           style: GoogleFonts.poppins(fontSize: 12.5),
                           decoration: InputDecoration(
-                            hintText: 'Misal: Pedas Level 3, Kuah Nyemek, Tanpa Bawang...',
+                            hintText: currentTabType == 'beverage'
+                                ? 'Misal: Less Sugar, Less Ice, Extra Shot...'
+                                : (currentTabType == 'food'
+                                    ? 'Misal: Pedas Level 3, Kuah Nyemek, Tanpa Bawang...'
+                                    : 'Misal: Bungkus Rapi, Pisah Kantong...'),
                             hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF94A3B8)),
                             filled: true,
                             fillColor: const Color(0xFFF8FAFC),
@@ -2052,40 +2150,48 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                           ),
                         ),
                         const SizedBox(height: 8),
-                        // Quick Presets Chips
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 6,
-                          children: quickNotesPreset.map((chipText) {
-                            return InkWell(
-                              borderRadius: BorderRadius.circular(8),
-                              onTap: () {
-                                setModalState(() {
-                                  if (notesController.text.isEmpty) {
-                                    notesController.text = chipText;
-                                  } else if (!notesController.text.contains(chipText)) {
-                                    notesController.text = '${notesController.text}, $chipText';
-                                  }
-                                });
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF1F5F9),
+                        // Quick Presets Chips based on active tab
+                        Builder(
+                          builder: (context) {
+                            final activePresetList = currentTabType == 'beverage'
+                                ? _beverageNotes
+                                : (currentTabType == 'food' ? _foodNotes : _generalNotes);
+
+                            return Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: activePresetList.map((chipText) {
+                                return InkWell(
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: const Color(0xFFE2E8F0)),
-                                ),
-                                child: Text(
-                                  '+ $chipText',
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w500,
-                                    color: const Color(0xFF334155),
+                                  onTap: () {
+                                    setModalState(() {
+                                      if (notesController.text.isEmpty) {
+                                        notesController.text = chipText;
+                                      } else if (!notesController.text.contains(chipText)) {
+                                        notesController.text = '${notesController.text}, $chipText';
+                                      }
+                                    });
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                                    ),
+                                    child: Text(
+                                      '+ $chipText',
+                                      style: GoogleFonts.poppins(
+                                        fontSize: 10.5,
+                                        fontWeight: FontWeight.w500,
+                                        color: const Color(0xFF334155),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
+                                );
+                              }).toList(),
                             );
-                          }).toList(),
+                          },
                         ),
                       ],
                     ),
@@ -2575,17 +2681,27 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
 
   void _showItemNoteDialog(BuildContext context, CartItem item) {
     final noteController = TextEditingController(text: item.notes ?? '');
-    final quickNotes = [
-      'Pedas Lv 1', 'Pedas Lv 2', 'Pedas Lv 3', 'Pedas Lv 5',
-      'Kuah Nyemek', 'Kuah Banyak', 'Kuah Kering',
-      'Tanpa Daun Bawang', 'Tanpa Micin', 'Less Sugar', 'Less Ice', 'Bungkus'
-    ];
+    
+    // Auto-detect note type category based on product
+    String? categoryName;
+    final catState = context.read<CategoryCubit>().state;
+    if (catState is CategoryLoaded) {
+      final match = catState.categories.cast<Category?>().firstWhere(
+            (c) => c?.id == item.product.categoryId,
+            orElse: () => null,
+          );
+      categoryName = match?.name;
+    }
+    String currentTabType = _detectProductNoteType(item.product, categoryName);
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDlgState) => AlertDialog(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          titlePadding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+          actionsPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           title: Row(
             children: [
               Container(
@@ -2620,48 +2736,100 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Category Switch Tabs
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  _buildNoteTypeSwitchChip(
+                    label: '🍜 Makanan',
+                    isSelected: currentTabType == 'food',
+                    activeColor: const Color(0xFFDC2626),
+                    onTap: () => setDlgState(() => currentTabType = 'food'),
+                  ),
+                  const SizedBox(width: 4),
+                  _buildNoteTypeSwitchChip(
+                    label: '☕ Minuman',
+                    isSelected: currentTabType == 'beverage',
+                    activeColor: const Color(0xFF78350F),
+                    onTap: () => setDlgState(() => currentTabType = 'beverage'),
+                  ),
+                  const SizedBox(width: 4),
+                  _buildNoteTypeSwitchChip(
+                    label: '🛍️ Umum',
+                    isSelected: currentTabType == 'general',
+                    activeColor: const Color(0xFF2563EB),
+                    onTap: () => setDlgState(() => currentTabType = 'general'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
               TextField(
                 controller: noteController,
                 autofocus: true,
                 style: GoogleFonts.poppins(fontSize: 13),
                 decoration: InputDecoration(
-                  hintText: 'Misal: Pedas Level 3, Kuah Nyemek...',
+                  hintText: currentTabType == 'beverage'
+                      ? 'Misal: Less Sugar, Less Ice, Extra Shot...'
+                      : (currentTabType == 'food'
+                          ? 'Misal: Pedas Level 3, Kuah Nyemek, Tanpa Bawang...'
+                          : 'Misal: Bungkus Rapi, Pisah Kantong...'),
                   hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF94A3B8)),
                   filled: true,
                   fillColor: const Color(0xFFF8FAFC),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: quickNotes.map((chipText) {
-                  return InkWell(
-                    borderRadius: BorderRadius.circular(6),
-                    onTap: () {
-                      setDlgState(() {
-                        if (noteController.text.isEmpty) {
-                          noteController.text = chipText;
-                        } else if (!noteController.text.contains(chipText)) {
-                          noteController.text = '${noteController.text}, $chipText';
-                        }
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
+              // Preset chips based on active category
+              Builder(
+                builder: (context) {
+                  final activePresetList = currentTabType == 'beverage'
+                      ? _beverageNotes
+                      : (currentTabType == 'food' ? _foodNotes : _generalNotes);
+
+                  return Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: activePresetList.map((chipText) {
+                      return InkWell(
                         borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: Text(
-                        '+ $chipText',
-                        style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFF334155), fontWeight: FontWeight.w500),
-                      ),
-                    ),
+                        onTap: () {
+                          setDlgState(() {
+                            if (noteController.text.isEmpty) {
+                              noteController.text = chipText;
+                            } else if (!noteController.text.contains(chipText)) {
+                              noteController.text = '${noteController.text}, $chipText';
+                            }
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Text(
+                            '+ $chipText',
+                            style: GoogleFonts.poppins(
+                              fontSize: 10.5,
+                              color: const Color(0xFF334155),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   );
-                }).toList(),
+                },
               ),
             ],
           ),
@@ -2695,6 +2863,38 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
               child: Text('Simpan', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 12)),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoteTypeSwitchChip({
+    required String label,
+    required bool isSelected,
+    required Color activeColor,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(6),
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        decoration: BoxDecoration(
+          color: isSelected ? activeColor.withValues(alpha: 0.12) : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(
+            color: isSelected ? activeColor : const Color(0xFFE2E8F0),
+            width: isSelected ? 1.2 : 0.8,
+          ),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.poppins(
+            fontSize: 9.5,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? activeColor : const Color(0xFF64748B),
+          ),
         ),
       ),
     );

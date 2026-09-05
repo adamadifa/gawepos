@@ -158,6 +158,80 @@ class _MasterMenuPageState extends State<MasterMenuPage> {
               ),
             ),
             const SizedBox(height: 12),
+            // Option 2: Seblak Prasmanan & 19 Topping F&B
+            InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: () {
+                Navigator.pop(ctx);
+                _startSeedingSeblakProducts(context);
+              },
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFDC2626).withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.soup_kitchen_rounded, color: Color(0xFFDC2626), size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'Seblak Prasmanan (F&B)',
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 13.5,
+                                  color: const Color(0xFF0F172A),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFEE2E2),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  '19 Topping',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFFDC2626),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            '19 Topping isian seblak (kerupuk, dumpling, ceker, mie, makaroni) & 6 bahan dapur',
+                            style: GoogleFonts.poppins(
+                              fontSize: 11.5,
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF94A3B8), size: 14),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             // Option 2: Retail / Minimarket 100 Products
             InkWell(
               borderRadius: BorderRadius.circular(16),
@@ -608,6 +682,102 @@ class _MasterMenuPageState extends State<MasterMenuPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Gagal membuat menu F&B: $e'),
+            backgroundColor: AppConstants.errorColor,
+          ),
+        );
+      }
+    });
+  }
+
+  void _startSeedingSeblakProducts(BuildContext context) {
+    int currentProgress = 0;
+    int totalProgress = 19;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (progressCtx) {
+        return StatefulBuilder(
+          builder: (context, setProgressState) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              contentPadding: const EdgeInsets.all(24),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 3.5,
+                      color: Color(0xFFDC2626),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    'Membuat Menu & Topping Seblak...',
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 15),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$currentProgress dari $totalProgress item seblak & bahan baku diproses',
+                    style: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF64748B)),
+                  ),
+                  const SizedBox(height: 14),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: totalProgress > 0 ? (currentProgress / totalProgress) : 0,
+                      minHeight: 8,
+                      backgroundColor: const Color(0xFFE2E8F0),
+                      color: const Color(0xFFDC2626),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    // Jalankan seeding Seblak
+    getIt<MasterRepository>().seedSeblakMenuProducts(
+      onProgress: (cur, tot) {
+        currentProgress = cur;
+        totalProgress = tot;
+      },
+    ).then((count) {
+      if (context.mounted) {
+        Navigator.pop(context); // Tutup dialog progress
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Berhasil membuat $count topping & isian seblak prasmanan siap kasir!',
+                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: const Color(0xFF0F172A),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    }).catchError((e) {
+      if (context.mounted) {
+        Navigator.pop(context); // Tutup dialog progress
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal membuat data seblak: $e'),
             backgroundColor: AppConstants.errorColor,
           ),
         );
