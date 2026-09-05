@@ -191,6 +191,7 @@ class OrderItems extends Table {
   RealColumn get discountAmount => real().withDefault(const Constant(0.0))();
   IntColumn get minQtyApplied => integer().withDefault(const Constant(1))();
   RealColumn get subtotal => real()();
+  TextColumn get notes => text().nullable()(); // Catatan pesanan item F&B (misal: "Pedas Lv 3, Kuah Nyemek")
 }
 
 // 16. Metode Pembayaran Detail
@@ -466,7 +467,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 11;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -515,6 +516,9 @@ class AppDatabase extends _$AppDatabase {
           if (from < 10) {
             await m.addColumn(products, products.hasRecipe);
             await m.createTable(productRecipes);
+          }
+          if (from < 11) {
+            await m.addColumn(orderItems, orderItems.notes);
           }
         },
         beforeOpen: (details) async {

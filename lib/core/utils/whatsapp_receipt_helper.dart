@@ -70,12 +70,21 @@ class WhatsAppReceiptHelper {
       final subtotalStr = CurrencyFormatter.format(item.subtotal);
 
       buffer.writeln('• *$name*');
+      if (item.notes != null && item.notes!.isNotEmpty) {
+        buffer.writeln('  _Note: ${item.notes}_');
+      }
       buffer.writeln('  $qtyStr $unitName x $priceStr = $subtotalStr');
       if (item.discountAmount > 0) {
         buffer.writeln('  _(Disc Item: -${CurrencyFormatter.format(item.discountAmount)})_');
       }
     }
     buffer.writeln('--------------------------------');
+
+    // Catatan Pesanan Keseluruhan / No Meja
+    if (order.notes != null && order.notes!.isNotEmpty) {
+      buffer.writeln('📌 *Catatan Pesanan:* ${order.notes}');
+      buffer.writeln('--------------------------------');
+    }
 
     // Ringkasan Pembayaran
     buffer.writeln('Subtotal      : ${CurrencyFormatter.format(order.subtotal)}');

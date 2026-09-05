@@ -103,6 +103,9 @@ class _PaymentPageState extends State<PaymentPage>
     super.initState();
     _amountPaid = widget.cart.grandTotal;
     _amountPaidController.text = _formatNumber(_amountPaid.toStringAsFixed(0));
+    if (widget.cart.orderNotes != null && widget.cart.orderNotes!.isNotEmpty) {
+      _notesController.text = widget.cart.orderNotes!;
+    }
     _calculateChange();
     _loadPointsData();
 
@@ -259,6 +262,7 @@ class _PaymentPageState extends State<PaymentPage>
         'price': item.price,
         'discountAmount': item.discountAmount,
         'appliedMinQty': item.appliedMinQty,
+        'notes': item.notes,
       };
     }).toList();
 

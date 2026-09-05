@@ -1617,6 +1617,16 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
     final existingInCart = cartState.items.where((c) => c.product.id == prod.id);
     final bool isProductNew = existingInCart.isEmpty;
 
+    // Ambil catatan eksisting jika ada
+    String? initialItemNotes;
+    for (final c in existingInCart) {
+      if (c.notes != null && c.notes!.isNotEmpty) {
+        initialItemNotes = c.notes;
+        break;
+      }
+    }
+    final notesController = TextEditingController(text: initialItemNotes ?? '');
+
     final List<_UnitInputState> unitStates = units.map((u) {
       double initialQty = getQtyForUnit(u);
       if (isProductNew && u.isBase && initialQty == 0.0) {
@@ -1678,6 +1688,12 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
 
           final totalQty = unitStates.fold<double>(0.0, (sum, u) => sum + u.qty);
 
+          final quickNotesPreset = [
+            'Pedas Lv 1', 'Pedas Lv 2', 'Pedas Lv 3', 'Pedas Lv 5',
+            'Kuah Nyemek', 'Kuah Banyak', 'Kuah Kering',
+            'Tanpa Daun Bawang', 'Tanpa Micin', 'Less Sugar (50%)', 'Less Ice', 'Bungkus / Take Away'
+          ];
+
           return Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 540),
@@ -1711,7 +1727,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Multi-Satuan & Harga Manual',
+                                'Multi-Satuan, Catatan Rasa & Harga',
                                 style: GoogleFonts.poppins(
                                   fontSize: 12,
                                   color: AppConstants.textLightColor,
@@ -1805,28 +1821,29 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                                   const SizedBox(width: 12),
                                   // Qty Stepper
                                   Expanded(
-                                    flex: 3,
+                                    flex: 4,
                                     child: Container(
                                       decoration: BoxDecoration(
                                         color: AppConstants.backgroundColor,
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                         children: [
                                           IconButton(
                                             icon: const Icon(Icons.remove_rounded, size: 18),
-                                            onPressed: uState.qty > 0 ? () {
-                                              setModalState(() {
-                                                uState.qty = (uState.qty - 1).clamp(0.0, double.infinity);
-                                                uState.qtyController.text = uState.qty > 0 
-                                                    ? uState.qty.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '') 
-                                                    : '';
-                                                if (!prod.allowManualPrice) {
-                                                  updatePriceForQuantity(uState);
-                                                }
-                                              });
-                                            } : null,
+                                            onPressed: () {
+                                              if (uState.qty > 0) {
+                                                setModalState(() {
+                                                  uState.qty--;
+                                                  uState.qtyController.text = uState.qty > 0 
+                                                      ? uState.qty.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '') 
+                                                      : '';
+                                                  if (!prod.allowManualPrice) {
+                                                    updatePriceForQuantity(uState);
+                                                  }
+                                                });
+                                              }
+                                            },
                                           ),
                                           Expanded(
                                             child: GestureDetector(
@@ -1846,7 +1863,11 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                                               },
                                               child: Container(
                                                 padding: const EdgeInsets.symmetric(vertical: 4),
-                                                color: Colors.transparent,
+                                                decoration: BoxDecoration(
+                                                  border: Border.all(color: AppConstants.borderLightColor.withValues(alpha: 0.3)),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                  color: Colors.white,
+                                                ),
                                                 child: Text(
                                                   uState.qty > 0 
                                                       ? uState.qty.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '') 
@@ -1883,7 +1904,85 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                         );
                       },
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
+
+                    // Catatan Pesanan / Kitchen Notes (F&B / Modifier)
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.edit_note_rounded, size: 18, color: Color(0xFF0F172A)),
+                            const SizedBox(width: 6),
+                            Text(
+                              'Catatan Pesanan & Racikan Dapur (Opsional)',
+                              style: GoogleFonts.poppins(
+                                fontSize: 12.5,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFF0F172A),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        TextField(
+                          controller: notesController,
+                          style: GoogleFonts.poppins(fontSize: 12.5),
+                          decoration: InputDecoration(
+                            hintText: 'Misal: Pedas Level 3, Kuah Nyemek, Tanpa Bawang...',
+                            hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF94A3B8)),
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        // Quick Presets Chips
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: quickNotesPreset.map((chipText) {
+                            return InkWell(
+                              borderRadius: BorderRadius.circular(8),
+                              onTap: () {
+                                setModalState(() {
+                                  if (notesController.text.isEmpty) {
+                                    notesController.text = chipText;
+                                  } else if (!notesController.text.contains(chipText)) {
+                                    notesController.text = '${notesController.text}, $chipText';
+                                  }
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF1F5F9),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                                ),
+                                child: Text(
+                                  '+ $chipText',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 10.5,
+                                    fontWeight: FontWeight.w500,
+                                    color: const Color(0xFF334155),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
 
                     // Global Discount Field
                     TextField(
@@ -1922,6 +2021,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         onPressed: () {
+                          final itemNotes = notesController.text.trim().isEmpty ? null : notesController.text.trim();
                           // Process each unit state
                           bool addedAny = false;
                           for (int i = 0; i < unitStates.length; i++) {
@@ -1937,6 +2037,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                                     quantity: us.qty,
                                     discount: unitDisc,
                                     customPrice: us.price,
+                                    notes: itemNotes,
                                   );
                               addedAny = true;
                             } else {
@@ -2174,131 +2275,429 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
               ),
               itemBuilder: (context, unitIndex) {
                 final item = group[unitIndex];
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  child: Row(
-                    children: [
-                      // Left side: Unit name chip
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEEF2FF),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          item.unit.name,
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            color: AppConstants.primaryColor,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-
-                      // Stepper controls
-                      Container(
-                        decoration: BoxDecoration(
-                          color: AppConstants.backgroundColor,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                return InkWell(
+                  onTap: () => _showItemNoteDialog(context, item),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
                           children: [
-                            _buildQtyButton(
-                              icon: item.quantity <= 1
-                                  ? Icons.delete_outline_rounded
-                                  : Icons.remove_rounded,
-                              color: item.quantity <= 1
-                                  ? AppConstants.errorColor
-                                  : AppConstants.textDarkColor,
-                              onTap: () {
-                                if (item.quantity <= 1) {
-                                  context.read<CartCubit>().removeFromCart(
-                                        item.product.id,
-                                        item.unit.id,
-                                      );
-                                } else {
-                                  context.read<CartCubit>().updateQuantity(
-                                        item.product.id,
-                                        item.unit.id,
-                                        item.quantity - 1,
-                                      );
-                                }
-                              },
-                            ),
-                            GestureDetector(
-                              onTap: () => _showQtyInputDialog(context, item),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                decoration: BoxDecoration(
-                                  border: Border.all(color: AppConstants.borderLightColor.withValues(alpha: 0.3)),
-                                  borderRadius: BorderRadius.circular(4),
-                                  color: Colors.white,
-                                ),
-                                child: Text(
-                                  item.quantity
-                                      .toStringAsFixed(3)
-                                      .replaceAll(RegExp(r'\.?0+$'), ''),
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
+                            // Left side: Unit name chip
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEEF2FF),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: Text(
+                                item.unit.name,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11,
+                                  color: AppConstants.primaryColor,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
-                            _buildQtyButton(
-                              icon: Icons.add_rounded,
-                              color: AppConstants.primaryColor,
-                              onTap: () => context.read<CartCubit>().updateQuantity(
-                                    item.product.id,
-                                    item.unit.id,
-                                    item.quantity + 1,
+                            const SizedBox(width: 8),
+
+                            // Stepper controls
+                            Container(
+                              decoration: BoxDecoration(
+                                color: AppConstants.backgroundColor,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  _buildQtyButton(
+                                    icon: item.quantity <= 1
+                                        ? Icons.delete_outline_rounded
+                                        : Icons.remove_rounded,
+                                    color: item.quantity <= 1
+                                        ? AppConstants.errorColor
+                                        : AppConstants.textDarkColor,
+                                    onTap: () {
+                                      if (item.quantity <= 1) {
+                                        context.read<CartCubit>().removeFromCart(
+                                              item.product.id,
+                                              item.unit.id,
+                                            );
+                                      } else {
+                                        context.read<CartCubit>().updateQuantity(
+                                              item.product.id,
+                                              item.unit.id,
+                                              item.quantity - 1,
+                                            );
+                                      }
+                                    },
                                   ),
+                                  GestureDetector(
+                                    onTap: () => _showQtyInputDialog(context, item),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(color: AppConstants.borderLightColor.withValues(alpha: 0.3)),
+                                        borderRadius: BorderRadius.circular(4),
+                                        color: Colors.white,
+                                      ),
+                                      child: Text(
+                                        item.quantity
+                                            .toStringAsFixed(3)
+                                            .replaceAll(RegExp(r'\.?0+$'), ''),
+                                        style: GoogleFonts.poppins(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  _buildQtyButton(
+                                    icon: Icons.add_rounded,
+                                    color: AppConstants.primaryColor,
+                                    onTap: () => context.read<CartCubit>().updateQuantity(
+                                          item.product.id,
+                                          item.unit.id,
+                                          item.quantity + 1,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const Spacer(),
+
+                            // Right side: Price and subtotal details
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  CurrencyFormatter.format(item.subtotal),
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppConstants.textDarkColor,
+                                  ),
+                                ),
+                                Text(
+                                  '@ ${CurrencyFormatter.format(item.price)}',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 10,
+                                    color: AppConstants.textLightColor,
+                                  ),
+                                ),
+                                if (item.discountAmount > 0) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '-${CurrencyFormatter.format(item.discountAmount)}',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 10,
+                                      color: AppConstants.errorColor,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ],
                             ),
                           ],
                         ),
-                      ),
-
-                      const Spacer(),
-
-                      // Right side: Price and subtotal details
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Text(
-                            CurrencyFormatter.format(item.subtotal),
-                            style: GoogleFonts.poppins(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: AppConstants.textDarkColor,
+                        // Catatan Item (Notes) Bar
+                        if (item.notes != null && item.notes!.isNotEmpty) ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFFBEB),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFFDE68A)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.notes_rounded, size: 12, color: Color(0xFFD97706)),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    item.notes!,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFFB45309),
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          Text(
-                            '@ ${CurrencyFormatter.format(item.price)}',
-                            style: GoogleFonts.poppins(
-                              fontSize: 10,
-                              color: AppConstants.textLightColor,
+                        ] else ...[
+                          const SizedBox(height: 4),
+                          GestureDetector(
+                            onTap: () => _showItemNoteDialog(context, item),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.add_comment_outlined, size: 12, color: Color(0xFF94A3B8)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '+ Tambah Catatan Rasa / Dapur',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 10,
+                                    color: const Color(0xFF94A3B8),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          if (item.discountAmount > 0) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              '-${CurrencyFormatter.format(item.discountAmount)}',
-                              style: GoogleFonts.poppins(
-                                fontSize: 10,
-                                color: AppConstants.errorColor,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
                         ],
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showItemNoteDialog(BuildContext context, CartItem item) {
+    final noteController = TextEditingController(text: item.notes ?? '');
+    final quickNotes = [
+      'Pedas Lv 1', 'Pedas Lv 2', 'Pedas Lv 3', 'Pedas Lv 5',
+      'Kuah Nyemek', 'Kuah Banyak', 'Kuah Kering',
+      'Tanpa Daun Bawang', 'Tanpa Micin', 'Less Sugar', 'Less Ice', 'Bungkus'
+    ];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.edit_note_rounded, color: Color(0xFF0F172A), size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Catatan Pesanan',
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 14),
+                    ),
+                    Text(
+                      '${item.product.name} (${item.unit.name})',
+                      style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: noteController,
+                autofocus: true,
+                style: GoogleFonts.poppins(fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Misal: Pedas Level 3, Kuah Nyemek...',
+                  hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF94A3B8)),
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: quickNotes.map((chipText) {
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(6),
+                    onTap: () {
+                      setDlgState(() {
+                        if (noteController.text.isEmpty) {
+                          noteController.text = chipText;
+                        } else if (!noteController.text.contains(chipText)) {
+                          noteController.text = '${noteController.text}, $chipText';
+                        }
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Text(
+                        '+ $chipText',
+                        style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFF334155), fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+          actions: [
+            if (item.notes != null && item.notes!.isNotEmpty)
+              TextButton(
+                onPressed: () {
+                  context.read<CartCubit>().updateItemNotes(item.product.id, item.unit.id, null);
+                  Navigator.pop(ctx);
+                },
+                child: Text('Hapus Catatan', style: GoogleFonts.poppins(color: const Color(0xFFDC2626), fontWeight: FontWeight.w600, fontSize: 12)),
+              ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Batal', style: GoogleFonts.poppins(color: const Color(0xFF64748B), fontWeight: FontWeight.w600, fontSize: 12)),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0F172A),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () {
+                final text = noteController.text.trim();
+                context.read<CartCubit>().updateItemNotes(
+                      item.product.id,
+                      item.unit.id,
+                      text.isEmpty ? null : text,
+                    );
+                Navigator.pop(ctx);
+              },
+              child: Text('Simpan', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 12)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showOrderNoteDialog(BuildContext context) {
+    final cartState = context.read<CartCubit>().state;
+    final controller = TextEditingController(text: cartState.orderNotes ?? '');
+    final tablePresets = ['Meja 1', 'Meja 2', 'Meja 3', 'Meja 4', 'Meja 5', 'Mangkok #01', 'Mangkok #02', 'Mangkok #05', 'Take Away / Bungkus'];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD97706).withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.table_restaurant_rounded, color: Color(0xFFD97706), size: 20),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Catatan Meja / Pesanan',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 14.5),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Tentukan nomor meja, nomor mangkok prasmanan, atau catatan instruksi order',
+                style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                style: GoogleFonts.poppins(fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Misal: Meja 05 - Seblak Prasmanan Kuah Nyemek...',
+                  hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF94A3B8)),
+                  filled: true,
+                  fillColor: const Color(0xFFF8FAFC),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: tablePresets.map((chipText) {
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(6),
+                    onTap: () {
+                      setDlgState(() {
+                        if (controller.text.isEmpty) {
+                          controller.text = chipText;
+                        } else if (!controller.text.contains(chipText)) {
+                          controller.text = '$chipText - ${controller.text}';
+                        }
+                      });
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Text(
+                        chipText,
+                        style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFF334155), fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ),
+          actions: [
+            if (cartState.orderNotes != null && cartState.orderNotes!.isNotEmpty)
+              TextButton(
+                onPressed: () {
+                  context.read<CartCubit>().updateOrderNotes(null);
+                  Navigator.pop(ctx);
+                },
+                child: Text('Hapus Catatan', style: GoogleFonts.poppins(color: const Color(0xFFDC2626), fontWeight: FontWeight.w600, fontSize: 12)),
+              ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Batal', style: GoogleFonts.poppins(color: const Color(0xFF64748B), fontWeight: FontWeight.w600, fontSize: 12)),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFF0F172A),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+              onPressed: () {
+                final text = controller.text.trim();
+                context.read<CartCubit>().updateOrderNotes(text.isEmpty ? null : text);
+                Navigator.pop(ctx);
+              },
+              child: Text('Simpan', style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 12)),
             ),
           ],
         ),
@@ -2384,6 +2783,30 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
             ),
           ),
               const SizedBox(width: 8),
+              // Order / Table Note button (Meja / Mangkok / Catatan Order)
+              Material(
+                color: (cart.orderNotes != null && cart.orderNotes!.isNotEmpty)
+                    ? const Color(0xFFFEF3C7)
+                    : const Color(0xFF0F172A).withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () => _showOrderNoteDialog(context),
+                  child: Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: Icon(
+                      (cart.orderNotes != null && cart.orderNotes!.isNotEmpty)
+                          ? Icons.table_restaurant_rounded
+                          : Icons.table_restaurant_outlined,
+                      color: (cart.orderNotes != null && cart.orderNotes!.isNotEmpty)
+                          ? const Color(0xFFD97706)
+                          : const Color(0xFF0F172A),
+                      size: 20,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
               // Split Bill button
               Material(
                 color: const Color(0xFF0F172A).withValues(alpha: 0.08),

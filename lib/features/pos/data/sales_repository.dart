@@ -138,6 +138,7 @@ class SalesRepository {
         final double disc = item['discountAmount'] ?? 0.0;
         final double sub = (qty * price) - disc;
         final int minQty = item['appliedMinQty'] ?? 1;
+        final String? itemNotes = item['notes'];
 
         await _db.into(_db.orderItems).insert(
               OrderItemsCompanion.insert(
@@ -149,6 +150,7 @@ class SalesRepository {
                 discountAmount: Value(disc),
                 subtotal: sub,
                 minQtyApplied: Value(minQty),
+                notes: Value(itemNotes),
               ),
             );
 

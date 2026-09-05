@@ -12,6 +12,7 @@ class CartItem {
   final List<ProductUnit> availableUnits;
   final List<ProductPrice> pricingMatrix;
   final int appliedMinQty;
+  final String? notes; // Catatan pesanan item F&B (misal: "Level 3, Kuah Nyemek, Tanpa Seledri")
 
   CartItem({
     required this.product,
@@ -22,6 +23,7 @@ class CartItem {
     required this.availableUnits,
     required this.pricingMatrix,
     required this.appliedMinQty,
+    this.notes,
   });
 
   CartItem copyWith({
@@ -33,6 +35,8 @@ class CartItem {
     List<ProductUnit>? availableUnits,
     List<ProductPrice>? pricingMatrix,
     int? appliedMinQty,
+    String? notes,
+    bool clearNotes = false,
   }) {
     return CartItem(
       product: product ?? this.product,
@@ -43,6 +47,7 @@ class CartItem {
       availableUnits: availableUnits ?? this.availableUnits,
       pricingMatrix: pricingMatrix ?? this.pricingMatrix,
       appliedMinQty: appliedMinQty ?? this.appliedMinQty,
+      notes: clearNotes ? null : (notes ?? this.notes),
     );
   }
 
@@ -57,6 +62,7 @@ class CartState {
   final double taxPercentage;
   final int redeemedPoints;
   final double pointsDiscount;
+  final String? orderNotes; // Catatan umum transaksi / No Meja / No Mangkok
 
   CartState({
     required this.items,
@@ -66,6 +72,7 @@ class CartState {
     this.taxPercentage = 0.0,
     this.redeemedPoints = 0,
     this.pointsDiscount = 0.0,
+    this.orderNotes,
   });
 
   double get subtotal => items.fold(0.0, (sum, item) => sum + item.subtotal);
@@ -89,7 +96,9 @@ class CartState {
     double? taxPercentage,
     int? redeemedPoints,
     double? pointsDiscount,
+    String? orderNotes,
     bool clearCustomer = false,
+    bool clearOrderNotes = false,
   }) {
     return CartState(
       items: items ?? this.items,
@@ -99,6 +108,7 @@ class CartState {
       taxPercentage: taxPercentage ?? this.taxPercentage,
       redeemedPoints: redeemedPoints ?? this.redeemedPoints,
       pointsDiscount: pointsDiscount ?? this.pointsDiscount,
+      orderNotes: clearOrderNotes ? null : (orderNotes ?? this.orderNotes),
     );
   }
 }
@@ -111,6 +121,7 @@ class CartCubit extends Cubit<CartState> {
     double quantity = 1.0,
     double discount = 0.0,
     double? customPrice,
+    String? notes,
   }) {
     final targetUnit = unit ?? units.firstWhere((u) => u.isBase, orElse: () => units.first);
     final price = customPrice ?? _getPriceForUnit(targetUnit.id, prices, quantity: quantity);
@@ -124,6 +135,7 @@ class CartCubit extends Cubit<CartState> {
         quantity: quantity,
         price: price,
         discountAmount: discount,
+        notes: notes ?? newItems[existingIndex].notes,
       );
       emit(state.copyWith(items: newItems));
     } else {
@@ -138,9 +150,30 @@ class CartCubit extends Cubit<CartState> {
           availableUnits: units,
           pricingMatrix: prices,
           appliedMinQty: appliedQty,
+          notes: notes,
         ));
       emit(state.copyWith(items: newItems));
     }
+  }
+
+  // Mengubah catatan khusus item
+  void updateItemNotes(int productId, int unitId, String? notes) {
+    final newItems = state.items.map((item) {
+      if (item.product.id == productId && item.unit.id == unitId) {
+        return item.copyWith(notes: notes, clearNotes: notes == null || notes.trim().isEmpty);
+      }
+      return item;
+    }).toList();
+
+    emit(state.copyWith(items: newItems));
+  }
+
+  // Mengubah catatan umum transaksi (misal: "Meja 12 / Mangkok 05 - Seblak Nyemek")
+  void updateOrderNotes(String? notes) {
+    emit(state.copyWith(
+      orderNotes: notes,
+      clearOrderNotes: notes == null || notes.trim().isEmpty,
+    ));
   }
 
   // Mengubah kuantitas item
@@ -296,6 +329,7 @@ class CartCubit extends Cubit<CartState> {
         'price': item.price,
         'discount_amount': item.discountAmount,
         'min_qty_applied': item.appliedMinQty,
+        'notes': item.notes,
       };
     }).toList();
 
@@ -303,6 +337,7 @@ class CartCubit extends Cubit<CartState> {
       'items': cartList,
       'global_discount': state.globalDiscount,
       'is_global_discount_percentage': state.isGlobalDiscountPercentage,
+      'order_notes': state.orderNotes,
     });
 
     await repo.holdOrder(
@@ -326,6 +361,7 @@ class CartCubit extends Cubit<CartState> {
       final itemsData = data['items'] as List<dynamic>;
       final globalDisc = (data['global_discount'] as num?)?.toDouble() ?? 0.0;
       final isPercentage = data['is_global_discount_percentage'] as bool? ?? false;
+      final ordNotes = data['order_notes'] as String?;
 
       // Temukan customer
       Customer? customer;
@@ -342,6 +378,7 @@ class CartCubit extends Cubit<CartState> {
         final double price = (itemMap['price'] as num).toDouble();
         final double disc = (itemMap['discount_amount'] as num).toDouble();
         final int appliedMinQty = itemMap['min_qty_applied'] ?? 1;
+        final String? itemNotes = itemMap['notes'];
 
         // Temukan detail produk di cache
         final prodMap = allPosProducts.firstWhere(
@@ -364,6 +401,7 @@ class CartCubit extends Cubit<CartState> {
             availableUnits: units,
             pricingMatrix: prices,
             appliedMinQty: appliedMinQty,
+            notes: itemNotes,
           ));
         }
       }
@@ -374,6 +412,7 @@ class CartCubit extends Cubit<CartState> {
         globalDiscount: globalDisc,
         isGlobalDiscountPercentage: isPercentage,
         taxPercentage: state.taxPercentage,
+        orderNotes: ordNotes,
       ));
     } catch (e) {
       // ignore

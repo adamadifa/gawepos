@@ -222,6 +222,11 @@ class PrintService {
         
         bytes += generator.text("$leftCol$spaces$itemSubtotalStr");
         
+        // Jika ada catatan racikan/dapur khusus per item
+        if (item.notes != null && item.notes!.isNotEmpty) {
+          bytes += generator.text("  * Note: ${item.notes}", styles: const PosStyles(fontType: PosFontType.fontB));
+        }
+
         // Jika ada diskon per item
         if (item.discountAmount > 0) {
           final discStr = "-${_formatCurr(item.discountAmount)}";

@@ -6595,6 +6595,15 @@ class $OrderItemsTable extends OrderItems
     type: DriftSqlType.double,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _notesMeta = const VerificationMeta('notes');
+  @override
+  late final GeneratedColumn<String> notes = GeneratedColumn<String>(
+    'notes',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -6606,6 +6615,7 @@ class $OrderItemsTable extends OrderItems
     discountAmount,
     minQtyApplied,
     subtotal,
+    notes,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -6688,6 +6698,12 @@ class $OrderItemsTable extends OrderItems
     } else if (isInserting) {
       context.missing(_subtotalMeta);
     }
+    if (data.containsKey('notes')) {
+      context.handle(
+        _notesMeta,
+        notes.isAcceptableOrUnknown(data['notes']!, _notesMeta),
+      );
+    }
     return context;
   }
 
@@ -6733,6 +6749,10 @@ class $OrderItemsTable extends OrderItems
         DriftSqlType.double,
         data['${effectivePrefix}subtotal'],
       )!,
+      notes: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}notes'],
+      ),
     );
   }
 
@@ -6752,6 +6772,7 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
   final double discountAmount;
   final int minQtyApplied;
   final double subtotal;
+  final String? notes;
   const OrderItem({
     required this.id,
     required this.orderId,
@@ -6762,6 +6783,7 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
     required this.discountAmount,
     required this.minQtyApplied,
     required this.subtotal,
+    this.notes,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -6775,6 +6797,9 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
     map['discount_amount'] = Variable<double>(discountAmount);
     map['min_qty_applied'] = Variable<int>(minQtyApplied);
     map['subtotal'] = Variable<double>(subtotal);
+    if (!nullToAbsent || notes != null) {
+      map['notes'] = Variable<String>(notes);
+    }
     return map;
   }
 
@@ -6789,6 +6814,9 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
       discountAmount: Value(discountAmount),
       minQtyApplied: Value(minQtyApplied),
       subtotal: Value(subtotal),
+      notes: notes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(notes),
     );
   }
 
@@ -6807,6 +6835,7 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
       discountAmount: serializer.fromJson<double>(json['discountAmount']),
       minQtyApplied: serializer.fromJson<int>(json['minQtyApplied']),
       subtotal: serializer.fromJson<double>(json['subtotal']),
+      notes: serializer.fromJson<String?>(json['notes']),
     );
   }
   @override
@@ -6822,6 +6851,7 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
       'discountAmount': serializer.toJson<double>(discountAmount),
       'minQtyApplied': serializer.toJson<int>(minQtyApplied),
       'subtotal': serializer.toJson<double>(subtotal),
+      'notes': serializer.toJson<String?>(notes),
     };
   }
 
@@ -6835,6 +6865,7 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
     double? discountAmount,
     int? minQtyApplied,
     double? subtotal,
+    Value<String?> notes = const Value.absent(),
   }) => OrderItem(
     id: id ?? this.id,
     orderId: orderId ?? this.orderId,
@@ -6845,6 +6876,7 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
     discountAmount: discountAmount ?? this.discountAmount,
     minQtyApplied: minQtyApplied ?? this.minQtyApplied,
     subtotal: subtotal ?? this.subtotal,
+    notes: notes.present ? notes.value : this.notes,
   );
   OrderItem copyWithCompanion(OrderItemsCompanion data) {
     return OrderItem(
@@ -6861,6 +6893,7 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
           ? data.minQtyApplied.value
           : this.minQtyApplied,
       subtotal: data.subtotal.present ? data.subtotal.value : this.subtotal,
+      notes: data.notes.present ? data.notes.value : this.notes,
     );
   }
 
@@ -6875,7 +6908,8 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
           ..write('price: $price, ')
           ..write('discountAmount: $discountAmount, ')
           ..write('minQtyApplied: $minQtyApplied, ')
-          ..write('subtotal: $subtotal')
+          ..write('subtotal: $subtotal, ')
+          ..write('notes: $notes')
           ..write(')'))
         .toString();
   }
@@ -6891,6 +6925,7 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
     discountAmount,
     minQtyApplied,
     subtotal,
+    notes,
   );
   @override
   bool operator ==(Object other) =>
@@ -6904,7 +6939,8 @@ class OrderItem extends DataClass implements Insertable<OrderItem> {
           other.price == this.price &&
           other.discountAmount == this.discountAmount &&
           other.minQtyApplied == this.minQtyApplied &&
-          other.subtotal == this.subtotal);
+          other.subtotal == this.subtotal &&
+          other.notes == this.notes);
 }
 
 class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
@@ -6917,6 +6953,7 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
   final Value<double> discountAmount;
   final Value<int> minQtyApplied;
   final Value<double> subtotal;
+  final Value<String?> notes;
   const OrderItemsCompanion({
     this.id = const Value.absent(),
     this.orderId = const Value.absent(),
@@ -6927,6 +6964,7 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
     this.discountAmount = const Value.absent(),
     this.minQtyApplied = const Value.absent(),
     this.subtotal = const Value.absent(),
+    this.notes = const Value.absent(),
   });
   OrderItemsCompanion.insert({
     this.id = const Value.absent(),
@@ -6938,6 +6976,7 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
     this.discountAmount = const Value.absent(),
     this.minQtyApplied = const Value.absent(),
     required double subtotal,
+    this.notes = const Value.absent(),
   }) : orderId = Value(orderId),
        productId = Value(productId),
        unitId = Value(unitId),
@@ -6954,6 +6993,7 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
     Expression<double>? discountAmount,
     Expression<int>? minQtyApplied,
     Expression<double>? subtotal,
+    Expression<String>? notes,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -6965,6 +7005,7 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
       if (discountAmount != null) 'discount_amount': discountAmount,
       if (minQtyApplied != null) 'min_qty_applied': minQtyApplied,
       if (subtotal != null) 'subtotal': subtotal,
+      if (notes != null) 'notes': notes,
     });
   }
 
@@ -6978,6 +7019,7 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
     Value<double>? discountAmount,
     Value<int>? minQtyApplied,
     Value<double>? subtotal,
+    Value<String?>? notes,
   }) {
     return OrderItemsCompanion(
       id: id ?? this.id,
@@ -6989,6 +7031,7 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
       discountAmount: discountAmount ?? this.discountAmount,
       minQtyApplied: minQtyApplied ?? this.minQtyApplied,
       subtotal: subtotal ?? this.subtotal,
+      notes: notes ?? this.notes,
     );
   }
 
@@ -7022,6 +7065,9 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
     if (subtotal.present) {
       map['subtotal'] = Variable<double>(subtotal.value);
     }
+    if (notes.present) {
+      map['notes'] = Variable<String>(notes.value);
+    }
     return map;
   }
 
@@ -7036,7 +7082,8 @@ class OrderItemsCompanion extends UpdateCompanion<OrderItem> {
           ..write('price: $price, ')
           ..write('discountAmount: $discountAmount, ')
           ..write('minQtyApplied: $minQtyApplied, ')
-          ..write('subtotal: $subtotal')
+          ..write('subtotal: $subtotal, ')
+          ..write('notes: $notes')
           ..write(')'))
         .toString();
   }
@@ -25792,6 +25839,7 @@ typedef $$OrderItemsTableCreateCompanionBuilder =
       Value<double> discountAmount,
       Value<int> minQtyApplied,
       required double subtotal,
+      Value<String?> notes,
     });
 typedef $$OrderItemsTableUpdateCompanionBuilder =
     OrderItemsCompanion Function({
@@ -25804,6 +25852,7 @@ typedef $$OrderItemsTableUpdateCompanionBuilder =
       Value<double> discountAmount,
       Value<int> minQtyApplied,
       Value<double> subtotal,
+      Value<String?> notes,
     });
 
 final class $$OrderItemsTableReferences
@@ -25903,6 +25952,11 @@ class $$OrderItemsTableFilterComposer
 
   ColumnFilters<double> get subtotal => $composableBuilder(
     column: $table.subtotal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get notes => $composableBuilder(
+    column: $table.notes,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -26015,6 +26069,11 @@ class $$OrderItemsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get notes => $composableBuilder(
+    column: $table.notes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$OrdersTableOrderingComposer get orderId {
     final $$OrdersTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -26115,6 +26174,9 @@ class $$OrderItemsTableAnnotationComposer
 
   GeneratedColumn<double> get subtotal =>
       $composableBuilder(column: $table.subtotal, builder: (column) => column);
+
+  GeneratedColumn<String> get notes =>
+      $composableBuilder(column: $table.notes, builder: (column) => column);
 
   $$OrdersTableAnnotationComposer get orderId {
     final $$OrdersTableAnnotationComposer composer = $composerBuilder(
@@ -26223,6 +26285,7 @@ class $$OrderItemsTableTableManager
                 Value<double> discountAmount = const Value.absent(),
                 Value<int> minQtyApplied = const Value.absent(),
                 Value<double> subtotal = const Value.absent(),
+                Value<String?> notes = const Value.absent(),
               }) => OrderItemsCompanion(
                 id: id,
                 orderId: orderId,
@@ -26233,6 +26296,7 @@ class $$OrderItemsTableTableManager
                 discountAmount: discountAmount,
                 minQtyApplied: minQtyApplied,
                 subtotal: subtotal,
+                notes: notes,
               ),
           createCompanionCallback:
               ({
@@ -26245,6 +26309,7 @@ class $$OrderItemsTableTableManager
                 Value<double> discountAmount = const Value.absent(),
                 Value<int> minQtyApplied = const Value.absent(),
                 required double subtotal,
+                Value<String?> notes = const Value.absent(),
               }) => OrderItemsCompanion.insert(
                 id: id,
                 orderId: orderId,
@@ -26255,6 +26320,7 @@ class $$OrderItemsTableTableManager
                 discountAmount: discountAmount,
                 minQtyApplied: minQtyApplied,
                 subtotal: subtotal,
+                notes: notes,
               ),
           withReferenceMapper: (p0) => p0
               .map(
