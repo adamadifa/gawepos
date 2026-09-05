@@ -2091,15 +2091,19 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        Wrap(
+                          alignment: WrapAlignment.spaceBetween,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 8,
+                          runSpacing: 6,
                           children: [
                             Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 const Icon(Icons.edit_note_rounded, size: 18, color: Color(0xFF0F172A)),
                                 const SizedBox(width: 6),
                                 Text(
-                                  'Catatan Pesanan & Racikan (Opsional)',
+                                  'Catatan & Racikan',
                                   style: GoogleFonts.poppins(
                                     fontSize: 12.5,
                                     fontWeight: FontWeight.w700,
@@ -2110,6 +2114,7 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
                             ),
                             // Small category switch chips
                             Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
                                 _buildNoteTypeSwitchChip(
                                   label: '🍜 Makanan',
@@ -2742,106 +2747,108 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
               ),
             ],
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Category Switch Tabs
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  _buildNoteTypeSwitchChip(
-                    label: '🍜 Makanan',
-                    isSelected: currentTabType == 'food',
-                    activeColor: const Color(0xFFDC2626),
-                    onTap: () => setDlgState(() => currentTabType = 'food'),
-                  ),
-                  const SizedBox(width: 4),
-                  _buildNoteTypeSwitchChip(
-                    label: '☕ Minuman',
-                    isSelected: currentTabType == 'beverage',
-                    activeColor: const Color(0xFF78350F),
-                    onTap: () => setDlgState(() => currentTabType = 'beverage'),
-                  ),
-                  const SizedBox(width: 4),
-                  _buildNoteTypeSwitchChip(
-                    label: '🛍️ Umum',
-                    isSelected: currentTabType == 'general',
-                    activeColor: const Color(0xFF2563EB),
-                    onTap: () => setDlgState(() => currentTabType = 'general'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: noteController,
-                autofocus: true,
-                style: GoogleFonts.poppins(fontSize: 13),
-                decoration: InputDecoration(
-                  hintText: currentTabType == 'beverage'
-                      ? 'Misal: Less Sugar, Less Ice, Extra Shot...'
-                      : (currentTabType == 'food'
-                          ? 'Misal: Pedas Level 3, Kuah Nyemek, Tanpa Bawang...'
-                          : 'Misal: Bungkus Rapi, Pisah Kantong...'),
-                  hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF94A3B8)),
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Category Switch Tabs
+                Wrap(
+                  spacing: 4,
+                  runSpacing: 4,
+                  alignment: WrapAlignment.end,
+                  children: [
+                    _buildNoteTypeSwitchChip(
+                      label: '🍜 Makanan',
+                      isSelected: currentTabType == 'food',
+                      activeColor: const Color(0xFFDC2626),
+                      onTap: () => setDlgState(() => currentTabType = 'food'),
+                    ),
+                    _buildNoteTypeSwitchChip(
+                      label: '☕ Minuman',
+                      isSelected: currentTabType == 'beverage',
+                      activeColor: const Color(0xFF78350F),
+                      onTap: () => setDlgState(() => currentTabType = 'beverage'),
+                    ),
+                    _buildNoteTypeSwitchChip(
+                      label: '🛍️ Umum',
+                      isSelected: currentTabType == 'general',
+                      activeColor: const Color(0xFF2563EB),
+                      onTap: () => setDlgState(() => currentTabType = 'general'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: noteController,
+                  autofocus: true,
+                  style: GoogleFonts.poppins(fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: currentTabType == 'beverage'
+                        ? 'Misal: Less Sugar, Less Ice, Extra Shot...'
+                        : (currentTabType == 'food'
+                            ? 'Misal: Pedas Level 3, Kuah Nyemek, Tanpa Bawang...'
+                            : 'Misal: Bungkus Rapi, Pisah Kantong...'),
+                    hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF94A3B8)),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFFE2E8F0)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 10),
-              // Preset chips based on active category
-              Builder(
-                builder: (context) {
-                  final activePresetList = currentTabType == 'beverage'
-                      ? _beverageNotes
-                      : (currentTabType == 'food' ? _foodNotes : _generalNotes);
+                const SizedBox(height: 10),
+                // Preset chips based on active category
+                Builder(
+                  builder: (context) {
+                    final activePresetList = currentTabType == 'beverage'
+                        ? _beverageNotes
+                        : (currentTabType == 'food' ? _foodNotes : _generalNotes);
 
-                  return Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    children: activePresetList.map((chipText) {
-                      return InkWell(
-                        borderRadius: BorderRadius.circular(6),
-                        onTap: () {
-                          setDlgState(() {
-                            if (noteController.text.isEmpty) {
-                              noteController.text = chipText;
-                            } else if (!noteController.text.contains(chipText)) {
-                              noteController.text = '${noteController.text}, $chipText';
-                            }
-                          });
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
-                          ),
-                          child: Text(
-                            '+ $chipText',
-                            style: GoogleFonts.poppins(
-                              fontSize: 10.5,
-                              color: const Color(0xFF334155),
-                              fontWeight: FontWeight.w500,
+                    return Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: activePresetList.map((chipText) {
+                        return InkWell(
+                          borderRadius: BorderRadius.circular(6),
+                          onTap: () {
+                            setDlgState(() {
+                              if (noteController.text.isEmpty) {
+                                noteController.text = chipText;
+                              } else if (!noteController.text.contains(chipText)) {
+                                noteController.text = '${noteController.text}, $chipText';
+                              }
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF1F5F9),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFFE2E8F0)),
+                            ),
+                            child: Text(
+                              '+ $chipText',
+                              style: GoogleFonts.poppins(
+                                fontSize: 10.5,
+                                color: const Color(0xFF334155),
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
                           ),
-                        ),
-                      );
-                    }).toList(),
-                  );
-                },
-              ),
-            ],
+                        );
+                      }).toList(),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
           actions: [
             if (item.notes != null && item.notes!.isNotEmpty)
@@ -2937,59 +2944,61 @@ class _PosPageState extends State<PosPage> with TickerProviderStateMixin, RouteA
               ),
             ],
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Tentukan nomor meja, nomor mangkok prasmanan, atau catatan instruksi order',
-                style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: controller,
-                autofocus: true,
-                style: GoogleFonts.poppins(fontSize: 13),
-                decoration: InputDecoration(
-                  hintText: 'Misal: Meja 05 - Seblak Prasmanan Kuah Nyemek...',
-                  hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF94A3B8)),
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tentukan nomor meja, nomor mangkok prasmanan, atau catatan instruksi order',
+                  style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
                 ),
-              ),
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: tablePresets.map((chipText) {
-                  return InkWell(
-                    borderRadius: BorderRadius.circular(6),
-                    onTap: () {
-                      setDlgState(() {
-                        if (controller.text.isEmpty) {
-                          controller.text = chipText;
-                        } else if (!controller.text.contains(chipText)) {
-                          controller.text = '$chipText - ${controller.text}';
-                        }
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: controller,
+                  autofocus: true,
+                  style: GoogleFonts.poppins(fontSize: 13),
+                  decoration: InputDecoration(
+                    hintText: 'Misal: Meja 05 - Seblak Prasmanan Kuah Nyemek...',
+                    hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF94A3B8)),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: tablePresets.map((chipText) {
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(6),
+                      onTap: () {
+                        setDlgState(() {
+                          if (controller.text.isEmpty) {
+                            controller.text = chipText;
+                          } else if (!controller.text.contains(chipText)) {
+                            controller.text = '$chipText - ${controller.text}';
+                          }
+                        });
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3.5),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Text(
+                          '+ $chipText',
+                          style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFF334155), fontWeight: FontWeight.w500),
+                        ),
                       ),
-                      child: Text(
-                        chipText,
-                        style: GoogleFonts.poppins(fontSize: 10, color: const Color(0xFF334155), fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
           ),
           actions: [
             if (cartState.orderNotes != null && cartState.orderNotes!.isNotEmpty)
