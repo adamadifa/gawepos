@@ -126,6 +126,9 @@ class _DatabaseManagementPageState extends State<DatabaseManagementPage> {
 
       final zipEncoder = ZipEncoder();
       final zipBytes = zipEncoder.encode(archive);
+      if (zipBytes == null) {
+        throw Exception('Gagal membuat file backup zip.');
+      }
 
       final backupZipFile = File(backupZipPath);
       await backupZipFile.writeAsBytes(zipBytes);

@@ -99,11 +99,12 @@ class _SplashPageState extends State<SplashPage>
 
                 // Footer
                 Text(
-                  'Versi 1.0.0 • UMKM Indonesia',
+                  'adamadifa_ | Programmer Introvert',
                   style: GoogleFonts.poppins(
                     fontSize: 11,
                     color: const Color(0xFF64748B),
-                    fontWeight: FontWeight.w400,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.3,
                   ),
                 ),
                 const SizedBox(height: 16),

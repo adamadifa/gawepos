@@ -168,6 +168,7 @@ class SalesRepository {
     required double changeAmount,
     required List<Map<String, dynamic>> cartItems,
     required List<Map<String, dynamic>> payments,
+    List<Map<String, dynamic>> appliedPromotions = const [],
     double downPayment = 0.0,
     int? customerId,
     String? notes,
@@ -386,6 +387,18 @@ class SalesRepository {
             );
       }
 
+      // 6. Insert Order Promotions
+      for (var promo in appliedPromotions) {
+        await _db.into(_db.orderPromotions).insert(
+              OrderPromotionsCompanion.insert(
+                orderId: orderId,
+                promotionId: promo['promotionId'],
+                promotionName: promo['promoName'] ?? 'Promo',
+                discountAmount: (promo['discountAmount'] as num?)?.toDouble() ?? 0.0,
+              ),
+            );
+      }
+
       return orderId;
     });
   }
@@ -495,6 +508,58 @@ class SalesRepository {
     return List<OrderNoteGroup>.from(OrderNoteGroup.defaultGroups);
   }
 
+  // --- PRESET CATATAN KERANJANG / MEJA / HIDANGAN (ORDER LEVEL) ---
+  static const List<String> defaultCartOrderNotePresets = [
+    'Meja 1',
+    'Meja 2',
+    'Meja 3',
+    'Meja 4',
+    'Meja 5',
+    'Meja 6',
+    'Meja 7',
+    'Meja 8',
+    'Mangkok #01',
+    'Mangkok #02',
+    'Mangkok #03',
+    'Mangkok #04',
+    'Mangkok #05',
+    'Seblak Kuah Nyemek',
+    'Seblak Kuah Banyak',
+    'Seblak Kering / Goreng',
+    'Pedas Lv 0 (Original)',
+    'Pedas Lv 1',
+    'Pedas Lv 2',
+    'Pedas Lv 3',
+    'Pedas Lv 5 (Ekstra)',
+    'Tanpa Daun Bawang',
+    'Tanpa Micin',
+    'Minta Pisah Kuah',
+    'Take Away / Bungkus',
+  ];
+
+  Future<List<String>> getCartOrderNotePresets() async {
+    final str = await getSetting('cart_order_note_presets');
+    if (str != null && str.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(str);
+        if (decoded is List) {
+          return decoded.map((e) => e.toString()).toList();
+        }
+      } catch (_) {}
+    }
+    return List<String>.from(defaultCartOrderNotePresets);
+  }
+
+  Future<void> saveCartOrderNotePresets(List<String> presets) async {
+    final encoded = jsonEncode(presets);
+    await saveSetting('cart_order_note_presets', encoded);
+  }
+
+  Future<List<String>> resetCartOrderNotePresetsToDefault() async {
+    await saveCartOrderNotePresets(defaultCartOrderNotePresets);
+    return List<String>.from(defaultCartOrderNotePresets);
+  }
+
   // --- POINTS SETTINGS ---
   Future<Map<String, int>> getPointsSettings() async {
     final enabled = await getSetting('points_enabled');
@@ -568,6 +633,10 @@ class SalesRepository {
       if (txn.type == 'redeem') pointsRedeemed += txn.points.abs();
     }
 
+    final promotions = await (_db.select(_db.orderPromotions)
+          ..where((tbl) => tbl.orderId.equals(orderId)))
+        .get();
+
     return {
       'order': order,
       'items': itemsWithDetails,
@@ -576,6 +645,7 @@ class SalesRepository {
       'session': session,
       'pointsEarned': pointsEarned,
       'pointsRedeemed': pointsRedeemed,
+      'promotions': promotions,
     };
   }
 

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/database/app_database.dart';
+import '../../../promotions/data/promotion_engine.dart';
 import '../../data/sales_repository.dart';
 
 class CartItem {
@@ -57,58 +58,100 @@ class CartItem {
 class CartState {
   final List<CartItem> items;
   final Customer? selectedCustomer;
+  final RestaurantTable? selectedTable; // Meja yang dipilih (Mode F&B)
   final double globalDiscount;
   final bool isGlobalDiscountPercentage;
   final double taxPercentage;
   final int redeemedPoints;
   final double pointsDiscount;
   final String? orderNotes; // Catatan umum transaksi / No Meja / No Mangkok
+  final int? heldOrderId; // ID antrean ditahan (jika sedang meload transaksi hold)
+  final List<Promotion> activePromotions; // Daftar promosi yang aktif di toko
+  final String? manualPromoCode; // Kode promo yang diketik manual kasir
+  final List<AppliedPromotion> appliedPromotions; // Promosi yang lolos syarat evaluasi
 
   CartState({
     required this.items,
     this.selectedCustomer,
+    this.selectedTable,
     this.globalDiscount = 0.0,
     this.isGlobalDiscountPercentage = false,
     this.taxPercentage = 0.0,
     this.redeemedPoints = 0,
     this.pointsDiscount = 0.0,
     this.orderNotes,
+    this.heldOrderId,
+    this.activePromotions = const [],
+    this.manualPromoCode,
+    this.appliedPromotions = const [],
   });
 
+  // Subtotal mentah item sebelum diskon global/promo
   double get subtotal => items.fold(0.0, (sum, item) => sum + item.subtotal);
 
-  double get discountAmount {
+  // Total potongan harga dari program promosi (BOGO, Tebus Murah, Min Belanja, dll)
+  double get promoDiscount =>
+      appliedPromotions.fold(0.0, (sum, p) => sum + p.discountAmount);
+
+  // Diskon manual kasir
+  double get manualGlobalDiscount {
     if (isGlobalDiscountPercentage) {
-      return subtotal * (globalDiscount / 100);
+      final base = (subtotal - promoDiscount).clamp(0.0, double.infinity);
+      return base * (globalDiscount / 100);
     }
     return globalDiscount;
   }
 
-  double get taxAmount => (subtotal - discountAmount) * (taxPercentage / 100);
+  // Total seluruh potongan harga (Promo + Manual)
+  double get discountAmount => promoDiscount + manualGlobalDiscount;
 
-  double get grandTotal => subtotal - discountAmount + taxAmount - pointsDiscount;
+  // Nilai pajak
+  double get taxAmount =>
+      ((subtotal - discountAmount).clamp(0.0, double.infinity)) *
+      (taxPercentage / 100);
+
+  // Grand Total akhir yang harus dibayar
+  double get grandTotal =>
+      (subtotal - discountAmount + taxAmount - pointsDiscount)
+          .clamp(0.0, double.infinity);
 
   CartState copyWith({
     List<CartItem>? items,
     Customer? selectedCustomer,
+    RestaurantTable? selectedTable,
     double? globalDiscount,
     bool? isGlobalDiscountPercentage,
     double? taxPercentage,
     int? redeemedPoints,
     double? pointsDiscount,
     String? orderNotes,
+    int? heldOrderId,
+    List<Promotion>? activePromotions,
+    String? manualPromoCode,
+    List<AppliedPromotion>? appliedPromotions,
     bool clearCustomer = false,
+    bool clearTable = false,
     bool clearOrderNotes = false,
+    bool clearHeldOrderId = false,
+    bool clearPromoCode = false,
   }) {
     return CartState(
       items: items ?? this.items,
-      selectedCustomer: clearCustomer ? null : (selectedCustomer ?? this.selectedCustomer),
+      selectedCustomer:
+          clearCustomer ? null : (selectedCustomer ?? this.selectedCustomer),
+      selectedTable: clearTable ? null : (selectedTable ?? this.selectedTable),
       globalDiscount: globalDiscount ?? this.globalDiscount,
-      isGlobalDiscountPercentage: isGlobalDiscountPercentage ?? this.isGlobalDiscountPercentage,
+      isGlobalDiscountPercentage:
+          isGlobalDiscountPercentage ?? this.isGlobalDiscountPercentage,
       taxPercentage: taxPercentage ?? this.taxPercentage,
       redeemedPoints: redeemedPoints ?? this.redeemedPoints,
       pointsDiscount: pointsDiscount ?? this.pointsDiscount,
       orderNotes: clearOrderNotes ? null : (orderNotes ?? this.orderNotes),
+      heldOrderId: clearHeldOrderId ? null : (heldOrderId ?? this.heldOrderId),
+      activePromotions: activePromotions ?? this.activePromotions,
+      manualPromoCode:
+          clearPromoCode ? null : (manualPromoCode ?? this.manualPromoCode),
+      appliedPromotions: appliedPromotions ?? this.appliedPromotions,
     );
   }
 }
@@ -116,31 +159,75 @@ class CartState {
 class CartCubit extends Cubit<CartState> {
   CartCubit() : super(CartState(items: []));
 
-  void addToCart(Product product, List<ProductUnit> units, List<ProductPrice> prices, {
+  // Menyetel promosi aktif dan mengevaluasi keranjang
+  void setActivePromotions(List<Promotion> promotions) {
+    final eval = PromotionEngine.evaluate(
+      activePromotions: promotions,
+      cartItems: state.items,
+      selectedCustomer: state.selectedCustomer,
+      manualPromoCode: state.manualPromoCode,
+    );
+    emit(state.copyWith(
+      activePromotions: promotions,
+      appliedPromotions: eval.appliedPromotions,
+    ));
+  }
+
+  // Menerapkan kode promo kupon manual
+  void applyPromoCode(String? code) {
+    final trimmed = code?.trim();
+    final eval = PromotionEngine.evaluate(
+      activePromotions: state.activePromotions,
+      cartItems: state.items,
+      selectedCustomer: state.selectedCustomer,
+      manualPromoCode: trimmed,
+    );
+    emit(state.copyWith(
+      manualPromoCode: trimmed,
+      clearPromoCode: trimmed == null || trimmed.isEmpty,
+      appliedPromotions: eval.appliedPromotions,
+    ));
+  }
+
+  // Menyetel meja terpilih
+  void setSelectedTable(RestaurantTable? table) {
+    emit(state.copyWith(
+      selectedTable: table,
+      clearTable: table == null,
+    ));
+  }
+
+  void addToCart(
+    Product product,
+    List<ProductUnit> units,
+    List<ProductPrice> prices, {
     ProductUnit? unit,
     double quantity = 1.0,
     double discount = 0.0,
     double? customPrice,
     String? notes,
   }) {
-    final targetUnit = unit ?? units.firstWhere((u) => u.isBase, orElse: () => units.first);
-    final price = customPrice ?? _getPriceForUnit(targetUnit.id, prices, quantity: quantity);
+    final targetUnit =
+        unit ?? units.firstWhere((u) => u.isBase, orElse: () => units.first);
+    final price =
+        customPrice ?? _getPriceForUnit(targetUnit.id, prices, quantity: quantity);
 
     final existingIndex = state.items.indexWhere(
         (item) => item.product.id == product.id && item.unit.id == targetUnit.id);
 
+    List<CartItem> newItems;
     if (existingIndex >= 0) {
-      final newItems = List<CartItem>.from(state.items);
+      newItems = List<CartItem>.from(state.items);
       newItems[existingIndex] = newItems[existingIndex].copyWith(
         quantity: quantity,
         price: price,
         discountAmount: discount,
         notes: notes ?? newItems[existingIndex].notes,
       );
-      emit(state.copyWith(items: newItems));
     } else {
-      final appliedQty = _getAppliedMinQty(targetUnit.id, prices, quantity: quantity);
-      final newItems = List<CartItem>.from(state.items)
+      final appliedQty =
+          _getAppliedMinQty(targetUnit.id, prices, quantity: quantity);
+      newItems = List<CartItem>.from(state.items)
         ..add(CartItem(
           product: product,
           unit: targetUnit,
@@ -152,15 +239,27 @@ class CartCubit extends Cubit<CartState> {
           appliedMinQty: appliedQty,
           notes: notes,
         ));
-      emit(state.copyWith(items: newItems));
     }
+
+    final eval = PromotionEngine.evaluate(
+      activePromotions: state.activePromotions,
+      cartItems: newItems,
+      selectedCustomer: state.selectedCustomer,
+      manualPromoCode: state.manualPromoCode,
+    );
+
+    emit(state.copyWith(
+      items: newItems,
+      appliedPromotions: eval.appliedPromotions,
+    ));
   }
 
   // Mengubah catatan khusus item
   void updateItemNotes(int productId, int unitId, String? notes) {
     final newItems = state.items.map((item) {
       if (item.product.id == productId && item.unit.id == unitId) {
-        return item.copyWith(notes: notes, clearNotes: notes == null || notes.trim().isEmpty);
+        return item.copyWith(
+            notes: notes, clearNotes: notes == null || notes.trim().isEmpty);
       }
       return item;
     }).toList();
@@ -185,37 +284,76 @@ class CartCubit extends Cubit<CartState> {
 
     final newItems = state.items.map((item) {
       if (item.product.id == productId && item.unit.id == unitId) {
-        final newPrice = _getPriceForUnit(unitId, item.pricingMatrix, quantity: quantity);
-        final newAppliedMinQty = _getAppliedMinQty(unitId, item.pricingMatrix, quantity: quantity);
-        return item.copyWith(quantity: quantity, price: newPrice, appliedMinQty: newAppliedMinQty);
+        final newPrice =
+            _getPriceForUnit(unitId, item.pricingMatrix, quantity: quantity);
+        final newAppliedMinQty =
+            _getAppliedMinQty(unitId, item.pricingMatrix, quantity: quantity);
+        return item.copyWith(
+            quantity: quantity,
+            price: newPrice,
+            appliedMinQty: newAppliedMinQty);
       }
       return item;
     }).toList();
 
-    emit(state.copyWith(items: newItems));
+    final eval = PromotionEngine.evaluate(
+      activePromotions: state.activePromotions,
+      cartItems: newItems,
+      selectedCustomer: state.selectedCustomer,
+      manualPromoCode: state.manualPromoCode,
+    );
+
+    emit(state.copyWith(
+      items: newItems,
+      appliedPromotions: eval.appliedPromotions,
+    ));
   }
 
   // Menghapus item dari keranjang
   void removeFromCart(int productId, int unitId) {
     final newItems = state.items
-        .where((item) => !(item.product.id == productId && item.unit.id == unitId))
+        .where(
+            (item) => !(item.product.id == productId && item.unit.id == unitId))
         .toList();
-    emit(state.copyWith(items: newItems));
+
+    final eval = PromotionEngine.evaluate(
+      activePromotions: state.activePromotions,
+      cartItems: newItems,
+      selectedCustomer: state.selectedCustomer,
+      manualPromoCode: state.manualPromoCode,
+    );
+
+    emit(state.copyWith(
+      items: newItems,
+      appliedPromotions: eval.appliedPromotions,
+    ));
   }
 
   // Menghapus semua unit produk dari keranjang
   void removeProductFromCart(int productId) {
-    final newItems = state.items
-        .where((item) => item.product.id != productId)
-        .toList();
-    emit(state.copyWith(items: newItems));
+    final newItems =
+        state.items.where((item) => item.product.id != productId).toList();
+
+    final eval = PromotionEngine.evaluate(
+      activePromotions: state.activePromotions,
+      cartItems: newItems,
+      selectedCustomer: state.selectedCustomer,
+      manualPromoCode: state.manualPromoCode,
+    );
+
+    emit(state.copyWith(
+      items: newItems,
+      appliedPromotions: eval.appliedPromotions,
+    ));
   }
 
   void updateUnit(int productId, int oldUnitId, ProductUnit newUnit) {
     final newItems = state.items.map((item) {
       if (item.product.id == productId && item.unit.id == oldUnitId) {
-        final newPrice = _getPriceForUnit(newUnit.id, item.pricingMatrix, quantity: item.quantity);
-        final appliedQty = _getAppliedMinQty(newUnit.id, item.pricingMatrix, quantity: item.quantity);
+        final newPrice = _getPriceForUnit(newUnit.id, item.pricingMatrix,
+            quantity: item.quantity);
+        final appliedQty = _getAppliedMinQty(newUnit.id, item.pricingMatrix,
+            quantity: item.quantity);
 
         return item.copyWith(
           unit: newUnit,
@@ -226,7 +364,17 @@ class CartCubit extends Cubit<CartState> {
       return item;
     }).toList();
 
-    emit(state.copyWith(items: newItems));
+    final eval = PromotionEngine.evaluate(
+      activePromotions: state.activePromotions,
+      cartItems: newItems,
+      selectedCustomer: state.selectedCustomer,
+      manualPromoCode: state.manualPromoCode,
+    );
+
+    emit(state.copyWith(
+      items: newItems,
+      appliedPromotions: eval.appliedPromotions,
+    ));
   }
 
   // Menerapkan diskon per item
@@ -238,10 +386,20 @@ class CartCubit extends Cubit<CartState> {
       return item;
     }).toList();
 
-    emit(state.copyWith(items: newItems));
+    final eval = PromotionEngine.evaluate(
+      activePromotions: state.activePromotions,
+      cartItems: newItems,
+      selectedCustomer: state.selectedCustomer,
+      manualPromoCode: state.manualPromoCode,
+    );
+
+    emit(state.copyWith(
+      items: newItems,
+      appliedPromotions: eval.appliedPromotions,
+    ));
   }
 
-  // Menerapkan diskon global
+  // Menerapkan diskon global manual
   void applyGlobalDiscount(double discount, {required bool isPercentage}) {
     emit(state.copyWith(
       globalDiscount: discount,
@@ -251,11 +409,19 @@ class CartCubit extends Cubit<CartState> {
 
   // Memilih pelanggan
   void selectCustomer(Customer? customer) {
+    final eval = PromotionEngine.evaluate(
+      activePromotions: state.activePromotions,
+      cartItems: state.items,
+      selectedCustomer: customer,
+      manualPromoCode: state.manualPromoCode,
+    );
+
     emit(state.copyWith(
       selectedCustomer: customer,
       clearCustomer: customer == null,
       redeemedPoints: 0,
       pointsDiscount: 0.0,
+      appliedPromotions: eval.appliedPromotions,
     ));
   }
 
@@ -281,15 +447,31 @@ class CartCubit extends Cubit<CartState> {
     emit(CartState(
       items: [],
       taxPercentage: state.taxPercentage,
+      activePromotions: state.activePromotions,
     ));
   }
 
   void replaceCart(CartState newState) {
-    emit(newState);
+    final eval = PromotionEngine.evaluate(
+      activePromotions: newState.activePromotions.isNotEmpty
+          ? newState.activePromotions
+          : state.activePromotions,
+      cartItems: newState.items,
+      selectedCustomer: newState.selectedCustomer,
+      manualPromoCode: newState.manualPromoCode,
+    );
+    emit(newState.copyWith(
+      activePromotions: newState.activePromotions.isNotEmpty
+          ? newState.activePromotions
+          : state.activePromotions,
+      appliedPromotions: eval.appliedPromotions,
+    ));
   }
 
-  double _getPriceForUnit(int unitId, List<ProductPrice> matrix, {required double quantity}) {
-    final validPrices = matrix.where((p) => p.unitId == unitId && p.price > 0).toList();
+  double _getPriceForUnit(int unitId, List<ProductPrice> matrix,
+      {required double quantity}) {
+    final validPrices =
+        matrix.where((p) => p.unitId == unitId && p.price > 0).toList();
     if (validPrices.isEmpty) return 0.0;
 
     final applicable = validPrices.where((p) => p.minQty <= quantity).toList();
@@ -302,8 +484,10 @@ class CartCubit extends Cubit<CartState> {
     return validPrices.first.price;
   }
 
-  int _getAppliedMinQty(int unitId, List<ProductPrice> matrix, {required double quantity}) {
-    final validPrices = matrix.where((p) => p.unitId == unitId && p.price > 0).toList();
+  int _getAppliedMinQty(int unitId, List<ProductPrice> matrix,
+      {required double quantity}) {
+    final validPrices =
+        matrix.where((p) => p.unitId == unitId && p.price > 0).toList();
     if (validPrices.isEmpty) return 1;
 
     final applicable = validPrices.where((p) => p.minQty <= quantity).toList();
@@ -337,7 +521,9 @@ class CartCubit extends Cubit<CartState> {
       'items': cartList,
       'global_discount': state.globalDiscount,
       'is_global_discount_percentage': state.isGlobalDiscountPercentage,
-      'order_notes': state.orderNotes,
+      'order_notes': refNo,
+      'table_id': state.selectedTable?.id,
+      'manual_promo_code': state.manualPromoCode,
     });
 
     await repo.holdOrder(
@@ -354,19 +540,34 @@ class CartCubit extends Cubit<CartState> {
   void recallCart(
     PosHeldOrder heldOrder,
     List<Map<String, dynamic>> allPosProducts,
-    List<Customer> allCustomers,
-  ) {
+    List<Customer> allCustomers, {
+    List<RestaurantTable> allTables = const [],
+  }) {
     try {
       final data = jsonDecode(heldOrder.cartData) as Map<String, dynamic>;
       final itemsData = data['items'] as List<dynamic>;
       final globalDisc = (data['global_discount'] as num?)?.toDouble() ?? 0.0;
-      final isPercentage = data['is_global_discount_percentage'] as bool? ?? false;
+      final isPercentage =
+          data['is_global_discount_percentage'] as bool? ?? false;
       final ordNotes = data['order_notes'] as String?;
+      final int? tableId = data['table_id'] as int?;
+      final String? manualPromoCode = data['manual_promo_code'] as String?;
 
       // Temukan customer
       Customer? customer;
       if (heldOrder.customerId != null) {
-        customer = allCustomers.firstWhere((c) => c.id == heldOrder.customerId, orElse: () => allCustomers.first);
+        customer = allCustomers.firstWhere(
+            (c) => c.id == heldOrder.customerId,
+            orElse: () => allCustomers.first);
+      }
+
+      // Temukan meja jika ada
+      RestaurantTable? table;
+      if (tableId != null && allTables.isNotEmpty) {
+        final match = allTables.where((t) => t.id == tableId);
+        if (match.isNotEmpty) {
+          table = match.first;
+        }
       }
 
       final List<CartItem> recalledItems = [];
@@ -388,9 +589,12 @@ class CartCubit extends Cubit<CartState> {
 
         if (prodMap.isNotEmpty) {
           final Product product = prodMap['product'];
-          final List<ProductUnit> units = List<ProductUnit>.from(prodMap['units']);
-          final List<ProductPrice> prices = List<ProductPrice>.from(prodMap['prices']);
-          final unit = units.firstWhere((u) => u.id == unitId, orElse: () => units.first);
+          final List<ProductUnit> units =
+              List<ProductUnit>.from(prodMap['units']);
+          final List<ProductPrice> prices =
+              List<ProductPrice>.from(prodMap['prices']);
+          final unit = units.firstWhere((u) => u.id == unitId,
+              orElse: () => units.first);
 
           recalledItems.add(CartItem(
             product: product,
@@ -406,13 +610,40 @@ class CartCubit extends Cubit<CartState> {
         }
       }
 
+      // Ambil notes yang ada di json atau dari heldOrder.referenceNo jika memuat tag antrean
+      String? combinedNotes = ordNotes;
+      if (heldOrder.referenceNo.contains('Antrean #')) {
+        final match =
+            RegExp(r'Antrean #\d+').firstMatch(heldOrder.referenceNo);
+        if (match != null) {
+          final qTag = match.group(0)!;
+          if (combinedNotes == null || !combinedNotes.contains(qTag)) {
+            combinedNotes = combinedNotes != null && combinedNotes.isNotEmpty
+                ? "$combinedNotes • $qTag"
+                : qTag;
+          }
+        }
+      }
+
+      final eval = PromotionEngine.evaluate(
+        activePromotions: state.activePromotions,
+        cartItems: recalledItems,
+        selectedCustomer: customer,
+        manualPromoCode: manualPromoCode,
+      );
+
       emit(CartState(
         items: recalledItems,
         selectedCustomer: customer,
+        selectedTable: table,
         globalDiscount: globalDisc,
         isGlobalDiscountPercentage: isPercentage,
         taxPercentage: state.taxPercentage,
-        orderNotes: ordNotes,
+        orderNotes: combinedNotes,
+        heldOrderId: heldOrder.id,
+        activePromotions: state.activePromotions,
+        manualPromoCode: manualPromoCode,
+        appliedPromotions: eval.appliedPromotions,
       ));
     } catch (e) {
       // ignore

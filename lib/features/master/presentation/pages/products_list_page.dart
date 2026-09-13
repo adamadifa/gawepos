@@ -7,6 +7,7 @@ import '../bloc/product_cubit.dart';
 import '../bloc/category_cubit.dart';
 import '../bloc/brand_cubit.dart';
 import 'product_form_page.dart';
+import '../dialogs/import_product_excel_dialog.dart';
 
 class ProductsListPage extends StatefulWidget {
   const ProductsListPage({super.key});
@@ -462,6 +463,42 @@ class _ProductsListPageState extends State<ProductsListPage> {
                     ),
                   ),
                   const Spacer(),
+                  Material(
+                    color: const Color(0xFFF0FDF4),
+                    borderRadius: BorderRadius.circular(10),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(10),
+                      onTap: () async {
+                        final importedCount = await showDialog<int>(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (ctx) => const ImportProductExcelDialog(),
+                        );
+                        if (importedCount != null && importedCount > 0 && context.mounted) {
+                          _showAppSnackbar('Berhasil mengimpor $importedCount produk dari Excel!');
+                        }
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.table_view_rounded, color: Color(0xFF16A34A), size: 18),
+                            SizedBox(width: 5),
+                            Text(
+                              'Import Excel',
+                              style: TextStyle(
+                                color: Color(0xFF16A34A),
+                                fontWeight: FontWeight.w700,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
                   Material(
                     color: const Color(0xFFF1F5F9),
                     borderRadius: BorderRadius.circular(10),

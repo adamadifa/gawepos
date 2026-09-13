@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import '../../../../core/constants/constants.dart';
 import '../../../../core/database/app_database.dart';
 import '../bloc/inventory_cubit.dart';
@@ -15,20 +16,61 @@ class StockAdjustmentPage extends StatefulWidget {
   State<StockAdjustmentPage> createState() => _StockAdjustmentPageState();
 }
 
-class _StockAdjustmentPageState extends State<StockAdjustmentPage> {
-  String _searchQuery = '';
-  final _searchController = TextEditingController();
+class _StockAdjustmentPageState extends State<StockAdjustmentPage> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  
+  // State untuk Tab Input Penyesuaian
+  String _productSearchQuery = '';
+  final _productSearchController = TextEditingController();
+
+  // State untuk Tab Riwayat
+  String _historySearchQuery = '';
+  final _historySearchController = TextEditingController();
+  String _selectedPeriod = 'Hari Ini';
+  DateTime _startDate = DateTime.now();
+  DateTime _endDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    context.read<InventoryCubit>().loadInventory();
+    _tabController = TabController(length: 2, vsync: this);
+    _updateDateRange();
+    _loadAllData();
   }
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _tabController.dispose();
+    _productSearchController.dispose();
+    _historySearchController.dispose();
     super.dispose();
+  }
+
+  void _loadAllData() {
+    context.read<InventoryCubit>().loadInventory();
+    _loadHistory();
+  }
+
+  void _loadHistory() {
+    context.read<InventoryCubit>().loadAdjustmentHistory(
+          start: _startDate,
+          end: _endDate,
+          search: _historySearchQuery,
+        );
+  }
+
+  void _updateDateRange() {
+    final now = DateTime.now();
+    if (_selectedPeriod == 'Hari Ini') {
+      _startDate = DateTime(now.year, now.month, now.day);
+      _endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    } else if (_selectedPeriod == '7 Hari Terakhir') {
+      _startDate = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 6));
+      _endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    } else if (_selectedPeriod == 'Bulan Ini') {
+      _startDate = DateTime(now.year, now.month, 1);
+      _endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
+    }
   }
 
   void _showAdjustmentDialog(
@@ -39,9 +81,7 @@ class _StockAdjustmentPageState extends State<StockAdjustmentPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppConstants.radiusMd)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (ctx) => Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(ctx).viewInsets.bottom,
@@ -50,7 +90,124 @@ class _StockAdjustmentPageState extends State<StockAdjustmentPage> {
           product: product,
           productUnits: productUnits,
           cubit: context.read<InventoryCubit>(),
+          onSuccess: () {
+            _loadAllData();
+            // Pindah ke tab riwayat agar user langsung melihat inputannya
+            if (_tabController.index != 0) {
+              _tabController.animateTo(0);
+            }
+          },
         ),
+      ),
+    );
+  }
+
+  void _confirmDeleteMovement(BuildContext context, int movementId, String productName, String typeLabel, double qty, String unitName) {
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFDC2626).withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.warning_amber_rounded, color: Color(0xFFDC2626), size: 20),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Batalkan Penyesuaian?',
+              style: GoogleFonts.poppins(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF0F172A),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Apakah Anda yakin ingin membatalkan transaksi penyesuaian stok ini?',
+              style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF475569)),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    productName,
+                    style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13, color: const Color(0xFF0F172A)),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        typeLabel,
+                        style: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF64748B), fontWeight: FontWeight.w500),
+                      ),
+                      Text(
+                        '${qty > 0 ? "+" : ""}${qty % 1 == 0 ? qty.toInt() : qty.toStringAsFixed(2)} $unitName',
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          color: qty > 0 ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Catatan: Stok produk di sistem akan otomatis dikembalikan (reversal) ke jumlah semula.',
+              style: GoogleFonts.poppins(fontSize: 11, fontStyle: FontStyle.italic, color: const Color(0xFF94A3B8)),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogCtx),
+            child: Text(
+              'Batal',
+              style: GoogleFonts.poppins(color: const Color(0xFF64748B), fontWeight: FontWeight.w600),
+            ),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFDC2626),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Navigator.pop(dialogCtx);
+              context.read<InventoryCubit>().deleteAdjustmentMovement(
+                    movementId,
+                    start: _startDate,
+                    end: _endDate,
+                    search: _historySearchQuery,
+                  );
+            },
+            child: Text(
+              'Ya, Batalkan & Kembalikan',
+              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 12.5),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -70,7 +227,7 @@ class _StockAdjustmentPageState extends State<StockAdjustmentPage> {
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
-                        'Penyesuaian stok berhasil disimpan.',
+                        state.message ?? 'Penyesuaian stok berhasil disimpan.',
                         style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
                       ),
                     ),
@@ -109,34 +266,84 @@ class _StockAdjustmentPageState extends State<StockAdjustmentPage> {
           }
         },
         builder: (context, state) {
-          List<Map<String, dynamic>> rawItemsList = [];
-          if (state is InventoryLoaded) {
-            rawItemsList = state.items;
-          }
-
           return SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Clean Executive Header
+                // Header
                 Container(
                   color: Colors.white,
-                  padding: const EdgeInsets.fromLTRB(6, 6, 12, 10),
+                  padding: const EdgeInsets.fromLTRB(6, 6, 12, 4),
                   child: Row(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                            color: Color(0xFF0F172A), size: 18),
+                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF0F172A), size: 18),
                         onPressed: () => Navigator.pop(context),
                       ),
                       const SizedBox(width: 2),
-                      Text(
-                        'Stok Masuk / Keluar',
-                        style: GoogleFonts.poppins(
-                          color: const Color(0xFF0F172A),
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: -0.2,
+                      Expanded(
+                        child: Text(
+                          'Penyesuaian Stok',
+                          style: GoogleFonts.poppins(
+                            color: const Color(0xFF0F172A),
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.refresh_rounded, color: Color(0xFF0F172A), size: 20),
+                        onPressed: () {
+                          if (_tabController.index == 0) {
+                            _loadHistory();
+                          } else {
+                            context.read<InventoryCubit>().loadInventory();
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Tab Bar
+                Container(
+                  color: Colors.white,
+                  child: TabBar(
+                    controller: _tabController,
+                    labelColor: const Color(0xFF0F172A),
+                    unselectedLabelColor: const Color(0xFF94A3B8),
+                    indicatorColor: const Color(0xFF0F172A),
+                    indicatorWeight: 3,
+                    labelStyle: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700),
+                    unselectedLabelStyle: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w500),
+                    onTap: (index) {
+                      if (index == 0) {
+                        _loadHistory();
+                      } else {
+                        context.read<InventoryCubit>().loadInventory();
+                      }
+                    },
+                    tabs: const [
+                      Tab(
+                        iconMargin: EdgeInsets.only(bottom: 2),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.history_rounded, size: 17),
+                            SizedBox(width: 6),
+                            Text('Riwayat Penyesuaian'),
+                          ],
+                        ),
+                      ),
+                      Tab(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_box_rounded, size: 17),
+                            SizedBox(width: 6),
+                            Text('Input Penyesuaian'),
+                          ],
                         ),
                       ),
                     ],
@@ -144,88 +351,14 @@ class _StockAdjustmentPageState extends State<StockAdjustmentPage> {
                 ),
                 Container(height: 1, color: const Color(0xFFE2E8F0)),
 
-                // Search Bar Clean
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Container(
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFE2E8F0)),
-                          ),
-                          child: TextField(
-                            controller: _searchController,
-                            style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A)),
-                            onChanged: (val) {
-                              setState(() {
-                                _searchQuery = val.trim().toLowerCase();
-                              });
-                            },
-                            decoration: InputDecoration(
-                              hintText: 'Cari nama produk / scan barcode...',
-                              hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
-                              prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B), size: 20),
-                              suffixIcon: _searchController.text.isNotEmpty
-                                  ? IconButton(
-                                      icon: const Icon(Icons.clear_rounded, size: 16),
-                                      onPressed: () {
-                                        _searchController.clear();
-                                        setState(() => _searchQuery = '');
-                                      },
-                                    )
-                                  : null,
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Material(
-                        color: const Color(0xFF0F172A),
-                        borderRadius: BorderRadius.circular(12),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(12),
-                          onTap: () => _showBarcodeScanner(rawItemsList),
-                          child: const Padding(
-                            padding: EdgeInsets.all(11),
-                            child: Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 20),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Main Content List
+                // Tab Bar View
                 Expanded(
-                  child: Builder(
-                    builder: (context) {
-                      if (state is InventoryLoading) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      if (state is InventoryLoaded) {
-                        if (state.items.isEmpty) {
-                          return Center(
-                            child: Text(
-                              'Belum ada data stok.',
-                              style: GoogleFonts.poppins(color: const Color(0xFF94A3B8)),
-                            ),
-                          );
-                        }
-                        return RefreshIndicator(
-                          onRefresh: () async {
-                            context.read<InventoryCubit>().loadInventory();
-                          },
-                          child: _buildProductList(state.items),
-                        );
-                      }
-                      return const SizedBox();
-                    },
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [
+                      _buildHistoryTabView(state),
+                      _buildInputTabView(state),
+                    ],
                   ),
                 ),
               ],
@@ -233,6 +366,534 @@ class _StockAdjustmentPageState extends State<StockAdjustmentPage> {
           );
         },
       ),
+    );
+  }
+
+  // ==========================================
+  // TAB 1: RIWAYAT PENYESUAIAN STOK
+  // ==========================================
+  Widget _buildHistoryTabView(InventoryState state) {
+    return Column(
+      children: [
+        // Period Filter Pills
+        _buildPeriodFilter(),
+
+        // Search Bar Riwayat
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+          child: Container(
+            height: 42,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFE2E8F0)),
+            ),
+            child: TextField(
+              controller: _historySearchController,
+              style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A)),
+              onChanged: (val) {
+                setState(() => _historySearchQuery = val);
+                _loadHistory();
+              },
+              decoration: InputDecoration(
+                hintText: 'Cari nama produk / alasan penyesuaian...',
+                hintStyle: GoogleFonts.poppins(fontSize: 12, color: const Color(0xFF94A3B8)),
+                prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B), size: 18),
+                suffixIcon: _historySearchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear_rounded, size: 16),
+                        onPressed: () {
+                          _historySearchController.clear();
+                          setState(() => _historySearchQuery = '');
+                          _loadHistory();
+                        },
+                      )
+                    : null,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              ),
+            ),
+          ),
+        ),
+
+        // List Riwayat
+        Expanded(
+          child: Builder(
+            builder: (context) {
+              if (state is InventoryLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (state is AdjustmentHistoryLoaded) {
+                final list = state.history;
+                if (list.isEmpty) {
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.inventory_rounded, size: 48, color: Colors.grey[400]),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Belum Ada Riwayat Penyesuaian',
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 15,
+                              color: const Color(0xFF0F172A),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Riwayat penyesuaian stok masuk, keluar, atau opname akan tampil di sini.',
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(
+                              fontSize: 12,
+                              color: const Color(0xFF64748B),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF0F172A),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ),
+                            onPressed: () => _tabController.animateTo(1),
+                            icon: const Icon(Icons.add_rounded, size: 16),
+                            label: Text('Input Penyesuaian Baru', style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w600)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                return RefreshIndicator(
+                  onRefresh: () async => _loadHistory(),
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                    itemCount: list.length,
+                    itemBuilder: (context, index) {
+                      final item = list[index];
+                      final StockMovement move = item['movement'];
+                      final Product product = item['product'];
+                      final ProductUnit unit = item['unit'];
+                      return _buildHistoryCard(move, product, unit);
+                    },
+                  ),
+                );
+              }
+              return const SizedBox();
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPeriodFilter() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Periode Riwayat',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11,
+                  color: const Color(0xFF64748B),
+                ),
+              ),
+              Text(
+                '${DateFormat('dd MMM yyyy').format(_startDate)} - ${DateFormat('dd MMM yyyy').format(_endDate)}',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF0F172A),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: ['Hari Ini', '7 Hari Terakhir', 'Bulan Ini', 'Kustom'].map((range) {
+              final isSelected = _selectedPeriod == range;
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 3.0),
+                  child: InkWell(
+                    onTap: () async {
+                      if (range == 'Kustom') {
+                        final picked = await showDateRangePicker(
+                          context: context,
+                          initialDateRange: DateTimeRange(start: _startDate, end: _endDate),
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime.now().add(const Duration(days: 365)),
+                          builder: (context, child) {
+                            return Theme(
+                              data: Theme.of(context).copyWith(
+                                colorScheme: const ColorScheme.light(
+                                  primary: Color(0xFF0F172A),
+                                  onPrimary: Colors.white,
+                                  surface: Colors.white,
+                                  onSurface: Color(0xFF0F172A),
+                                ),
+                              ),
+                              child: child!,
+                            );
+                          },
+                        );
+                        if (picked != null) {
+                          setState(() {
+                            _selectedPeriod = 'Kustom';
+                            _startDate = DateTime(picked.start.year, picked.start.month, picked.start.day);
+                            _endDate = DateTime(picked.end.year, picked.end.month, picked.end.day, 23, 59, 59);
+                          });
+                          _loadHistory();
+                        }
+                      } else {
+                        setState(() {
+                          _selectedPeriod = range;
+                          _updateDateRange();
+                        });
+                        _loadHistory();
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isSelected ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        range,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 10.5,
+                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected ? Colors.white : const Color(0xFF475569),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistoryCard(StockMovement move, Product product, ProductUnit unit) {
+    final isPositive = move.quantity > 0;
+    String typeLabel = 'Penyesuaian';
+    Color typeColor = const Color(0xFF0F172A);
+    IconData typeIcon = Icons.tune_rounded;
+
+    if (move.type == 'manual_in') {
+      typeLabel = 'Stok Masuk';
+      typeColor = const Color(0xFF059669);
+      typeIcon = Icons.arrow_downward_rounded;
+    } else if (move.type == 'manual_out') {
+      typeLabel = 'Stok Keluar';
+      typeColor = const Color(0xFFDC2626);
+      typeIcon = Icons.arrow_upward_rounded;
+    } else if (move.type == 'opname') {
+      typeLabel = 'Opname';
+      typeColor = const Color(0xFF2563EB);
+      typeIcon = Icons.inventory_2_rounded;
+    }
+
+    final formattedDate = DateFormat('dd MMM yyyy, HH:mm').format(move.createdAt);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Row Top: Tipe & Jam & Action Delete
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: typeColor.withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: typeColor.withValues(alpha: 0.2)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(typeIcon, color: typeColor, size: 12),
+                          const SizedBox(width: 4),
+                          Text(
+                            typeLabel,
+                            style: GoogleFonts.poppins(
+                              color: typeColor,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 10.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      formattedDate,
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
+                        color: const Color(0xFF94A3B8),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                // Tombol Batalkan / Hapus
+                InkWell(
+                  onTap: () => _confirmDeleteMovement(
+                    context,
+                    move.id,
+                    product.name,
+                    typeLabel,
+                    move.quantity,
+                    unit.name,
+                  ),
+                  borderRadius: BorderRadius.circular(6),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: const Color(0xFFFECACA)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.delete_outline_rounded, color: Color(0xFFDC2626), size: 13),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Batalkan',
+                          style: GoogleFonts.poppins(
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFFDC2626),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+
+            // Nama Produk & Qty
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        product.name,
+                        style: GoogleFonts.poppins(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13.5,
+                          color: const Color(0xFF0F172A),
+                        ),
+                      ),
+                      if (product.sku != null) ...[
+                        const SizedBox(height: 1),
+                        Text(
+                          'SKU: ${product.sku}',
+                          style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: isPositive ? const Color(0xFFECFDF5) : const Color(0xFFFEF2F2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: isPositive ? const Color(0xFFA7F3D0) : const Color(0xFFFECACA),
+                    ),
+                  ),
+                  child: Text(
+                    '${isPositive ? "+" : ""}${move.quantity % 1 == 0 ? move.quantity.toInt() : move.quantity.toStringAsFixed(2)} ${unit.name}',
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                      color: isPositive ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            // Catatan Alasan (jika ada)
+            if (move.notes != null && move.notes!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline_rounded, color: Color(0xFF64748B), size: 13),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        move.notes!,
+                        style: GoogleFonts.poppins(
+                          fontSize: 11.5,
+                          color: const Color(0xFF475569),
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ==========================================
+  // TAB 2: INPUT PENYESUAIAN STOK (DAFTAR PRODUK)
+  // ==========================================
+  Widget _buildInputTabView(InventoryState state) {
+    List<Map<String, dynamic>> rawItemsList = [];
+    if (state is InventoryLoaded) {
+      rawItemsList = state.items;
+    }
+
+    return Column(
+      children: [
+        // Search Bar Produk
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: TextField(
+                    controller: _productSearchController,
+                    style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A)),
+                    onChanged: (val) {
+                      setState(() {
+                        _productSearchQuery = val.trim().toLowerCase();
+                      });
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'Cari nama produk / scan barcode...',
+                      hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                      prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF64748B), size: 20),
+                      suffixIcon: _productSearchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded, size: 16),
+                              onPressed: () {
+                                _productSearchController.clear();
+                                setState(() => _productSearchQuery = '');
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Material(
+                color: const Color(0xFF0F172A),
+                borderRadius: BorderRadius.circular(12),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => _showBarcodeScanner(rawItemsList),
+                  child: const Padding(
+                    padding: EdgeInsets.all(11),
+                    child: Icon(Icons.qr_code_scanner_rounded, color: Colors.white, size: 20),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Main Content List
+        Expanded(
+          child: Builder(
+            builder: (context) {
+              if (state is InventoryLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (state is InventoryLoaded) {
+                if (state.items.isEmpty) {
+                  return Center(
+                    child: Text(
+                      'Belum ada data stok.',
+                      style: GoogleFonts.poppins(color: const Color(0xFF94A3B8)),
+                    ),
+                  );
+                }
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    context.read<InventoryCubit>().loadInventory();
+                  },
+                  child: _buildProductList(state.items),
+                );
+              }
+              return const SizedBox();
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -252,72 +913,72 @@ class _StockAdjustmentPageState extends State<StockAdjustmentPage> {
           child: SafeArea(
             top: false,
             child: Column(
-            children: [
-              const SizedBox(height: 8),
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
+              children: [
+                const SizedBox(height: 8),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppConstants.primaryColor.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppConstants.primaryColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.qr_code_scanner_rounded,
+                            color: AppConstants.primaryColor, size: 20),
                       ),
-                      child: const Icon(Icons.qr_code_scanner_rounded,
-                          color: AppConstants.primaryColor, size: 20),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Scan Barcode Produk',
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                      const SizedBox(width: 12),
+                      Text(
+                        'Scan Barcode Produk',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ],
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded),
+                        onPressed: () => Navigator.pop(ctx),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: MobileScanner(
-                      onDetect: (capture) {
-                        if (scanned) return;
-                        final List<Barcode> barcodes = capture.barcodes;
-                        if (barcodes.isNotEmpty) {
-                          final code = barcodes.first.rawValue;
-                          if (code != null) {
-                            scanned = true;
-                            ScanSoundHelper.playBeep();
-                            HapticFeedback.lightImpact();
-                            Navigator.pop(ctx, code);
+                Expanded(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: MobileScanner(
+                        onDetect: (capture) {
+                          if (scanned) return;
+                          final List<Barcode> barcodes = capture.barcodes;
+                          if (barcodes.isNotEmpty) {
+                            final code = barcodes.first.rawValue;
+                            if (code != null) {
+                              scanned = true;
+                              ScanSoundHelper.playBeep();
+                              HapticFeedback.lightImpact();
+                              Navigator.pop(ctx, code);
+                            }
                           }
-                        }
-                      },
+                        },
+                      ),
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
-            ],
+                const SizedBox(height: 24),
+              ],
+            ),
           ),
-        ),
         );
       },
     ).then((code) async {
@@ -378,7 +1039,7 @@ class _StockAdjustmentPageState extends State<StockAdjustmentPage> {
   Widget _buildProductList(List<Map<String, dynamic>> items) {
     final filtered = items.where((item) {
       final Product p = item['product'];
-      final query = _searchQuery;
+      final query = _productSearchQuery;
       if (query.isEmpty) return true;
       return p.name.toLowerCase().contains(query) ||
           (p.sku?.toLowerCase().contains(query) ?? false) ||
@@ -502,11 +1163,13 @@ class _ManualAdjustmentDialog extends StatefulWidget {
   final Product product;
   final List<Map<String, dynamic>> productUnits;
   final InventoryCubit cubit;
+  final VoidCallback? onSuccess;
 
   const _ManualAdjustmentDialog({
     required this.product,
     required this.productUnits,
     required this.cubit,
+    this.onSuccess,
   });
 
   @override
@@ -554,6 +1217,7 @@ class _ManualAdjustmentDialogState extends State<_ManualAdjustmentDialog> {
       isAddition: _isAddition,
       notes: _notesController.text.isEmpty ? null : _notesController.text,
     );
+    widget.onSuccess?.call();
   }
 
   @override
@@ -575,288 +1239,290 @@ class _ManualAdjustmentDialogState extends State<_ManualAdjustmentDialog> {
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Handle bar
-              Center(
-                child: Container(
-                  width: 36,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFCBD5E1),
-                    borderRadius: BorderRadius.circular(2),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Handle bar
+                Center(
+                  child: Container(
+                    width: 36,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFCBD5E1),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 14),
+                const SizedBox(height: 14),
 
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0F172A).withValues(alpha: 0.06),
-                          borderRadius: BorderRadius.circular(10),
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.sync_alt_rounded,
+                              color: Color(0xFF0F172A), size: 18),
                         ),
-                        child: const Icon(Icons.sync_alt_rounded,
-                            color: Color(0xFF0F172A), size: 18),
-                      ),
-                      const SizedBox(width: 10),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Penyesuaian Stok',
+                          style: GoogleFonts.poppins(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF0F172A),
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B), size: 20),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+
+                // Info Box Produk
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        'Penyesuaian Stok',
+                        widget.product.name,
                         style: GoogleFonts.poppins(
-                          fontSize: 16,
                           fontWeight: FontWeight.w700,
+                          fontSize: 14,
                           color: const Color(0xFF0F172A),
                         ),
                       ),
+                      if (widget.product.sku != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          'SKU: ${widget.product.sku}',
+                          style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
+                        ),
+                      ],
                     ],
                   ),
-                  IconButton(
-                    visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B), size: 20),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // Info Box Produk
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(height: 16),
+
+                // Segmented Toggle: Stok Masuk / Stok Keluar
+                Row(
                   children: [
-                    Text(
-                      widget.product.name,
-                      style: GoogleFonts.poppins(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
-                        color: const Color(0xFF0F172A),
-                      ),
+                    Expanded(
+                      child: _buildToggleButton('Stok Masuk', Icons.arrow_downward_rounded, true),
                     ),
-                    if (widget.product.sku != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        'SKU: ${widget.product.sku}',
-                        style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
-                      ),
-                    ],
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _buildToggleButton('Stok Keluar', Icons.arrow_upward_rounded, false),
+                    ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // Segmented Toggle: Stok Masuk / Stok Keluar
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildToggleButton('Stok Masuk', Icons.arrow_downward_rounded, true),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildToggleButton('Stok Keluar', Icons.arrow_upward_rounded, false),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Pilih Satuan & Stok Saat ini Row
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 3,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Pilih Satuan',
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                            color: const Color(0xFF334155),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        DropdownButtonFormField<int>(
-                          value: _selectedUnitId,
-                          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: const Color(0xFFF8FAFC),
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
-                            ),
-                          ),
-                          items: widget.productUnits.map((u) {
-                            final unit = u['unit'] as ProductUnit;
-                            return DropdownMenuItem(
-                              value: unit.id,
-                              child: Text(unit.name, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            if (val != null) setState(() => _selectedUnitId = val);
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    flex: 2,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Stok Sistem',
-                          style: GoogleFonts.poppins(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                            color: const Color(0xFF334155),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Container(
-                          height: 48,
-                          padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEFF6FF),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFFBFDBFE)),
-                          ),
-                          alignment: Alignment.center,
-                          child: Text(
-                            '${currentStock % 1 == 0 ? currentStock.toInt() : currentStock.toStringAsFixed(2)}',
+                // Pilih Satuan & Stok Saat ini Row
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Pilih Satuan',
                             style: GoogleFonts.poppins(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 15,
-                              color: const Color(0xFF1D4ED8),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                              color: const Color(0xFF334155),
                             ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 6),
+                          DropdownButtonFormField<int>(
+                            initialValue: _selectedUnitId,
+                            style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
+                            decoration: InputDecoration(
+                              filled: true,
+                              fillColor: const Color(0xFFF8FAFC),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                              ),
+                            ),
+                            items: widget.productUnits.map((u) {
+                              final unit = u['unit'] as ProductUnit;
+                              return DropdownMenuItem(
+                                value: unit.id,
+                                child: Text(unit.name, style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w600)),
+                              );
+                            }).toList(),
+                            onChanged: (val) {
+                              if (val != null) setState(() => _selectedUnitId = val);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      flex: 2,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Stok Sistem',
+                            style: GoogleFonts.poppins(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 12,
+                              color: const Color(0xFF334155),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Container(
+                            height: 48,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEFF6FF),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFFBFDBFE)),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              '${currentStock % 1 == 0 ? currentStock.toInt() : currentStock.toStringAsFixed(2)}',
+                              style: GoogleFonts.poppins(
+                                fontWeight: FontWeight.w800,
+                                fontSize: 15,
+                                color: const Color(0xFF1D4ED8),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+
+                // Jumlah
+                Text(
+                  'Jumlah Perubahan *',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                    color: const Color(0xFF334155),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                TextField(
+                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  controller: _quantityController,
+                  style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)),
+                  decoration: InputDecoration(
+                    hintText: '0',
+                    prefixIcon: const Icon(Icons.numbers_rounded, size: 18, color: Color(0xFF64748B)),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 14),
+                ),
+                const SizedBox(height: 14),
 
-              // Jumlah
-              Text(
-                'Jumlah Perubahan *',
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                  color: const Color(0xFF334155),
-                ),
-              ),
-              const SizedBox(height: 6),
-              TextField(
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                controller: _quantityController,
-                style: GoogleFonts.poppins(fontSize: 14, fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)),
-                decoration: InputDecoration(
-                  hintText: '0',
-                  prefixIcon: const Icon(Icons.numbers_rounded, size: 18, color: Color(0xFF64748B)),
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                // Catatan
+                Text(
+                  'Alasan / Catatan (Opsional)',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                    color: const Color(0xFF334155),
                   ),
                 ),
-              ),
-              const SizedBox(height: 14),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: _notesController,
+                  maxLines: 2,
+                  style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
+                  decoration: InputDecoration(
+                    hintText: 'Contoh: Barang rusak, retur pemasok, bonus vendor...',
+                    hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                    prefixIcon: const Icon(Icons.notes_rounded, size: 18, color: Color(0xFF64748B)),
+                    filled: true,
+                    fillColor: const Color(0xFFF8FAFC),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
 
-              // Catatan
-              Text(
-                'Alasan / Catatan (Opsional)',
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                  color: const Color(0xFF334155),
-                ),
-              ),
-              const SizedBox(height: 6),
-              TextField(
-                controller: _notesController,
-                maxLines: 2,
-                style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
-                decoration: InputDecoration(
-                  hintText: 'Contoh: Barang rusak, retur pemasok, bonus vendor...',
-                  hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
-                  prefixIcon: const Icon(Icons.notes_rounded, size: 18, color: Color(0xFF64748B)),
-                  filled: true,
-                  fillColor: const Color(0xFFF8FAFC),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                // Action Buttons
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: FilledButton.icon(
+                    onPressed: _submit,
+                    icon: Icon(_isAddition ? Icons.add_circle_outline_rounded : Icons.remove_circle_outline_rounded, size: 18),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: _isAddition ? const Color(0xFF059669) : const Color(0xFFDC2626),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    label: Text(
+                      _isAddition ? 'TAMBAHKAN STOK MASUK' : 'POTONG STOK KELUAR',
+                      style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 24),
-
-              // Action Buttons
-              SizedBox(
-                width: double.infinity,
-                height: 48,
-                child: FilledButton.icon(
-                  onPressed: _submit,
-                  icon: Icon(_isAddition ? Icons.add_circle_outline_rounded : Icons.remove_circle_outline_rounded, size: 18),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: _isAddition ? const Color(0xFF059669) : const Color(0xFFDC2626),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  label: Text(
-                    _isAddition ? 'TAMBAHKAN STOK MASUK' : 'POTONG STOK KELUAR',
-                    style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13),
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

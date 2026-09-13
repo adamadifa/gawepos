@@ -25,6 +25,8 @@ import 'features/auth/presentation/bloc/user_management_cubit.dart';
 import 'features/auth/presentation/bloc/role_permissions_cubit.dart';
 import 'features/inventory/presentation/bloc/return_cubit.dart';
 import 'features/consignment/presentation/bloc/consignment_cubit.dart';
+import 'features/tables/presentation/bloc/table_cubit.dart';
+import 'features/promotions/presentation/bloc/promotion_cubit.dart';
 
 import 'package:intl/date_symbol_data_local.dart';
 
@@ -74,6 +76,9 @@ class MyApp extends StatelessWidget {
         BlocProvider<ProductCubit>(
           create: (context) => getIt<ProductCubit>(),
         ),
+        BlocProvider<TableCubit>(
+          create: (context) => getIt<TableCubit>()..loadTables(),
+        ),
         BlocProvider<InventoryCubit>(
           create: (context) => getIt<InventoryCubit>(),
         ),
@@ -97,6 +102,9 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider<ConsignmentCubit>(
           create: (context) => getIt<ConsignmentCubit>(),
+        ),
+        BlocProvider<PromotionCubit>(
+          create: (context) => getIt<PromotionCubit>()..loadPromotions(),
         ),
       ],
       child: MaterialApp(

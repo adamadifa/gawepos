@@ -148,4 +148,79 @@ class InventoryRepository {
           );
     });
   }
+
+  // Mengambil seluruh riwayat penyesuaian stok (manual_in, manual_out, opname)
+  Future<List<Map<String, dynamic>>> getAdjustmentHistory({
+    DateTime? start,
+    DateTime? end,
+    String? search,
+  }) async {
+    final query = _db.select(_db.stockMovements).join([
+      innerJoin(_db.products, _db.products.id.equalsExp(_db.stockMovements.productId)),
+      innerJoin(_db.productUnits, _db.productUnits.id.equalsExp(_db.stockMovements.unitId)),
+    ])
+      ..where(_db.stockMovements.type.isIn(['manual_in', 'manual_out', 'opname']))
+      ..orderBy([OrderingTerm(expression: _db.stockMovements.createdAt, mode: OrderingMode.desc)]);
+
+    if (start != null) {
+      query.where(_db.stockMovements.createdAt.isBiggerOrEqualValue(start));
+    }
+    if (end != null) {
+      query.where(_db.stockMovements.createdAt.isSmallerOrEqualValue(end));
+    }
+
+    final rows = await query.get();
+
+    final result = rows.map((row) {
+      return {
+        'movement': row.readTable(_db.stockMovements),
+        'product': row.readTable(_db.products),
+        'unit': row.readTable(_db.productUnits),
+      };
+    }).toList();
+
+    if (search != null && search.trim().isNotEmpty) {
+      final s = search.trim().toLowerCase();
+      return result.where((item) {
+        final p = item['product'] as Product;
+        final notes = (item['movement'] as StockMovement).notes ?? '';
+        return p.name.toLowerCase().contains(s) ||
+            (p.sku?.toLowerCase().contains(s) ?? false) ||
+            notes.toLowerCase().contains(s);
+      }).toList();
+    }
+
+    return result;
+  }
+
+  // Menghapus/Membatalkan riwayat penyesuaian stok (Reversal)
+  Future<void> deleteAdjustmentMovement(int movementId) async {
+    await _db.transaction(() async {
+      final movement = await (_db.select(_db.stockMovements)..where((tbl) => tbl.id.equals(movementId))).getSingleOrNull();
+      if (movement == null) {
+        throw Exception('Data penyesuaian stok tidak ditemukan.');
+      }
+
+      // Reversal: kembalikan perubahan stok
+      final deltaToReverse = -movement.quantity;
+
+      final existingInv = await (_db.select(_db.inventory)
+            ..where((tbl) => tbl.productId.equals(movement.productId) & tbl.unitId.equals(movement.unitId)))
+          .getSingleOrNull();
+
+      if (existingInv != null) {
+        final revertedQty = existingInv.quantity + deltaToReverse;
+        if (revertedQty < 0) {
+          throw Exception('Pembatalan gagal: stok saat ini tidak mencukupi untuk dipotong kembali.');
+        }
+        await _db.update(_db.inventory).replace(
+              existingInv.copyWith(quantity: revertedQty),
+            );
+      }
+
+      // Hapus riwayat movement
+      await (_db.delete(_db.stockMovements)..where((tbl) => tbl.id.equals(movementId))).go();
+    });
+  }
 }
+

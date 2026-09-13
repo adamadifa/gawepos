@@ -29,6 +29,7 @@ class WhatsAppReceiptHelper {
     String? cashierName,
     int pointsEarned = 0,
     int pointsRedeemed = 0,
+    List<OrderPromotion> promotions = const [],
   }) async {
     final salesRepo = getIt<SalesRepository>();
     final shopName = await salesRepo.getSetting('shop_name') ?? 'GawePOS Store';
@@ -88,9 +89,21 @@ class WhatsAppReceiptHelper {
 
     // Ringkasan Pembayaran
     buffer.writeln('Subtotal      : ${CurrencyFormatter.format(order.subtotal)}');
-    if (order.discountAmount > 0) {
-      buffer.writeln('Diskon Global : -${CurrencyFormatter.format(order.discountAmount)}');
+    
+    // Rincian Promosi
+    double totalPromoDisc = 0.0;
+    for (final p in promotions) {
+      totalPromoDisc += p.discountAmount;
+      buffer.writeln('Promo: ${p.promotionName} : -${CurrencyFormatter.format(p.discountAmount)}');
     }
+    
+    final remainingDiscount = order.discountAmount - totalPromoDisc;
+    if (remainingDiscount > 0) {
+      buffer.writeln('Diskon Tambahan : -${CurrencyFormatter.format(remainingDiscount)}');
+    } else if (order.discountAmount > 0 && promotions.isEmpty) {
+      buffer.writeln('Diskon Global   : -${CurrencyFormatter.format(order.discountAmount)}');
+    }
+
     if (order.taxAmount > 0) {
       buffer.writeln('Pajak (PPN)   : +${CurrencyFormatter.format(order.taxAmount)}');
     }

@@ -127,6 +127,26 @@ void main() {
 
       final bomItems = await db.select(db.productRecipes).get();
       expect(bomItems.isNotEmpty, isTrue);
+
+      // Verifikasi kategori topping seblak memiliki defaultNoteType: 'none'
+      final cats = await db.select(db.categories).get();
+      final toppingCat = cats.firstWhere((c) => c.name.contains('Topping'));
+      expect(toppingCat.defaultNoteType, equals('none'));
+    });
+
+    test('Verifikasi defaultNoteType: Retail=none, Coffee & Non Coffee=beverage, Seblak Toppings=none', () async {
+      await repo.seedDummyData();
+      await repo.seedCoffeeMenuProducts();
+      await repo.seedSeblakMenuProducts();
+
+      final cats = await db.select(db.categories).get();
+      final coffeeCat = cats.firstWhere((c) => c.name == 'Coffee');
+      final nonCoffeeCat = cats.firstWhere((c) => c.name == 'Non Coffee');
+      expect(coffeeCat.defaultNoteType, equals('beverage'));
+      expect(nonCoffeeCat.defaultNoteType, equals('beverage'));
+
+      final toppingCat = cats.firstWhere((c) => c.name == 'Topping Kerupuk Seblak');
+      expect(toppingCat.defaultNoteType, equals('none'));
     });
   });
 }

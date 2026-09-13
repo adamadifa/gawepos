@@ -27,6 +27,10 @@ import '../../features/inventory/data/return_repository.dart';
 import '../../features/inventory/presentation/bloc/return_cubit.dart';
 import '../../features/consignment/data/consignment_repository.dart';
 import '../../features/consignment/presentation/bloc/consignment_cubit.dart';
+import '../../features/tables/data/table_repository.dart';
+import '../../features/tables/presentation/bloc/table_cubit.dart';
+import '../../features/promotions/data/promotion_repository.dart';
+import '../../features/promotions/presentation/bloc/promotion_cubit.dart';
 
 final getIt = GetIt.instance;
 
@@ -49,8 +53,14 @@ Future<void> setupLocator() async {
   // Register InventoryRepository
   getIt.registerLazySingleton<InventoryRepository>(() => InventoryRepository(getIt<AppDatabase>()));
 
+  // Register TableRepository
+  getIt.registerLazySingleton<TableRepository>(() => TableRepository(getIt<AppDatabase>()));
+
   // Register SalesRepository
   getIt.registerLazySingleton<SalesRepository>(() => SalesRepository(getIt<AppDatabase>()));
+
+  // Register PromotionRepository
+  getIt.registerLazySingleton<PromotionRepository>(() => PromotionRepository(getIt<AppDatabase>()));
  
   // Register ExpensesRepository & PurchaseRepository
   getIt.registerLazySingleton<ExpensesRepository>(() => ExpensesRepository(getIt<AppDatabase>()));
@@ -72,6 +82,12 @@ Future<void> setupLocator() async {
   getIt.registerFactory<CustomerCubit>(() => CustomerCubit(getIt<MasterRepository>()));
   getIt.registerFactory<SupplierCubit>(() => SupplierCubit(getIt<MasterRepository>()));
   getIt.registerFactory<ProductCubit>(() => ProductCubit(getIt<MasterRepository>()));
+
+  // Register Table Cubit
+  getIt.registerFactory<TableCubit>(() => TableCubit(getIt<TableRepository>()));
+
+  // Register Promotion Cubit
+  getIt.registerFactory<PromotionCubit>(() => PromotionCubit(getIt<PromotionRepository>()));
 
   // Register Inventory Cubit
   getIt.registerFactory<InventoryCubit>(() => InventoryCubit(getIt<InventoryRepository>()));

@@ -7,7 +7,10 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/di/injection.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../data/sales_repository.dart';
+import '../../../tables/data/table_repository.dart';
+import '../../../tables/presentation/bloc/table_cubit.dart';
 import '../bloc/cart_cubit.dart';
+import '../../../../core/services/queue_voice_service.dart';
 
 class HeldOrdersPage extends StatefulWidget {
   final User user;
@@ -27,6 +30,8 @@ class HeldOrdersPage extends StatefulWidget {
 
 class _HeldOrdersPageState extends State<HeldOrdersPage> {
   final SalesRepository _salesRepository = getIt<SalesRepository>();
+  final TableRepository _tableRepository = getIt<TableRepository>();
+  List<RestaurantTable> _allTables = [];
   List<_ParsedHeldOrder> _parsedHeldOrders = [];
   List<_ParsedHeldOrder> _filteredHeldOrders = [];
   bool _isLoading = true;
@@ -49,8 +54,10 @@ class _HeldOrdersPageState extends State<HeldOrdersPage> {
     setState(() => _isLoading = true);
     try {
       final orders = await _salesRepository.getHeldOrders(widget.user.id);
-      final parsed = orders.map((o) => _parseHeldOrder(o)).toList();
+      final tables = await _tableRepository.getAllTables();
+      final parsed = orders.map((o) => _parseHeldOrder(o, tables)).toList();
       setState(() {
+        _allTables = tables;
         _parsedHeldOrders = parsed;
         _isLoading = false;
       });
@@ -69,25 +76,36 @@ class _HeldOrdersPageState extends State<HeldOrdersPage> {
         _filteredHeldOrders = _parsedHeldOrders.where((parsed) {
           final refMatch = parsed.order.referenceNo.toLowerCase().contains(query);
           final custMatch = parsed.customer != null && parsed.customer!.name.toLowerCase().contains(query);
+          final tableMatch = parsed.table != null && parsed.table!.name.toLowerCase().contains(query);
           final itemMatch = parsed.items.any((item) => item.productName.toLowerCase().contains(query));
-          return refMatch || custMatch || itemMatch;
+          return refMatch || custMatch || tableMatch || itemMatch;
         }).toList();
       }
     });
   }
 
-  _ParsedHeldOrder _parseHeldOrder(PosHeldOrder order) {
+  _ParsedHeldOrder _parseHeldOrder(PosHeldOrder order, [List<RestaurantTable> tables = const []]) {
     try {
       final data = jsonDecode(order.cartData) as Map<String, dynamic>;
       final itemsData = (data['items'] as List<dynamic>?) ?? [];
       final globalDisc = (data['global_discount'] as num?)?.toDouble() ?? 0.0;
       final isPercentage = data['is_global_discount_percentage'] as bool? ?? false;
+      final int? tableId = data['table_id'] as int?;
 
       Customer? customer;
       if (order.customerId != null) {
         final matches = widget.allCustomers.where((c) => c.id == order.customerId);
         if (matches.isNotEmpty) {
           customer = matches.first;
+        }
+      }
+
+      RestaurantTable? table;
+      final sourceTables = tables.isNotEmpty ? tables : _allTables;
+      if (tableId != null && sourceTables.isNotEmpty) {
+        final matches = sourceTables.where((t) => t.id == tableId);
+        if (matches.isNotEmpty) {
+          table = matches.first;
         }
       }
 
@@ -149,6 +167,7 @@ class _HeldOrdersPageState extends State<HeldOrdersPage> {
       return _ParsedHeldOrder(
         order: order,
         customer: customer,
+        table: table,
         totalItemCount: parsedItems.length,
         totalQuantity: totalQty,
         subtotal: subtotal,
@@ -171,9 +190,18 @@ class _HeldOrdersPageState extends State<HeldOrdersPage> {
     }
   }
 
-  Future<void> _deleteHeld(int id, {bool showToast = true}) async {
+  Future<void> _deleteHeld(_ParsedHeldOrder parsed, {bool showToast = true}) async {
     try {
-      await _salesRepository.deleteHeldOrder(id);
+      await _salesRepository.deleteHeldOrder(parsed.order.id);
+      
+      // Jika pesanan terkait meja dan meja tersebut occupied, tawarkan / ubah status kembali ke available
+      if (parsed.table != null) {
+        await _tableRepository.updateTableStatus(parsed.table!.id, 'available');
+        if (mounted) {
+          context.read<TableCubit>().loadTables();
+        }
+      }
+
       _loadHeldOrders();
       if (mounted && showToast) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -205,8 +233,8 @@ class _HeldOrdersPageState extends State<HeldOrdersPage> {
           parsed.order,
           widget.allProducts,
           widget.allCustomers,
+          allTables: _allTables,
         );
-    _deleteHeld(parsed.order.id, showToast: false);
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -282,7 +310,7 @@ class _HeldOrdersPageState extends State<HeldOrdersPage> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
-              _deleteHeld(parsed.order.id, showToast: true);
+              _deleteHeld(parsed, showToast: true);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFDC2626),
@@ -336,35 +364,43 @@ class _HeldOrdersPageState extends State<HeldOrdersPage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFEF3C7),
-                            borderRadius: BorderRadius.circular(10),
+                    Expanded(
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFEF3C7),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: const Icon(Icons.pause_circle_filled_rounded, color: Color(0xFFD97706), size: 20),
                           ),
-                          child: const Icon(Icons.pause_circle_filled_rounded, color: Color(0xFFD97706), size: 20),
-                        ),
-                        const SizedBox(width: 10),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              parsed.order.referenceNo,
-                              style: GoogleFonts.poppins(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: const Color(0xFF0F172A),
-                              ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  parsed.order.referenceNo,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF0F172A),
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  DateFormat('dd MMM yyyy, HH:mm').format(parsed.order.createdAt),
+                                  style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF94A3B8)),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
-                            Text(
-                              DateFormat('dd MMM yyyy, HH:mm').format(parsed.order.createdAt),
-                              style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF94A3B8)),
-                            ),
-                          ],
-                        ),
-                      ],
+                          ),
+                        ],
+                      ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
@@ -382,6 +418,36 @@ class _HeldOrdersPageState extends State<HeldOrdersPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Table badge if any
+                      if (parsed.table != null) ...[
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: const Color(0xFFFDE68A)),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.table_restaurant_rounded, size: 16, color: Color(0xFFD97706)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Meja: ${parsed.table!.name} • ${parsed.table!.section} (${parsed.table!.capacity} Orang)',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF92400E),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+
                       // Customer badge if any
                       if (parsed.customer != null) ...[
                         Container(
@@ -914,27 +980,34 @@ class _HeldOrdersPageState extends State<HeldOrdersPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF3C7),
-                        borderRadius: BorderRadius.circular(8),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.pause_rounded, size: 16, color: Color(0xFFD97706)),
                       ),
-                      child: const Icon(Icons.pause_rounded, size: 16, color: Color(0xFFD97706)),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      order.referenceNo,
-                      style: GoogleFonts.poppins(
-                        fontSize: 13.5,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF0F172A),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          order.referenceNo,
+                          style: GoogleFonts.poppins(
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF0F172A),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
@@ -942,6 +1015,7 @@ class _HeldOrdersPageState extends State<HeldOrdersPage> {
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(Icons.access_time_rounded, size: 11, color: Color(0xFF64748B)),
                       const SizedBox(width: 4),
@@ -965,23 +1039,57 @@ class _HeldOrdersPageState extends State<HeldOrdersPage> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (parsed.customer != null) ...[
-                  Row(
+                if (parsed.customer != null || parsed.table != null) ...[
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      const Icon(Icons.person_outline_rounded, size: 14, color: Color(0xFF2563EB)),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          parsed.customer!.name,
-                          style: GoogleFonts.poppins(
-                            fontSize: 11.5,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF2563EB),
+                      if (parsed.table != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFFDE68A)),
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.table_restaurant_rounded, size: 12, color: Color(0xFFD97706)),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${parsed.table!.name} • ${parsed.table!.section}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 10.5,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFFB45309),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
+                      if (parsed.customer != null)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.person_outline_rounded, size: 14, color: Color(0xFF2563EB)),
+                            const SizedBox(width: 4),
+                            ConstrainedBox(
+                              constraints: const BoxConstraints(maxWidth: 160),
+                              child: Text(
+                                parsed.customer!.name,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF2563EB),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -1020,28 +1128,91 @@ class _HeldOrdersPageState extends State<HeldOrdersPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${parsed.totalItemCount} Item (${CurrencyFormatter.formatQty(parsed.totalQuantity)} pcs)',
-                      style: GoogleFonts.poppins(
-                        fontSize: 10,
-                        color: const Color(0xFF94A3B8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${parsed.totalItemCount} Item (${CurrencyFormatter.formatQty(parsed.totalQuantity)} pcs)',
+                        style: GoogleFonts.poppins(
+                          fontSize: 10,
+                          color: const Color(0xFF94A3B8),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                    Text(
-                      CurrencyFormatter.format(parsed.grandTotal),
-                      style: GoogleFonts.poppins(
-                        fontSize: 14.5,
-                        fontWeight: FontWeight.w800,
-                        color: const Color(0xFF0F172A),
+                      Text(
+                        CurrencyFormatter.format(parsed.grandTotal),
+                        style: GoogleFonts.poppins(
+                          fontSize: 14.5,
+                          fontWeight: FontWeight.w800,
+                          color: const Color(0xFF0F172A),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
+                const SizedBox(width: 8),
                 Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
+                    // Tombol Panggil Suara Antrean AI
+                    ValueListenableBuilder<String?>(
+                      valueListenable: QueueVoiceService().currentlySpeakingQueue,
+                      builder: (context, speakingQueue, child) {
+                        final isSpeakingThis = speakingQueue == order.referenceNo;
+                        return Material(
+                          color: isSpeakingThis ? const Color(0xFF10B981) : const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(8),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(8),
+                            onTap: () {
+                              if (isSpeakingThis) {
+                                QueueVoiceService().stop();
+                              } else {
+                                // Ekstrak nomor antrean dari referenceNo
+                                String qNumber = order.referenceNo;
+                                final match = RegExp(r'#(\d+)').firstMatch(order.referenceNo);
+                                if (match != null) {
+                                  qNumber = match.group(1)!;
+                                }
+
+                                QueueVoiceService().speakQueueCall(
+                                  queueNumber: qNumber,
+                                  customerName: parsed.customer?.name,
+                                  tableName: parsed.table?.name,
+                                );
+                              }
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    isSpeakingThis ? Icons.volume_up_rounded : Icons.record_voice_over_rounded,
+                                    size: 16,
+                                    color: isSpeakingThis ? Colors.white : const Color(0xFF2563EB),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    isSpeakingThis ? 'Memanggil...' : 'Panggil',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: isSpeakingThis ? Colors.white : const Color(0xFF2563EB),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 6),
                     InkWell(
                       onTap: () => _confirmDeleteHeld(parsed),
                       borderRadius: BorderRadius.circular(8),
@@ -1055,7 +1226,7 @@ class _HeldOrdersPageState extends State<HeldOrdersPage> {
                         child: const Icon(Icons.delete_outline_rounded, size: 18, color: Color(0xFFE11D48)),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     ElevatedButton.icon(
                       onPressed: () => _recallOrder(parsed),
                       icon: const Icon(Icons.play_arrow_rounded, size: 16),
@@ -1070,7 +1241,7 @@ class _HeldOrdersPageState extends State<HeldOrdersPage> {
                         backgroundColor: const Color(0xFF0F172A),
                         foregroundColor: Colors.white,
                         elevation: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                     ),
@@ -1143,6 +1314,7 @@ class _HeldOrdersPageState extends State<HeldOrdersPage> {
 class _ParsedHeldOrder {
   final PosHeldOrder order;
   final Customer? customer;
+  final RestaurantTable? table;
   final int totalItemCount;
   final double totalQuantity;
   final double subtotal;
@@ -1154,6 +1326,7 @@ class _ParsedHeldOrder {
   _ParsedHeldOrder({
     required this.order,
     this.customer,
+    this.table,
     required this.totalItemCount,
     required this.totalQuantity,
     required this.subtotal,

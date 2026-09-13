@@ -6,6 +6,7 @@ import '../../../core/database/app_database.dart';
 import 'dummy_products_data.dart';
 import 'dummy_coffee_raw_materials.dart';
 import 'dummy_seblak_data.dart';
+import 'product_excel_service.dart';
 
 class MasterRepository {
   final AppDatabase _db;
@@ -101,6 +102,10 @@ class MasterRepository {
   }
 
   // ─── PRODUCTS & MATRIX CRUD ────────────────────────────────────────
+
+  Future<List<Product>> getProducts() async {
+    return await _db.select(_db.products).get();
+  }
 
   // Mengambil daftar produk lengkap beserta Brand & Category
   Future<List<Map<String, dynamic>>> getProductsWithDetails() async {
@@ -394,6 +399,8 @@ class MasterRepository {
       await _db.delete(_db.stockMovements).go();
       await _db.delete(_db.productUnits).go();
       await _db.delete(_db.products).go();
+      await _db.delete(_db.categories).go();
+      await _db.delete(_db.brands).go();
     });
   }
 
@@ -1022,7 +1029,7 @@ class MasterRepository {
         catId = await _db.into(_db.categories).insert(
           CategoriesCompanion.insert(
             name: item.category,
-            defaultNoteType: const Value('food'),
+            defaultNoteType: const Value('none'),
           ),
         );
         categoryMap[item.category] = catId;
@@ -1138,6 +1145,166 @@ class MasterRepository {
     }
 
     return insertedCount;
+  }
+
+  // ─── IMPORT EXCEL BATCH ──────────────────────────────────────────
+  Future<int> importProductsFromExcelBatch(
+    ExcelParseResult parseResult, {
+    void Function(int current, int total)? onProgress,
+  }) async {
+    return await _db.transaction(() async {
+      // 0. Pastikan default PriceTier
+      final existingTiers = await _db.select(_db.priceTiers).get();
+      int defaultTierId = 1;
+      if (existingTiers.isEmpty) {
+        defaultTierId = await _db.into(_db.priceTiers).insert(
+          PriceTiersCompanion.insert(name: 'Harga Umum'),
+        );
+      } else {
+        defaultTierId = existingTiers.first.id;
+      }
+
+      // 1. Sinkronisasi Kategori
+      final existingCats = await _db.select(_db.categories).get();
+      final Map<String, int> catMap = {
+        for (var c in existingCats) c.name.toLowerCase().trim(): c.id
+      };
+
+      // Tambahkan kategori dari Sheet Kategori
+      for (final catRow in parseResult.categories) {
+        final key = catRow.name.toLowerCase().trim();
+        if (!catMap.containsKey(key)) {
+          final id = await _db.into(_db.categories).insert(
+            CategoriesCompanion.insert(
+              name: catRow.name.trim(),
+              description: Value(catRow.description?.trim()),
+            ),
+          );
+          catMap[key] = id;
+        }
+      }
+
+      // 2. Sinkronisasi Merek
+      final existingBrands = await _db.select(_db.brands).get();
+      final Map<String, int> brandMap = {
+        for (var b in existingBrands) b.name.toLowerCase().trim(): b.id
+      };
+
+      for (final brandRow in parseResult.brands) {
+        final key = brandRow.name.toLowerCase().trim();
+        if (!brandMap.containsKey(key)) {
+          final id = await _db.into(_db.brands).insert(
+            BrandsCompanion.insert(
+              name: brandRow.name.trim(),
+            ),
+          );
+          brandMap[key] = id;
+        }
+      }
+
+      // 3. Simpan Produk massal
+      int insertedCount = 0;
+      final totalProducts = parseResult.products.length;
+
+      for (int i = 0; i < totalProducts; i++) {
+        final prodRow = parseResult.products[i];
+
+        // Pastikan kategori produk ada (jika terisi di baris produk)
+        int? categoryId;
+        if (prodRow.categoryName != null && prodRow.categoryName!.isNotEmpty) {
+          final catKey = prodRow.categoryName!.toLowerCase().trim();
+          if (catMap.containsKey(catKey)) {
+            categoryId = catMap[catKey];
+          } else {
+            // Auto create kategori jika baru
+            categoryId = await _db.into(_db.categories).insert(
+              CategoriesCompanion.insert(name: prodRow.categoryName!.trim()),
+            );
+            catMap[catKey] = categoryId;
+          }
+        }
+
+        // Pastikan merek produk ada
+        int? brandId;
+        if (prodRow.brandName != null && prodRow.brandName!.isNotEmpty) {
+          final brandKey = prodRow.brandName!.toLowerCase().trim();
+          if (brandMap.containsKey(brandKey)) {
+            brandId = brandMap[brandKey];
+          } else {
+            // Auto create merek jika baru
+            brandId = await _db.into(_db.brands).insert(
+              BrandsCompanion.insert(name: prodRow.brandName!.trim()),
+            );
+            brandMap[brandKey] = brandId;
+          }
+        }
+
+        // Insert Produk
+        final productId = await _db.into(_db.products).insert(
+          ProductsCompanion.insert(
+            name: prodRow.name.trim(),
+            barcode: Value(prodRow.barcode?.trim()),
+            sku: Value(prodRow.sku?.trim()),
+            categoryId: Value(categoryId),
+            brandId: Value(brandId),
+            productType: const Value('goods'),
+            isStockManaged: const Value(true),
+            minStockAlert: Value(prodRow.minStockAlert),
+            isActive: const Value(true),
+            businessSegment: Value(prodRow.businessSegment),
+          ),
+        );
+
+        // Insert Satuan Dasar
+        final unitId = await _db.into(_db.productUnits).insert(
+          ProductUnitsCompanion.insert(
+            productId: productId,
+            name: prodRow.unitName.trim().isEmpty ? 'Pcs' : prodRow.unitName.trim(),
+            conversionFactor: const Value(1.0),
+            costPrice: Value(prodRow.costPrice),
+            isBase: const Value(true),
+          ),
+        );
+
+        // Insert Harga Jual
+        await _db.into(_db.productPrices).insert(
+          ProductPricesCompanion.insert(
+            productId: productId,
+            unitId: unitId,
+            priceTierId: defaultTierId,
+            price: Value(prodRow.sellPrice),
+            minQty: const Value(1),
+          ),
+        );
+
+        // Inisialisasi Stok jika > 0
+        if (prodRow.initialStock > 0) {
+          await _db.into(_db.inventory).insert(
+            InventoryCompanion.insert(
+              productId: productId,
+              unitId: unitId,
+              quantity: Value(prodRow.initialStock),
+            ),
+          );
+
+          await _db.into(_db.stockMovements).insert(
+            StockMovementsCompanion.insert(
+              productId: productId,
+              unitId: unitId,
+              quantity: prodRow.initialStock,
+              type: 'opname',
+              referenceNo: const Value('IMPORT_EXCEL'),
+              notes: const Value('Stok awal dari import data Excel'),
+            ),
+          );
+        }
+
+        insertedCount++;
+        onProgress?.call(insertedCount, totalProducts);
+      }
+
+      return insertedCount;
+    });
   }
 }
 

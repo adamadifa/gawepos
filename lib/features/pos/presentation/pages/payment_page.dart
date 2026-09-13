@@ -322,6 +322,7 @@ class _PaymentPageState extends State<PaymentPage>
           downPayment: _paymentMethod == 'debt' ? _amountPaid : 0.0,
           cartItems: cartItemsMap,
           payments: paymentsMap,
+          appliedPromotions: widget.cart.appliedPromotions.map((p) => p.toMap()).toList(),
           customerId: widget.cart.selectedCustomer?.id,
           notes: _notesController.text.trim().isEmpty
               ? null

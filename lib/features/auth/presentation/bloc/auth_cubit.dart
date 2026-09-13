@@ -52,7 +52,7 @@ class AuthCubit extends Cubit<AuthState> {
     if (_currentUser == null) return false;
     // Admin always has access to core & management menus to prevent lockout
     if (_currentUser!.role == 'admin' && 
-        (menuKey == 'users' || menuKey == 'settings' || menuKey == 'owner_dashboard' || menuKey == 'debts_receivables' || menuKey == 'returns' || menuKey == 'consignment')) {
+        (menuKey == 'users' || menuKey == 'settings' || menuKey == 'owner_dashboard' || menuKey == 'debts_receivables' || menuKey == 'returns' || menuKey == 'consignment' || menuKey == 'promotions')) {
       return true;
     }
     return _allowedMenus.contains(menuKey);

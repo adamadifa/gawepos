@@ -19,7 +19,15 @@ class StockCardLoaded extends InventoryState {
   StockCardLoaded(this.movements, this.units);
 }
 
-class InventorySuccess extends InventoryState {}
+class AdjustmentHistoryLoaded extends InventoryState {
+  final List<Map<String, dynamic>> history;
+  AdjustmentHistoryLoaded(this.history);
+}
+
+class InventorySuccess extends InventoryState {
+  final String? message;
+  InventorySuccess([this.message]);
+}
 
 class InventoryError extends InventoryState {
   final String message;
@@ -52,6 +60,27 @@ class InventoryCubit extends Cubit<InventoryState> {
     }
   }
 
+  Future<void> loadAdjustmentHistory({DateTime? start, DateTime? end, String? search}) async {
+    emit(InventoryLoading());
+    try {
+      final history = await _repository.getAdjustmentHistory(start: start, end: end, search: search);
+      emit(AdjustmentHistoryLoaded(history));
+    } catch (e) {
+      emit(InventoryError('Gagal memuat riwayat penyesuaian: $e'));
+    }
+  }
+
+  Future<void> deleteAdjustmentMovement(int movementId, {DateTime? start, DateTime? end, String? search}) async {
+    emit(InventoryLoading());
+    try {
+      await _repository.deleteAdjustmentMovement(movementId);
+      emit(InventorySuccess('Penyesuaian stok berhasil dibatalkan & stok dikembalikan.'));
+      await loadAdjustmentHistory(start: start, end: end, search: search);
+    } catch (e) {
+      emit(InventoryError('Gagal membatalkan penyesuaian stok: $e'));
+    }
+  }
+
   Future<void> adjustStock({
     required int productId,
     required int unitId,
@@ -68,7 +97,7 @@ class InventoryCubit extends Cubit<InventoryState> {
         physicalQty: physicalQty,
         notes: notes,
       );
-      emit(InventorySuccess());
+      emit(InventorySuccess('Penyesuaian stok opname berhasil disimpan.'));
       await loadInventory();
     } catch (e) {
       emit(InventoryError('Gagal melakukan penyesuaian stok: $e'));
@@ -91,7 +120,7 @@ class InventoryCubit extends Cubit<InventoryState> {
           notes: notes,
         );
       }
-      emit(InventorySuccess());
+      emit(InventorySuccess('Penyesuaian stok opname berhasil disimpan.'));
       await loadInventory();
     } catch (e) {
       emit(InventoryError('Gagal melakukan penyesuaian stok: $e'));
@@ -114,7 +143,7 @@ class InventoryCubit extends Cubit<InventoryState> {
         isAddition: isAddition,
         notes: notes,
       );
-      emit(InventorySuccess());
+      emit(InventorySuccess('Penyesuaian stok manual berhasil disimpan.'));
       await loadInventory();
     } catch (e) {
       emit(InventoryError('Gagal melakukan penyesuaian stok manual: $e'));

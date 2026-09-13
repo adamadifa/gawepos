@@ -430,6 +430,69 @@ class ProductRecipes extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
+// 29. Meja Restoran / Kafe (Dining Tables)
+@TableIndex(name: 'restaurant_tables_section_idx', columns: {#section})
+class RestaurantTables extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text().withLength(min: 1, max: 50)(); // Misal: "Meja 01", "VIP 1", "Bar 03"
+  TextColumn get section => text().withDefault(const Constant('Utama'))(); // Misal: "Lantai 1", "Outdoor", "VIP"
+  IntColumn get capacity => integer().withDefault(const Constant(4))(); // Jumlah kursi (contoh: 2, 4, 6)
+  TextColumn get status => text().withDefault(const Constant('available'))(); // 'available', 'occupied', 'reserved'
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+// 30. Program Promosi & Diskon Kasir (Promotions)
+@TableIndex(name: 'promotions_type_idx', columns: {#type})
+@TableIndex(name: 'promotions_active_idx', columns: {#isActive})
+class Promotions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get code => text().unique()(); // Kode unik promo, misal: "PROMO-BOGO-SUSU"
+  TextColumn get name => text().withLength(min: 1, max: 100)(); // Misal: "Beli 2 Gratis 1 Susu UHT"
+  TextColumn get description => text().nullable()();
+  TextColumn get type => text()(); // 'buy_x_get_y', 'product_discount', 'min_purchase_discount', 'purchase_with_purchase'
+  
+  // Konfigurasi Diskon & Syarat
+  TextColumn get discountType => text().withDefault(const Constant('nominal'))(); // 'nominal' / 'percentage'
+  RealColumn get discountValue => real().withDefault(const Constant(0.0))(); // Nilai potongan (Rp / %)
+  RealColumn get minPurchaseAmount => real().withDefault(const Constant(0.0))(); // Syarat minimal belanja (Rp)
+  
+  // Konfigurasi BOGO / Buy X Get Y / PWP
+  @ReferenceName('promoBuyProducts')
+  IntColumn get buyProductId => integer().nullable().references(Products, #id, onDelete: KeyAction.cascade)();
+  RealColumn get buyQuantity => real().withDefault(const Constant(1.0))();
+  @ReferenceName('promoGetProducts')
+  IntColumn get getProductId => integer().nullable().references(Products, #id, onDelete: KeyAction.cascade)();
+  RealColumn get getQuantity => real().withDefault(const Constant(1.0))();
+  RealColumn get specialPrice => real().nullable()(); // Harga khusus jika tebus murah (PWP)
+
+  // Filter Kategori / Brand (Opsional untuk diskon massal)
+  IntColumn get categoryId => integer().nullable().references(Categories, #id, onDelete: KeyAction.setNull)();
+  IntColumn get brandId => integer().nullable().references(Brands, #id, onDelete: KeyAction.setNull)();
+
+  // Batasan Waktu & Member
+  DateTimeColumn get startDate => dateTime()();
+  DateTimeColumn get endDate => dateTime()();
+  TextColumn get activeDays => text().withDefault(const Constant('1,2,3,4,5,6,7'))(); // 1=Senin..7=Minggu
+  TextColumn get activeHours => text().nullable()(); // Misal: "14:00-17:00"
+  BoolColumn get memberOnly => boolean().withDefault(const Constant(false))();
+  IntColumn get maxUsageCount => integer().withDefault(const Constant(0))(); // 0 = unlimited
+  IntColumn get currentUsageCount => integer().withDefault(const Constant(0))();
+  
+  BoolColumn get isActive => boolean().withDefault(const Constant(true))();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+// 31. Riwayat Promosi yang Terpakai pada Transaksi Penjualan
+@TableIndex(name: 'order_promotions_order_idx', columns: {#orderId})
+class OrderPromotions extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get orderId => integer().references(Orders, #id, onDelete: KeyAction.cascade)();
+  IntColumn get promotionId => integer().references(Promotions, #id)();
+  TextColumn get promotionName => text()();
+  RealColumn get discountAmount => real()();
+}
+
 @DriftDatabase(tables: [
   Outlets,
   Users,
@@ -465,12 +528,15 @@ class ProductRecipes extends Table {
   ConsignmentSettlements,
   ConsignmentSettlementItems,
   ProductRecipes,
+  RestaurantTables,
+  Promotions,
+  OrderPromotions,
 ])
 class AppDatabase extends _$AppDatabase {
   AppDatabase([QueryExecutor? e]) : super(e ?? _openConnection());
 
   @override
-  int get schemaVersion => 13;
+  int get schemaVersion => 15;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -528,6 +594,13 @@ class AppDatabase extends _$AppDatabase {
           }
           if (from < 13) {
             await m.addColumn(categories, categories.defaultNoteType);
+          }
+          if (from < 14) {
+            await m.createTable(restaurantTables);
+          }
+          if (from < 15) {
+            await m.createTable(promotions);
+            await m.createTable(orderPromotions);
           }
         },
         beforeOpen: (details) async {

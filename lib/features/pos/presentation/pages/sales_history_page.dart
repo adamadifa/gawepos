@@ -8,6 +8,7 @@ import '../../../../core/services/print_service.dart';
 import '../../../../core/di/injection.dart';
 import '../../../master/data/master_repository.dart';
 import '../../data/sales_repository.dart';
+import '../../../../core/services/queue_voice_service.dart';
 
 class SalesHistoryPage extends StatefulWidget {
   const SalesHistoryPage({super.key});
@@ -27,7 +28,7 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
 
   DateTime? _startDate;
   DateTime? _endDate;
-  String _selectedRange = 'Semua';
+  String _selectedRange = 'Hari Ini';
   String _customerSearchQuery = '';
   final TextEditingController _customerSearchController = TextEditingController();
   bool _isLoading = false;
@@ -42,6 +43,9 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
   @override
   void initState() {
     super.initState();
+    final now = DateTime.now();
+    _startDate = DateTime(now.year, now.month, now.day);
+    _endDate = DateTime(now.year, now.month, now.day, 23, 59, 59);
     _loadData();
   }
 
@@ -194,6 +198,16 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
     final Customer? customer = details['customer'];
     final CashierSession? session = details['session'];
 
+    final anMatch = order.notes != null ? RegExp(r'a/n\s+([^•]+)').firstMatch(order.notes!) : null;
+    final anName = anMatch?.group(1)?.trim();
+    final displayName = customer != null ? customer.name : anName;
+    final cleanModalNotes = order.notes != null
+        ? order.notes!
+            .replaceAll(RegExp(r'\s*•?\s*Antrean #\d+'), '')
+            .replaceAll(RegExp(r'\s*•?\s*a/n\s+[^•]+'), '')
+            .trim()
+        : '';
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -281,20 +295,20 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                         ],
                       ),
                       const Divider(height: 24, color: Color(0xFFE2E8F0)),
-                      if (customer != null) ...[
+                      if (displayName != null && displayName.isNotEmpty) ...[
                         Row(
                           children: [
                             const Icon(Icons.person_rounded, size: 16, color: Color(0xFF64748B)),
                             const SizedBox(width: 6),
                             Text(
-                              'Pelanggan: ${customer.name}',
+                              'Pelanggan: $displayName',
                               style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
                             ),
                           ],
                         ),
                         const SizedBox(height: 10),
                       ],
-                      if (order.notes != null && order.notes!.isNotEmpty) ...[
+                      if (cleanModalNotes.isNotEmpty) ...[
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(10),
@@ -303,7 +317,7 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: const Color(0xFFE2E8F0)),
                           ),
-                          child: Text('Catatan: ${order.notes}', style: GoogleFonts.poppins(fontSize: 11.5, color: const Color(0xFF64748B))),
+                          child: Text('Catatan: $cleanModalNotes', style: GoogleFonts.poppins(fontSize: 11.5, color: const Color(0xFF64748B))),
                         ),
                         const SizedBox(height: 12),
                       ],
@@ -340,9 +354,29 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                                       Text(
                                         product?.name ?? 'Produk (ID: ${item.productId})',
                                         style: GoogleFonts.poppins(fontSize: 12.5, fontWeight: FontWeight.w600, color: const Color(0xFF0F172A)),
-                                        maxLines: 1,
+                                        maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
                                       ),
+                                      if (item.notes != null && item.notes!.trim().isNotEmpty) ...[
+                                        const SizedBox(height: 2),
+                                        Row(
+                                          children: [
+                                            const Text('• ', style: TextStyle(fontSize: 10, color: Color(0xFFD97706), fontWeight: FontWeight.bold)),
+                                            Expanded(
+                                              child: Text(
+                                                item.notes!.trim(),
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 10.5,
+                                                  color: const Color(0xFFD97706),
+                                                  fontWeight: FontWeight.w500,
+                                                  fontStyle: FontStyle.italic,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                      const SizedBox(height: 2),
                                       Text(
                                         '$qtyStr ${unit?.name ?? "Pcs"} x ${CurrencyFormatter.format(item.price)}',
                                         style: GoogleFonts.poppins(fontSize: 11, color: const Color(0xFF64748B)),
@@ -435,6 +469,59 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                         ),
                       ],
                       const SizedBox(height: 20),
+                      // Tombol Panggil Antrean Suara AI
+                      ValueListenableBuilder<String?>(
+                        valueListenable: QueueVoiceService().currentlySpeakingQueue,
+                        builder: (context, speakingQueue, child) {
+                          String qNum = '';
+                          final notes = order.notes ?? '';
+                          final match = RegExp(r'#(\d+)').firstMatch(notes);
+                          if (match != null) {
+                            qNum = match.group(1)!;
+                          }
+                          final isSpeaking = speakingQueue == (qNum.isNotEmpty ? qNum : order.referenceNo);
+
+                          return SizedBox(
+                            width: double.infinity,
+                            height: 44,
+                            child: OutlinedButton.icon(
+                              onPressed: () {
+                                if (isSpeaking) {
+                                  QueueVoiceService().stop();
+                                } else {
+                                  QueueVoiceService().speakQueueCall(
+                                    queueNumber: qNum.isNotEmpty ? qNum : order.referenceNo,
+                                    customerName: displayName,
+                                  );
+                                }
+                              },
+                              icon: Icon(
+                                isSpeaking ? Icons.volume_up_rounded : Icons.record_voice_over_rounded,
+                                size: 18,
+                                color: isSpeaking ? const Color(0xFF10B981) : const Color(0xFF2563EB),
+                              ),
+                              label: Text(
+                                isSpeaking
+                                    ? 'Memanggil Antrean...'
+                                    : (qNum.isNotEmpty ? 'PANGGIL ANTREAN #$qNum' : 'PANGGIL NOTA #${order.referenceNo}'),
+                                style: GoogleFonts.poppins(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 12.5,
+                                  color: isSpeaking ? const Color(0xFF10B981) : const Color(0xFF2563EB),
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(
+                                  color: isSpeaking ? const Color(0xFF10B981) : const Color(0xFFBFDBFE),
+                                  width: 1.5,
+                                ),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 10),
                       SizedBox(
                         width: double.infinity,
                         height: 46,
@@ -795,6 +882,22 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                                 final dateStr = DateFormat('dd MMM yyyy').format(item.createdAt);
                                 final isVoid = item.status == 'void';
 
+                                final match = item.notes != null ? RegExp(r'Antrean #\d+').firstMatch(item.notes!) : null;
+                                final queueTag = match?.group(0);
+                                final anMatch = item.notes != null ? RegExp(r'a/n\s+([^•]+)').firstMatch(item.notes!) : null;
+                                final anName = anMatch?.group(1)?.trim();
+                                
+                                final cleanNotes = item.notes != null
+                                    ? item.notes!
+                                        .replaceAll(RegExp(r'\s*•?\s*Antrean #\d+'), '')
+                                        .replaceAll(RegExp(r'\s*•?\s*a/n\s+[^•]+'), '')
+                                        .trim()
+                                    : '';
+
+                                final displayName = customer != null
+                                    ? customer.name
+                                    : (anName != null && anName.isNotEmpty ? anName : 'Pelanggan Umum');
+
                                 return Container(
                                   margin: const EdgeInsets.only(bottom: 12),
                                   decoration: BoxDecoration(
@@ -820,34 +923,66 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                                           Row(
                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
-                                              Row(
-                                                children: [
-                                                  Container(
-                                                    padding: const EdgeInsets.all(6),
-                                                    decoration: BoxDecoration(
-                                                      color: isVoid
-                                                          ? Colors.grey.withValues(alpha: 0.1)
-                                                          : const Color(0xFF0F172A).withValues(alpha: 0.06),
-                                                      borderRadius: BorderRadius.circular(8),
+                                              Expanded(
+                                                child: Row(
+                                                  children: [
+                                                    Container(
+                                                      padding: const EdgeInsets.all(6),
+                                                      decoration: BoxDecoration(
+                                                        color: isVoid
+                                                            ? Colors.grey.withValues(alpha: 0.1)
+                                                            : const Color(0xFF0F172A).withValues(alpha: 0.06),
+                                                        borderRadius: BorderRadius.circular(8),
+                                                      ),
+                                                      child: Icon(
+                                                        isVoid ? Icons.cancel_outlined : Icons.receipt_rounded,
+                                                        size: 16,
+                                                        color: isVoid ? Colors.grey : const Color(0xFF0F172A),
+                                                      ),
                                                     ),
-                                                    child: Icon(
-                                                      isVoid ? Icons.cancel_outlined : Icons.receipt_rounded,
-                                                      size: 16,
-                                                      color: isVoid ? Colors.grey : const Color(0xFF0F172A),
+                                                    const SizedBox(width: 8),
+                                                    Flexible(
+                                                      child: Text(
+                                                        item.referenceNo,
+                                                        style: GoogleFonts.poppins(
+                                                          fontWeight: FontWeight.w700,
+                                                          fontSize: 13.5,
+                                                          color: isVoid ? Colors.grey : const Color(0xFF0F172A),
+                                                          decoration: isVoid ? TextDecoration.lineThrough : null,
+                                                        ),
+                                                        overflow: TextOverflow.ellipsis,
+                                                      ),
                                                     ),
-                                                  ),
-                                                  const SizedBox(width: 8),
-                                                  Text(
-                                                    item.referenceNo,
-                                                    style: GoogleFonts.poppins(
-                                                      fontWeight: FontWeight.w700,
-                                                      fontSize: 13.5,
-                                                      color: isVoid ? Colors.grey : const Color(0xFF0F172A),
-                                                      decoration: isVoid ? TextDecoration.lineThrough : null,
-                                                    ),
-                                                  ),
-                                                ],
+                                                    if (queueTag != null) ...[
+                                                      const SizedBox(width: 8),
+                                                      Container(
+                                                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                                                        decoration: BoxDecoration(
+                                                          color: const Color(0xFFF59E0B).withValues(alpha: 0.12),
+                                                          borderRadius: BorderRadius.circular(6),
+                                                          border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.35)),
+                                                        ),
+                                                        child: Row(
+                                                          mainAxisSize: MainAxisSize.min,
+                                                          children: [
+                                                            const Icon(Icons.confirmation_number_rounded, size: 11, color: Color(0xFFD97706)),
+                                                            const SizedBox(width: 3),
+                                                            Text(
+                                                              queueTag,
+                                                              style: GoogleFonts.poppins(
+                                                                fontSize: 10.5,
+                                                                fontWeight: FontWeight.w700,
+                                                                color: const Color(0xFFD97706),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ],
+                                                ),
                                               ),
+                                              const SizedBox(width: 6),
                                               _buildStatusBadge(item.paymentStatus, item.status),
                                             ],
                                           ),
@@ -856,7 +991,7 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                             children: [
                                               Text(
-                                                customer != null ? 'Pelanggan: ${customer.name}' : 'Pelanggan Umum',
+                                                'Pelanggan: $displayName',
                                                 style: GoogleFonts.poppins(
                                                   fontSize: 12,
                                                   fontWeight: FontWeight.w500,
@@ -873,6 +1008,35 @@ class _SalesHistoryPageState extends State<SalesHistoryPage> {
                                               ),
                                             ],
                                           ),
+                                          if (cleanNotes.isNotEmpty) ...[
+                                            const SizedBox(height: 6),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFF1F5F9),
+                                                borderRadius: BorderRadius.circular(6),
+                                                border: Border.all(color: const Color(0xFFE2E8F0)),
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  const Icon(Icons.notes_rounded, size: 13, color: Color(0xFF64748B)),
+                                                  const SizedBox(width: 5),
+                                                  Expanded(
+                                                    child: Text(
+                                                      cleanNotes,
+                                                      style: GoogleFonts.poppins(
+                                                        fontSize: 11,
+                                                        color: const Color(0xFF475569),
+                                                        fontStyle: FontStyle.italic,
+                                                      ),
+                                                      maxLines: 1,
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
                                           const SizedBox(height: 8),
                                           Row(
                                             mainAxisAlignment: MainAxisAlignment.spaceBetween,

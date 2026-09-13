@@ -192,221 +192,223 @@ class _CategoryTabContentState extends State<_CategoryTabContent> {
                 top: false,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Handle bar
-                      Center(
-                        child: Container(
-                          width: 36,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFCBD5E1),
-                            borderRadius: BorderRadius.circular(2),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Handle bar
+                        Center(
+                          child: Container(
+                            width: 36,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFCBD5E1),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 14),
+                        const SizedBox(height: 14),
 
-                      // Header
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF0F172A).withValues(alpha: 0.06),
-                                  borderRadius: BorderRadius.circular(10),
+                        // Header
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(Icons.category_rounded,
+                                      color: Color(0xFF0F172A), size: 18),
                                 ),
-                                child: const Icon(Icons.category_rounded,
-                                    color: Color(0xFF0F172A), size: 18),
-                              ),
-                              const SizedBox(width: 10),
-                              Text(
-                                category == null ? 'Tambah Kategori' : 'Ubah Kategori',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF0F172A),
+                                const SizedBox(width: 10),
+                                Text(
+                                  category == null ? 'Tambah Kategori' : 'Ubah Kategori',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF0F172A),
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          IconButton(
-                            visualDensity: VisualDensity.compact,
-                            icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B), size: 20),
-                            onPressed: () => Navigator.pop(ctx),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 18),
+                              ],
+                            ),
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B), size: 20),
+                              onPressed: () => Navigator.pop(ctx),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 18),
 
-                      // Field: Nama Kategori
-                      Text(
-                        'Nama Kategori',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF334155),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      TextFormField(
-                        controller: _nameController,
-                        style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
-                        decoration: InputDecoration(
-                          hintText: 'Contoh: Makanan, Minuman, Pakaian...',
-                          hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
-                          prefixIcon: const Icon(Icons.label_outline_rounded, size: 18, color: Color(0xFF64748B)),
-                          filled: true,
-                          fillColor: const Color(0xFFF8FAFC),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          errorText: (hasInteractedName && !isNameValid) ? 'Nama kategori wajib diisi' : null,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                        // Field: Nama Kategori
+                        Text(
+                          'Nama Kategori',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF334155),
                           ),
                         ),
-                        onChanged: (_) {
-                          setModalState(() {
-                            hasInteractedName = true;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 14),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          controller: _nameController,
+                          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
+                          decoration: InputDecoration(
+                            hintText: 'Contoh: Makanan, Minuman, Pakaian...',
+                            hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                            prefixIcon: const Icon(Icons.label_outline_rounded, size: 18, color: Color(0xFF64748B)),
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            errorText: (hasInteractedName && !isNameValid) ? 'Nama kategori wajib diisi' : null,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                            ),
+                          ),
+                          onChanged: (_) {
+                            setModalState(() {
+                              hasInteractedName = true;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 14),
 
-                      // Field: Deskripsi
-                      Text(
-                        'Deskripsi (Opsional)',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF334155),
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      TextField(
-                        controller: _descController,
-                        style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
-                        decoration: InputDecoration(
-                          hintText: 'Keterangan tambahan untuk kategori...',
-                          hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
-                          prefixIcon: const Icon(Icons.notes_rounded, size: 18, color: Color(0xFF64748B)),
-                          filled: true,
-                          fillColor: const Color(0xFFF8FAFC),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                        // Field: Deskripsi
+                        Text(
+                          'Deskripsi (Opsional)',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF334155),
                           ),
                         ),
-                        maxLines: 2,
-                      ),
-                      const SizedBox(height: 16),
+                        const SizedBox(height: 6),
+                        TextField(
+                          controller: _descController,
+                          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
+                          decoration: InputDecoration(
+                            hintText: 'Keterangan tambahan untuk kategori...',
+                            hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                            prefixIcon: const Icon(Icons.notes_rounded, size: 18, color: Color(0xFF64748B)),
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                            ),
+                          ),
+                          maxLines: 2,
+                        ),
+                        const SizedBox(height: 16),
 
-                      // Field: Jenis Preset Catatan / Racikan
-                      Text(
-                        'Jenis Preset Catatan & Racikan Kasir',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF334155),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Preset racikan yang otomatis tampil saat produk dalam kategori ini dipilih di kasir.',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          color: const Color(0xFF64748B),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          _buildNoteTypeSelectorOption(
-                            type: 'none',
-                            label: '❌ Tanpa Catatan',
-                            sublabel: 'Retail / tidak ada racikan',
-                            activeColor: const Color(0xFF64748B),
-                            isSelected: selectedNoteType == 'none' || selectedNoteType.isEmpty,
-                            onTap: () => setModalState(() => selectedNoteType = 'none'),
+                        // Field: Jenis Preset Catatan / Racikan
+                        Text(
+                          'Jenis Preset Catatan & Racikan Kasir',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF334155),
                           ),
-                          ..._noteGroups.map((group) {
-                            return _buildNoteTypeSelectorOption(
-                              type: group.id,
-                              label: group.name,
-                              sublabel: '${group.options.length} pilihan opsi cepat',
-                              activeColor: Color(group.colorValue),
-                              isSelected: selectedNoteType == group.id,
-                              onTap: () => setModalState(() => selectedNoteType = group.id),
-                            );
-                          }),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Preset racikan yang otomatis tampil saat produk dalam kategori ini dipilih di kasir.',
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color: const Color(0xFF64748B),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _buildNoteTypeSelectorOption(
+                              type: 'none',
+                              label: '❌ Tanpa Catatan',
+                              sublabel: 'Retail / tidak ada racikan',
+                              activeColor: const Color(0xFF64748B),
+                              isSelected: selectedNoteType == 'none' || selectedNoteType.isEmpty,
+                              onTap: () => setModalState(() => selectedNoteType = 'none'),
+                            ),
+                            ..._noteGroups.map((group) {
+                              return _buildNoteTypeSelectorOption(
+                                type: group.id,
+                                label: group.name,
+                                sublabel: '${group.options.length} pilihan opsi cepat',
+                                activeColor: Color(group.colorValue),
+                                isSelected: selectedNoteType == group.id,
+                                onTap: () => setModalState(() => selectedNoteType = group.id),
+                              );
+                            }),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
 
-                      // Submit Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: FilledButton.icon(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF0F172A),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            disabledBackgroundColor: const Color(0xFFE2E8F0),
-                            disabledForegroundColor: const Color(0xFF94A3B8),
-                          ),
-                          icon: const Icon(Icons.check_rounded, size: 18),
-                          onPressed: isNameValid
-                              ? () {
-                                  final name = _nameController.text.trim();
-                                  if (category == null) {
-                                    context.read<CategoryCubit>().addCategory(
-                                      name,
-                                      _descController.text.trim().isEmpty ? null : _descController.text.trim(),
-                                      defaultNoteType: selectedNoteType,
-                                    );
-                                  } else {
-                                    context.read<CategoryCubit>().editCategory(
-                                      category,
-                                      name,
-                                      _descController.text.trim().isEmpty ? null : _descController.text.trim(),
-                                      defaultNoteType: selectedNoteType,
-                                    );
+                        // Submit Button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF0F172A),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              disabledBackgroundColor: const Color(0xFFE2E8F0),
+                              disabledForegroundColor: const Color(0xFF94A3B8),
+                            ),
+                            icon: const Icon(Icons.check_rounded, size: 18),
+                            onPressed: isNameValid
+                                ? () {
+                                    final name = _nameController.text.trim();
+                                    if (category == null) {
+                                      context.read<CategoryCubit>().addCategory(
+                                        name,
+                                        _descController.text.trim().isEmpty ? null : _descController.text.trim(),
+                                        defaultNoteType: selectedNoteType,
+                                      );
+                                    } else {
+                                      context.read<CategoryCubit>().editCategory(
+                                        category,
+                                        name,
+                                        _descController.text.trim().isEmpty ? null : _descController.text.trim(),
+                                        defaultNoteType: selectedNoteType,
+                                      );
+                                    }
+                                    Navigator.pop(ctx);
                                   }
-                                  Navigator.pop(ctx);
-                                }
-                              : null,
-                          label: Text(
-                            category == null ? 'Simpan Kategori' : 'Perbarui Kategori',
-                            style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13),
+                                : null,
+                            label: Text(
+                              category == null ? 'Simpan Kategori' : 'Perbarui Kategori',
+                              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -759,131 +761,133 @@ class _BrandTabContent extends StatelessWidget {
                 top: false,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Handle bar
-                      Center(
-                        child: Container(
-                          width: 36,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFCBD5E1),
-                            borderRadius: BorderRadius.circular(2),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Handle bar
+                        Center(
+                          child: Container(
+                            width: 36,
+                            height: 4,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFCBD5E1),
+                              borderRadius: BorderRadius.circular(2),
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 14),
+                        const SizedBox(height: 14),
 
-                      // Header
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFF2563EB).withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(10),
+                        // Header
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF2563EB).withValues(alpha: 0.08),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(Icons.stars_rounded,
+                                      color: Color(0xFF2563EB), size: 18),
                                 ),
-                                child: const Icon(Icons.stars_rounded,
-                                    color: Color(0xFF2563EB), size: 18),
-                              ),
-                              const SizedBox(width: 10),
-                              Text(
-                                brand == null ? 'Tambah Merek' : 'Ubah Merek',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: const Color(0xFF0F172A),
+                                const SizedBox(width: 10),
+                                Text(
+                                  brand == null ? 'Tambah Merek' : 'Ubah Merek',
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: const Color(0xFF0F172A),
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                          IconButton(
-                            visualDensity: VisualDensity.compact,
-                            icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B), size: 20),
-                            onPressed: () => Navigator.pop(ctx),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 18),
-
-                      // Field: Nama Merek
-                      Text(
-                        'Nama Merek (Brand)',
-                        style: GoogleFonts.poppins(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF334155),
+                              ],
+                            ),
+                            IconButton(
+                              visualDensity: VisualDensity.compact,
+                              icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B), size: 20),
+                              onPressed: () => Navigator.pop(ctx),
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      TextFormField(
-                        controller: _nameController,
-                        style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
-                        decoration: InputDecoration(
-                          hintText: 'Contoh: Indofood, Unilever, Samsung...',
-                          hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
-                          prefixIcon: const Icon(Icons.stars_outlined, size: 18, color: Color(0xFF64748B)),
-                          filled: true,
-                          fillColor: const Color(0xFFF8FAFC),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                          errorText: (hasInteractedName && !isNameValid) ? 'Nama merek wajib diisi' : null,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                        const SizedBox(height: 18),
+
+                        // Field: Nama Merek
+                        Text(
+                          'Nama Merek (Brand)',
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF334155),
                           ),
                         ),
-                        onChanged: (_) {
-                          setModalState(() {
-                            hasInteractedName = true;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Submit Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: FilledButton.icon(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: const Color(0xFF0F172A),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            disabledBackgroundColor: const Color(0xFFE2E8F0),
-                            disabledForegroundColor: const Color(0xFF94A3B8),
+                        const SizedBox(height: 6),
+                        TextFormField(
+                          controller: _nameController,
+                          style: GoogleFonts.poppins(fontSize: 13, color: const Color(0xFF0F172A), fontWeight: FontWeight.w500),
+                          decoration: InputDecoration(
+                            hintText: 'Contoh: Indofood, Unilever, Samsung...',
+                            hintStyle: GoogleFonts.poppins(fontSize: 12.5, color: const Color(0xFF94A3B8)),
+                            prefixIcon: const Icon(Icons.stars_outlined, size: 18, color: Color(0xFF64748B)),
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                            errorText: (hasInteractedName && !isNameValid) ? 'Nama merek wajib diisi' : null,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFFCBD5E1)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Color(0xFF0F172A), width: 1.5),
+                            ),
                           ),
-                          icon: const Icon(Icons.check_rounded, size: 18),
-                          onPressed: isNameValid
-                              ? () {
-                                  final name = _nameController.text.trim();
-                                  if (brand == null) {
-                                    context.read<BrandCubit>().addBrand(name);
-                                  } else {
-                                    context.read<BrandCubit>().editBrand(brand, name);
+                          onChanged: (_) {
+                            setModalState(() {
+                              hasInteractedName = true;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 24),
+
+                        // Submit Button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 48,
+                          child: FilledButton.icon(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF0F172A),
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              disabledBackgroundColor: const Color(0xFFE2E8F0),
+                              disabledForegroundColor: const Color(0xFF94A3B8),
+                            ),
+                            icon: const Icon(Icons.check_rounded, size: 18),
+                            onPressed: isNameValid
+                                ? () {
+                                    final name = _nameController.text.trim();
+                                    if (brand == null) {
+                                      context.read<BrandCubit>().addBrand(name);
+                                    } else {
+                                      context.read<BrandCubit>().editBrand(brand, name);
+                                    }
+                                    Navigator.pop(ctx);
                                   }
-                                  Navigator.pop(ctx);
-                                }
-                              : null,
-                          label: Text(
-                            brand == null ? 'Simpan Merek' : 'Perbarui Merek',
-                            style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13),
+                                : null,
+                            label: Text(
+                              brand == null ? 'Simpan Merek' : 'Perbarui Merek',
+                              style: GoogleFonts.poppins(fontWeight: FontWeight.w700, fontSize: 13),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

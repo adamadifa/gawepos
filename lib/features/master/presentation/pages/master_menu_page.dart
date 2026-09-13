@@ -8,6 +8,7 @@ import 'categories_brands_page.dart';
 import 'contacts_page.dart';
 import 'products_list_page.dart';
 import 'raw_materials_page.dart';
+import '../../../tables/presentation/pages/tables_management_page.dart';
 import '../../../inventory/presentation/pages/stock_opname_page.dart';
 import '../../../inventory/presentation/pages/stock_adjustment_page.dart';
 import '../../../consignment/presentation/pages/consignment_page.dart';
@@ -928,6 +929,21 @@ class _MasterMenuPageState extends State<MasterMenuPage> {
                     },
                   ),
                   if (_businessMode != 'retail') ...[
+                    const SizedBox(height: 12),
+                    _buildMenuCard(
+                      icon: Icons.table_restaurant_rounded,
+                      title: 'Manajemen Meja (F&B Tables)',
+                      subtitle: 'Atur nomor meja, kapasitas kursi & area layout restoran',
+                      color: const Color(0xFFD97706),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const TablesManagementPage(),
+                          ),
+                        );
+                      },
+                    ),
                     const SizedBox(height: 12),
                     _buildMenuCard(
                       icon: Icons.eco_rounded,

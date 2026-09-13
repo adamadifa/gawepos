@@ -9,6 +9,7 @@ import '../../../../core/services/print_service.dart';
 import '../../../../core/di/injection.dart';
 import '../../data/sales_repository.dart';
 import '../bloc/cart_cubit.dart';
+import '../../../../core/services/queue_voice_service.dart';
 
 class PaymentSuccessPage extends StatefulWidget {
   final int orderId;
@@ -90,6 +91,7 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
       final Customer? customer = details['customer'];
       final int pointsEarned = details['pointsEarned'] as int? ?? 0;
       final int pointsRedeemed = details['pointsRedeemed'] as int? ?? 0;
+      final List<OrderPromotion> promotions = details['promotions'] as List<OrderPromotion>? ?? [];
 
       final message = await WhatsAppReceiptHelper.generateReceiptMessage(
         order: order,
@@ -99,6 +101,7 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
         cashierName: widget.user.name,
         pointsEarned: pointsEarned,
         pointsRedeemed: pointsRedeemed,
+        promotions: promotions,
       );
 
       if (mounted) {
@@ -284,7 +287,88 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
                                             ),
                                             textAlign: TextAlign.center,
                                           ),
-                                          const SizedBox(height: 24),
+                                          const SizedBox(height: 16),
+
+                                          // Card Nomor Antrean & Tombol Panggil Suara
+                                          Builder(
+                                            builder: (context) {
+                                              String qNum = '';
+                                              final notes = widget.cart.orderNotes ?? '';
+                                              final match = RegExp(r'#(\d+)').firstMatch(notes);
+                                              if (match != null) {
+                                                qNum = match.group(1)!;
+                                              }
+
+                                              final displayQueue = qNum.isNotEmpty ? "Antrean #$qNum" : "Pesanan Lunas";
+
+                                              return Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFFEF3C7),
+                                                  borderRadius: BorderRadius.circular(16),
+                                                  border: Border.all(color: const Color(0xFFFDE68A)),
+                                                ),
+                                                child: Column(
+                                                  children: [
+                                                    Row(
+                                                      mainAxisAlignment: MainAxisAlignment.center,
+                                                      children: [
+                                                        const Icon(Icons.confirmation_number_rounded, color: Color(0xFFB45309), size: 20),
+                                                        const SizedBox(width: 8),
+                                                        Text(
+                                                          displayQueue,
+                                                          style: GoogleFonts.poppins(
+                                                            fontSize: 18,
+                                                            fontWeight: FontWeight.w800,
+                                                            color: const Color(0xFF78350F),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    const SizedBox(height: 8),
+                                                    ValueListenableBuilder<String?>(
+                                                      valueListenable: QueueVoiceService().currentlySpeakingQueue,
+                                                      builder: (context, speakingQueue, child) {
+                                                        final isSpeaking = speakingQueue == (qNum.isNotEmpty ? qNum : displayQueue);
+                                                        return ElevatedButton.icon(
+                                                          onPressed: () {
+                                                            if (isSpeaking) {
+                                                              QueueVoiceService().stop();
+                                                            } else {
+                                                              QueueVoiceService().speakQueueCall(
+                                                                queueNumber: qNum.isNotEmpty ? qNum : "01",
+                                                                customerName: widget.cart.selectedCustomer?.name,
+                                                                tableName: widget.cart.selectedTable?.name,
+                                                              );
+                                                            }
+                                                          },
+                                                          icon: Icon(
+                                                            isSpeaking ? Icons.volume_up_rounded : Icons.record_voice_over_rounded,
+                                                            size: 18,
+                                                          ),
+                                                          label: Text(
+                                                            isSpeaking ? 'Memanggil Antrean...' : '🔊 Panggil Antrean Sekarang',
+                                                            style: GoogleFonts.poppins(
+                                                              fontWeight: FontWeight.w700,
+                                                              fontSize: 12.5,
+                                                            ),
+                                                          ),
+                                                          style: ElevatedButton.styleFrom(
+                                                            backgroundColor: isSpeaking ? const Color(0xFF10B981) : const Color(0xFF0F172A),
+                                                            foregroundColor: Colors.white,
+                                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                                            elevation: 0,
+                                                          ),
+                                                        );
+                                                      },
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                          const SizedBox(height: 20),
 
                                           // Dashed Separator Line
                                           const DashedLine(height: 1.5, color: Colors.black12),
@@ -304,56 +388,135 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
                                           ),
                                           const SizedBox(height: 12),
 
-                                          // Cart Items summary list inside a capsule
-                                          Container(
-                                            padding: const EdgeInsets.all(12),
-                                            decoration: BoxDecoration(
-                                              color: Colors.grey.shade50,
-                                              borderRadius: BorderRadius.circular(16),
-                                            ),
-                                            child: Column(
-                                              children: widget.cart.items.map((item) {
-                                                final qtyStr = item.quantity.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '');
-                                                return Padding(
-                                                  padding: const EdgeInsets.symmetric(vertical: 4.0),
-                                                  child: Row(
-                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                    children: [
-                                                      Expanded(
-                                                        child: Column(
-                                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                                          children: [
-                                                            Text(
-                                                              item.product.name,
-                                                              style: GoogleFonts.poppins(
-                                                                fontSize: 12,
-                                                                fontWeight: FontWeight.w600,
-                                                                color: Colors.black87,
-                                                              ),
-                                                              maxLines: 1,
-                                                              overflow: TextOverflow.ellipsis,
-                                                            ),
-                                                            Text(
-                                                              '$qtyStr ${item.unit.name} x ${CurrencyFormatter.format(item.price)}',
-                                                              style: const TextStyle(fontSize: 11, color: AppConstants.textLightColor),
-                                                            ),
-                                                          ],
-                                                        ),
-                                                      ),
-                                                      Text(
-                                                        CurrencyFormatter.format(item.subtotal),
-                                                        style: GoogleFonts.poppins(
-                                                          fontSize: 12,
-                                                          fontWeight: FontWeight.bold,
-                                                          color: Colors.black87,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                );
-                                              }).toList(),
-                                            ),
-                                          ),
+                                           // Catatan Pesanan / Meja (jika ada)
+                                           if (widget.cart.selectedTable != null || (widget.cart.orderNotes != null && widget.cart.orderNotes!.isNotEmpty)) ...[
+                                             Container(
+                                               width: double.infinity,
+                                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                               decoration: BoxDecoration(
+                                                 color: const Color(0xFFF1F5F9),
+                                                 borderRadius: BorderRadius.circular(10),
+                                                 border: Border.all(color: const Color(0xFFE2E8F0)),
+                                               ),
+                                               child: Column(
+                                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                                 children: [
+                                                   if (widget.cart.selectedTable != null)
+                                                     Row(
+                                                       children: [
+                                                         const Icon(Icons.table_restaurant_rounded, size: 14, color: AppConstants.primaryColor),
+                                                         const SizedBox(width: 6),
+                                                         Expanded(
+                                                           child: Text(
+                                                             'Meja: ${widget.cart.selectedTable!.name} (${widget.cart.selectedTable!.section})',
+                                                             style: GoogleFonts.poppins(
+                                                               fontSize: 12,
+                                                               fontWeight: FontWeight.bold,
+                                                               color: const Color(0xFF0F172A),
+                                                             ),
+                                                           ),
+                                                         ),
+                                                       ],
+                                                     ),
+                                                   if (widget.cart.selectedTable != null && widget.cart.orderNotes != null && widget.cart.orderNotes!.isNotEmpty)
+                                                     const SizedBox(height: 4),
+                                                   if (widget.cart.orderNotes != null && widget.cart.orderNotes!.isNotEmpty)
+                                                     Row(
+                                                       crossAxisAlignment: CrossAxisAlignment.start,
+                                                       children: [
+                                                         const Icon(Icons.notes_rounded, size: 14, color: Color(0xFF64748B)),
+                                                         const SizedBox(width: 6),
+                                                         Expanded(
+                                                           child: Text(
+                                                             'Catatan: ${widget.cart.orderNotes!}',
+                                                             style: GoogleFonts.poppins(
+                                                               fontSize: 11,
+                                                               color: const Color(0xFF475569),
+                                                               fontStyle: FontStyle.italic,
+                                                             ),
+                                                           ),
+                                                         ),
+                                                       ],
+                                                     ),
+                                                 ],
+                                               ),
+                                             ),
+                                             const SizedBox(height: 16),
+                                           ],
+
+                                           // Cart Items summary list inside a capsule
+                                           Container(
+                                             padding: const EdgeInsets.all(12),
+                                             decoration: BoxDecoration(
+                                               color: Colors.grey.shade50,
+                                               borderRadius: BorderRadius.circular(16),
+                                             ),
+                                             child: Column(
+                                               children: widget.cart.items.map((item) {
+                                                 final qtyStr = item.quantity.toStringAsFixed(3).replaceAll(RegExp(r'\.?0+$'), '');
+                                                 return Padding(
+                                                   padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                                   child: Row(
+                                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                     crossAxisAlignment: CrossAxisAlignment.start,
+                                                     children: [
+                                                       Expanded(
+                                                         child: Column(
+                                                           crossAxisAlignment: CrossAxisAlignment.start,
+                                                           children: [
+                                                             Text(
+                                                               item.product.name,
+                                                               style: GoogleFonts.poppins(
+                                                                 fontSize: 12,
+                                                                 fontWeight: FontWeight.w600,
+                                                                 color: Colors.black87,
+                                                               ),
+                                                               maxLines: 2,
+                                                               overflow: TextOverflow.ellipsis,
+                                                             ),
+                                                             if (item.notes != null && item.notes!.trim().isNotEmpty) ...[
+                                                               const SizedBox(height: 2),
+                                                               Row(
+                                                                 crossAxisAlignment: CrossAxisAlignment.start,
+                                                                 children: [
+                                                                   const Text('• ', style: TextStyle(fontSize: 10, color: Color(0xFFD97706), fontWeight: FontWeight.bold)),
+                                                                   Expanded(
+                                                                     child: Text(
+                                                                       item.notes!.trim(),
+                                                                       style: GoogleFonts.poppins(
+                                                                         fontSize: 10.5,
+                                                                         color: const Color(0xFFD97706),
+                                                                         fontWeight: FontWeight.w500,
+                                                                         fontStyle: FontStyle.italic,
+                                                                       ),
+                                                                     ),
+                                                                   ),
+                                                                 ],
+                                                               ),
+                                                             ],
+                                                             const SizedBox(height: 2),
+                                                             Text(
+                                                               '$qtyStr ${item.unit.name} x ${CurrencyFormatter.format(item.price)}',
+                                                               style: const TextStyle(fontSize: 11, color: AppConstants.textLightColor),
+                                                             ),
+                                                           ],
+                                                         ),
+                                                       ),
+                                                       const SizedBox(width: 8),
+                                                       Text(
+                                                         CurrencyFormatter.format(item.subtotal),
+                                                         style: GoogleFonts.poppins(
+                                                           fontSize: 12,
+                                                           fontWeight: FontWeight.bold,
+                                                           color: Colors.black87,
+                                                         ),
+                                                       ),
+                                                     ],
+                                                   ),
+                                                 );
+                                               }).toList(),
+                                             ),
+                                           ),
                                           const SizedBox(height: 24),
 
                                           // Total Payment Info
@@ -373,6 +536,46 @@ class _PaymentSuccessPageState extends State<PaymentSuccessPage>
                                               fontWeight: FontWeight.bold,
                                             ),
                                           ),
+                                          if (widget.cart.appliedPromotions.isNotEmpty) ...[
+                                            const SizedBox(height: 10),
+                                            for (final p in widget.cart.appliedPromotions)
+                                              Container(
+                                                margin: const EdgeInsets.only(bottom: 4),
+                                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFFEFF6FF),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                                                ),
+                                                child: Row(
+                                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                  children: [
+                                                    Row(
+                                                      children: [
+                                                        const Icon(Icons.local_offer_rounded, size: 13, color: Color(0xFF2563EB)),
+                                                        const SizedBox(width: 5),
+                                                        Text(
+                                                          p.promoName,
+                                                          style: GoogleFonts.poppins(
+                                                            fontSize: 11,
+                                                            fontWeight: FontWeight.w600,
+                                                            color: const Color(0xFF1E40AF),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    Text(
+                                                      '-${CurrencyFormatter.format(p.discountAmount)}',
+                                                      style: GoogleFonts.poppins(
+                                                        fontSize: 11,
+                                                        fontWeight: FontWeight.w700,
+                                                        color: const Color(0xFF1E40AF),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                          ],
                                           const SizedBox(height: 16),
 
                                           if (widget.pointsEarned > 0 || widget.pointsRedeemed > 0) ...[

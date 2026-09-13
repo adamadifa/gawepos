@@ -534,6 +534,33 @@ class _ShopSettingsPageState extends State<ShopSettingsPage> {
                       ),
                     ),
                   ),
+                const SizedBox(height: 6),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.info_outline_rounded, size: 14, color: Color(0xFF1D4ED8)),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          'Disarankan format JPG/JPEG berlatar putih solid untuk hasil cetak thermal terbaik.',
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.poppins(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                            color: const Color(0xFF1E40AF),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 14),
               ],
             ),

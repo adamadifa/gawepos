@@ -65,6 +65,21 @@ class PrintService {
     return CurrencyFormatter.format(amount).replaceAll('Rp', '').trim();
   }
 
+  // Format baris 2 kolom (Kiri rata kiri, Kanan rata kanan) anti-turun-baris
+  String _formatRow(String left, String right, int maxWidth) {
+    final rightClean = right.trim();
+    if (left.length + rightClean.length + 1 > maxWidth) {
+      final maxLeftLen = maxWidth - rightClean.length - 1;
+      final safeLeft = maxLeftLen > 0 ? left.substring(0, maxLeftLen) : '';
+      final spaces = maxWidth - safeLeft.length - rightClean.length;
+      return "$safeLeft${' ' * (spaces > 0 ? spaces : 1)}$rightClean";
+    }
+    final spaces = maxWidth - left.length - rightClean.length;
+    return "$left${' ' * spaces}$rightClean";
+  }
+
+  String _separator(int width) => '-' * width;
+
   // Test Print
   Future<bool> printTest(String deviceName, String macAddress) async {
     final connected = await connect(macAddress);
@@ -76,6 +91,45 @@ class PrintService {
       final profile = await CapabilityProfile.load();
       final generator = Generator(paperSize, profile);
       List<int> bytes = [];
+
+      final shopLogoPath = await _salesRepository.getSetting('shop_logo') ?? '';
+      final printLogoStr = await _salesRepository.getSetting('printer_print_logo') ?? '1';
+
+      if (printLogoStr == '1' && shopLogoPath.isNotEmpty) {
+        final logoFile = File(shopLogoPath);
+        if (await logoFile.exists()) {
+          try {
+            final bytesLogo = await logoFile.readAsBytes();
+            final imgDecoded = img.decodeImage(bytesLogo);
+            if (imgDecoded != null) {
+              img.Image processedImg = imgDecoded;
+              if (processedImg.hasAlpha) {
+                final flat = img.Image(
+                  width: processedImg.width,
+                  height: processedImg.height,
+                  numChannels: 3,
+                );
+                img.fill(flat, color: img.ColorRgb8(255, 255, 255));
+                img.compositeImage(flat, processedImg);
+                processedImg = flat;
+              }
+
+              final targetWidth = paperSize == PaperSize.mm80 ? 240 : 160;
+              final resizedImg = img.copyResize(processedImg, width: targetWidth);
+              final grayscaleImg = img.grayscale(resizedImg);
+
+              try {
+                bytes += generator.imageRaster(grayscaleImg, align: PosAlign.center);
+              } catch (_) {
+                try {
+                  bytes += generator.image(grayscaleImg, align: PosAlign.center);
+                } catch (_) {}
+              }
+              bytes += generator.feed(1);
+            }
+          } catch (_) {}
+        }
+      }
 
       bytes += generator.text("=== TEST KONEKSI PRINTER ===", styles: const PosStyles(align: PosAlign.center, bold: true));
       bytes += generator.text("GawePOS - Kasir UMKM", styles: const PosStyles(align: PosAlign.center));
@@ -136,6 +190,8 @@ class PrintService {
       final generator = Generator(paperSize, profile);
       List<int> bytes = [];
 
+      final int printWidth = paperSize == PaperSize.mm80 ? 48 : 32;
+
       for (int copy = 0; copy < printCount; copy++) {
         if (copy > 0) {
           bytes += generator.text("=== SALINAN KASIR / ARSIP ===", styles: const PosStyles(align: PosAlign.center, bold: true));
@@ -149,8 +205,30 @@ class PrintService {
               final bytesLogo = await logoFile.readAsBytes();
               final imgDecoded = img.decodeImage(bytesLogo);
               if (imgDecoded != null) {
-                final resizedImg = img.copyResize(imgDecoded, width: 180);
-                bytes += generator.imageRaster(resizedImg, align: PosAlign.center);
+                // Konversi gambar jika ada transparansi PNG menjadi background putih
+                img.Image processedImg = imgDecoded;
+                if (processedImg.hasAlpha) {
+                  final flat = img.Image(
+                    width: processedImg.width,
+                    height: processedImg.height,
+                    numChannels: 3,
+                  );
+                  img.fill(flat, color: img.ColorRgb8(255, 255, 255));
+                  img.compositeImage(flat, processedImg);
+                  processedImg = flat;
+                }
+
+                final targetWidth = paperSize == PaperSize.mm80 ? 240 : 160;
+                final resizedImg = img.copyResize(processedImg, width: targetWidth);
+                final grayscaleImg = img.grayscale(resizedImg);
+
+                try {
+                  bytes += generator.imageRaster(grayscaleImg, align: PosAlign.center);
+                } catch (_) {
+                  try {
+                    bytes += generator.image(grayscaleImg, align: PosAlign.center);
+                  } catch (_) {}
+                }
                 bytes += generator.feed(1);
               }
             } catch (_) {}
@@ -165,7 +243,7 @@ class PrintService {
       if (shopPhone.isNotEmpty) {
         bytes += generator.text("Telp: $shopPhone", styles: const PosStyles(align: PosAlign.center));
       }
-      bytes += generator.text("--------------------------------", styles: const PosStyles(align: PosAlign.center));
+      bytes += generator.text(_separator(printWidth), styles: const PosStyles(align: PosAlign.center));
 
       // --- INFO TRANSAKSI ---
       final dateStr = DateFormat('dd/MM/yyyy HH:mm').format(order.createdAt);
@@ -198,7 +276,7 @@ class PrintService {
           } catch (_) {}
         }
       }
-      bytes += generator.text("--------------------------------", styles: const PosStyles(align: PosAlign.center));
+      bytes += generator.text(_separator(printWidth), styles: const PosStyles(align: PosAlign.center));
 
       // --- ITEMS ---
       for (var itemDetail in items) {
@@ -215,12 +293,8 @@ class PrintService {
         final priceStr = _formatCurr(item.price);
         final itemSubtotalStr = _formatCurr(item.subtotal);
         
-        // Buat detail row: "2.5 x 10.000             25.000"
-        final leftCol = "$qtyStr $unitName x $priceStr";
-        final spacesNeeded = 32 - leftCol.length - itemSubtotalStr.length;
-        final spaces = spacesNeeded > 0 ? " " * spacesNeeded : " ";
-        
-        bytes += generator.text("$leftCol$spaces$itemSubtotalStr");
+        final leftCol = " $qtyStr $unitName x $priceStr";
+        bytes += generator.text(_formatRow(leftCol, itemSubtotalStr, printWidth));
         
         // Jika ada catatan racikan/dapur khusus per item
         if (item.notes != null && item.notes!.isNotEmpty) {
@@ -230,32 +304,43 @@ class PrintService {
         // Jika ada diskon per item
         if (item.discountAmount > 0) {
           final discStr = "-${_formatCurr(item.discountAmount)}";
-          final discLeftCol = "  Diskon Item";
-          final discSpacesNeeded = 32 - discLeftCol.length - discStr.length;
-          final discSpaces = discSpacesNeeded > 0 ? " " * discSpacesNeeded : " ";
-          bytes += generator.text("$discLeftCol$discSpaces$discStr");
+          bytes += generator.text(_formatRow("  Diskon Item", discStr, printWidth));
         }
       }
-      bytes += generator.text("--------------------------------", styles: const PosStyles(align: PosAlign.center));
+      bytes += generator.text(_separator(printWidth), styles: const PosStyles(align: PosAlign.center));
 
       // --- SUMMARY FOOTER ---
       final subtotalStr = _formatCurr(order.subtotal);
       final grandTotalStr = _formatCurr(order.grandTotal);
       
-      bytes += generator.text("Subtotal        : " + " " * (16 - subtotalStr.length) + subtotalStr);
+      bytes += generator.text(_formatRow("Subtotal", subtotalStr, printWidth));
       
-      if (order.discountAmount > 0) {
+      // Cetak Rincian Diskon Promosi (BOGO / Diskon Min Belanja / Tebus Murah)
+      final List<OrderPromotion> promoList = details['promotions'] as List<OrderPromotion>? ?? [];
+      double totalPromoDiscounts = 0.0;
+      for (var p in promoList) {
+        totalPromoDiscounts += p.discountAmount;
+        final promoDiscStr = "-${_formatCurr(p.discountAmount)}";
+        final promoLabel = "Promo: ${p.promotionName}";
+        bytes += generator.text(_formatRow(promoLabel, promoDiscStr, printWidth));
+      }
+
+      final double remainingDiscount = order.discountAmount - totalPromoDiscounts;
+      if (remainingDiscount > 0) {
+        final discStr = "-${_formatCurr(remainingDiscount)}";
+        bytes += generator.text(_formatRow("Diskon Tambahan", discStr, printWidth));
+      } else if (order.discountAmount > 0 && promoList.isEmpty) {
         final discStr = "-${_formatCurr(order.discountAmount)}";
-        bytes += generator.text("Diskon Global   : " + " " * (16 - discStr.length) + discStr);
+        bytes += generator.text(_formatRow("Diskon Global", discStr, printWidth));
       }
       
       if (order.taxAmount > 0) {
         final taxStr = _formatCurr(order.taxAmount);
-        bytes += generator.text("Pajak           : " + " " * (16 - taxStr.length) + taxStr);
+        bytes += generator.text(_formatRow("Pajak", taxStr, printWidth));
       }
       
-      bytes += generator.text("Grand Total     : " + " " * (16 - grandTotalStr.length) + grandTotalStr, styles: const PosStyles(bold: true));
-      bytes += generator.text("--------------------------------", styles: const PosStyles(align: PosAlign.center));
+      bytes += generator.text(_formatRow("GRAND TOTAL", grandTotalStr, printWidth), styles: const PosStyles(bold: true));
+      bytes += generator.text(_separator(printWidth), styles: const PosStyles(align: PosAlign.center));
 
       // --- PAYMENTS ---
       for (var p in payments) {
@@ -267,20 +352,20 @@ class PrintService {
                     ? 'EDC/Kartu'
                     : 'Transfer';
         final payAmountStr = _formatCurr(p.amount);
-        bytes += generator.text("$payMethodName            : " + " " * (16 - payAmountStr.length) + payAmountStr);
+        bytes += generator.text(_formatRow("Bayar ($payMethodName)", payAmountStr, printWidth));
       }
 
       if (order.changeAmount > 0) {
         final changeStr = _formatCurr(order.changeAmount);
-        bytes += generator.text("Kembalian       : " + " " * (16 - changeStr.length) + changeStr);
+        bytes += generator.text(_formatRow("Kembalian", changeStr, printWidth));
       }
 
-      bytes += generator.text("--------------------------------", styles: const PosStyles(align: PosAlign.center));
+      bytes += generator.text(_separator(printWidth), styles: const PosStyles(align: PosAlign.center));
       bytes += generator.feed(1);
 
       // --- POIN ---
       if (pointsEarned > 0 || pointsRedeemed > 0) {
-        bytes += generator.text("--------------------------------", styles: const PosStyles(align: PosAlign.center));
+        bytes += generator.text(_separator(printWidth), styles: const PosStyles(align: PosAlign.center));
         if (pointsEarned > 0) {
           bytes += generator.text("Poin didapat: +$pointsEarned", styles: const PosStyles(align: PosAlign.center));
         }

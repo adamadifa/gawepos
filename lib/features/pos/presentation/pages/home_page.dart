@@ -8,6 +8,8 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/utils/currency_formatter.dart';
 import '../../../auth/presentation/bloc/auth_cubit.dart';
 import '../../../master/presentation/pages/master_menu_page.dart';
+import '../widgets/pulsing_heart_icon.dart';
+import 'support_developer_page.dart';
 import 'pos_page.dart';
 import 'settings_page.dart';
 import 'sales_history_page.dart';
@@ -20,6 +22,7 @@ import '../../../reports/presentation/pages/owner_dashboard_page.dart';
 import '../../../master/presentation/pages/contacts_page.dart';
 import '../../../inventory/presentation/pages/returns_menu_page.dart';
 import '../../../consignment/presentation/pages/consignment_page.dart';
+import '../../../promotions/presentation/pages/promotions_list_page.dart';
 
 class HomePage extends StatefulWidget {
   final User user;
@@ -306,6 +309,18 @@ class _HomePageState extends State<HomePage> {
               MaterialPageRoute(builder: (context) => const ConsignmentPage()),
             ),
       },
+      {
+        'key': 'promotions',
+        'icon': Icons.local_offer_rounded,
+        'title': 'Promosi',
+        'subtitle': 'Diskon & BOGO',
+        'color': const Color(0xFFE11D48), // Rose
+        'bg': const Color(0xFFFFF1F2),
+        'onTap': () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const PromotionsListPage()),
+            ),
+      },
     ];
 
     final allowedMenus = menus.where((m) => authCubit.isMenuAllowed(m['key'] as String)).toList();
@@ -383,6 +398,15 @@ class _HomePageState extends State<HomePage> {
                     const SizedBox(width: 12),
                   ],
 
+                  // Support Developer button with Heartbeat Pulse Animation
+                  PulsingHeartIcon(
+                    size: 22,
+                    tooltip: 'Dukung Pengembang',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const SupportDeveloperPage()),
+                    ),
+                  ),
                   // Settings button
                   IconButton(
                     icon: const Icon(Icons.settings_outlined, color: Color(0xFF475569), size: 22),
@@ -439,9 +463,16 @@ class _HomePageState extends State<HomePage> {
                   child: Center(
                     child: ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 1200),
-                      child: isTablet
-                          ? _buildTabletDashboardLayout(allowedMenus)
-                          : _buildMobileDashboardLayout(allowedMenus),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          isTablet
+                              ? _buildTabletDashboardLayout(allowedMenus)
+                              : _buildMobileDashboardLayout(allowedMenus),
+                          const SizedBox(height: 24),
+                          _buildFooterCopyright(context),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -1355,6 +1386,39 @@ class _HomePageState extends State<HomePage> {
             child: Text('Buka Shift', style: GoogleFonts.poppins(fontWeight: FontWeight.w600)),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFooterCopyright(BuildContext context) {
+    return InkWell(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const SupportDeveloperPage()),
+      ),
+      borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const PulsingHeartIcon(size: 13),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                '© @adamadifa_ | Programmer Introvert - Support Developer',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: const Color(0xFF64748B),
+                ),
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

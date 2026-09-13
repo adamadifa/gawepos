@@ -25,6 +25,14 @@ class _RolePermissionsPageState extends State<RolePermissionsPage> {
       'desc': 'Melakukan transaksi penjualan kasir, pembayaran, split bill, cetak struk.',
     },
     {
+      'key': 'promotions',
+      'title': 'Program Promosi & Diskon',
+      'icon': Icons.local_offer_rounded,
+      'color': const Color(0xFFE11D48), // Rose
+      'category': 'Transaksi & Kasir',
+      'desc': 'Kelola promo Beli 1 Gratis 1, diskon min. belanja, tebus murah, dan grosir.',
+    },
+    {
       'key': 'history',
       'title': 'Riwayat Transaksi',
       'icon': Icons.query_stats_rounded,
